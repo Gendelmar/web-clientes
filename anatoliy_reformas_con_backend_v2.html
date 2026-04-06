@@ -1,0 +1,1595 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Anatoliy Reformas S.L. — Madrid</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;1,400&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+/* ── RESET ─────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+body { font-family: 'DM Sans', sans-serif; background: #f4efe6;
+       color: #1c140d; font-size: 15px; line-height: 1.6; overflow-x: hidden; }
+h1, h2, h3 { font-family: 'Cormorant Garamond', serif; font-weight: 600; line-height: 1.2; }
+img { display: block; max-width: 100%; }
+button, input, select, textarea { font-family: 'DM Sans', sans-serif; }
+
+/* ── VARIABLES ─────────────────────────────────── */
+:root {
+  --cream:   #f4efe6;
+  --stone:   #e5ddd0;
+  --warm:    #c4b49a;
+  --terra:   #8a5c38;
+  --deep:    #18100a;
+  --ink:     #1c140d;
+  --accent:  #c96f28;
+  --light:   #faf7f2;
+  --muted:   #7a6b58;
+  --ok:      #3a6648;
+  --danger:  #963030;
+  --border:  #ddd5c5;
+  --r:       10px;
+}
+
+/* ── NAVEGACIÓN PRINCIPAL ──────────────────────── */
+.main-nav {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 900;
+  background: var(--deep); height: 56px;
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0 32px;
+  border-bottom: 1px solid rgba(255,255,255,.07);
+}
+.nav-logo {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 18px; color: var(--cream); letter-spacing: .3px;
+  cursor: pointer;
+}
+.nav-logo span { color: var(--accent); }
+.nav-tabs { display: flex; gap: 2px; }
+.nav-tab {
+  padding: 8px 20px; border: none; background: transparent;
+  color: var(--warm); font-size: 13px; font-weight: 500;
+  letter-spacing: .3px; cursor: pointer; border-radius: 6px;
+  transition: all .2s;
+}
+.nav-tab:hover { color: var(--cream); background: rgba(255,255,255,.06); }
+.nav-tab.active { background: rgba(201,111,40,.2); color: var(--accent); }
+.nav-contact {
+  font-size: 12px; color: rgba(196,180,154,.5);
+  letter-spacing: .5px;
+}
+
+/* ── VISTAS ────────────────────────────────────── */
+.view { display: none; padding-top: 56px; min-height: 100vh; }
+.view.active { display: block; }
+
+/* ════════════════════════════════════════════════
+   PESTAÑA 1: PORTFOLIO
+════════════════════════════════════════════════ */
+
+/* Hero */
+.hero {
+  background: var(--deep); padding: 88px 40px 100px;
+  text-align: center; position: relative; overflow: hidden;
+}
+.hero-pattern {
+  position: absolute; inset: 0; opacity: .04;
+  background-image: repeating-linear-gradient(
+    45deg, #f4efe6 0, #f4efe6 1px, transparent 0, transparent 50%);
+  background-size: 24px 24px;
+}
+.hero-glow {
+  position: absolute; inset: 0; pointer-events: none;
+  background: radial-gradient(ellipse 70% 50% at 50% 110%, rgba(201,111,40,.14), transparent 70%);
+}
+.hero-tag {
+  display: inline-block; border: 1px solid rgba(201,111,40,.4);
+  color: var(--accent); font-size: 11px; letter-spacing: 2.5px;
+  text-transform: uppercase; padding: 5px 18px; border-radius: 20px;
+  margin-bottom: 24px; position: relative;
+}
+.hero h1 {
+  font-size: clamp(36px, 6vw, 66px); color: var(--cream);
+  margin-bottom: 20px; position: relative;
+}
+.hero h1 em { color: var(--accent); font-style: normal; }
+.hero-sub {
+  color: var(--warm); font-weight: 300; font-size: 17px;
+  max-width: 460px; margin: 0 auto 40px; position: relative; line-height: 1.7;
+}
+.hero-btns { display: flex; gap: 14px; justify-content: center; position: relative; }
+.btn-hero {
+  padding: 14px 32px; border-radius: 8px; font-size: 15px;
+  font-weight: 500; border: none; cursor: pointer; transition: all .2s;
+}
+.btn-hero-primary { background: var(--accent); color: #fff; }
+.btn-hero-primary:hover { background: #b8621f; }
+.btn-hero-ghost {
+  background: transparent; border: 1px solid rgba(196,180,154,.35);
+  color: var(--warm);
+}
+.btn-hero-ghost:hover { border-color: var(--warm); color: var(--cream); }
+
+/* Stats */
+.stats-bar {
+  background: var(--light); border-bottom: 1px solid var(--border);
+  display: flex; justify-content: center;
+}
+.stat-item {
+  padding: 22px 52px; text-align: center;
+  border-right: 1px solid var(--border);
+}
+.stat-item:last-child { border-right: none; }
+.stat-num {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 34px; color: var(--terra);
+}
+.stat-lbl {
+  font-size: 11px; color: var(--muted);
+  text-transform: uppercase; letter-spacing: .8px;
+}
+
+/* Sección genérica */
+.section { padding: 72px 40px; max-width: 1080px; margin: 0 auto; }
+.section-wide { padding: 72px 40px; }
+.section-tag {
+  font-size: 11px; letter-spacing: 2.5px;
+  text-transform: uppercase; color: var(--accent); margin-bottom: 10px;
+}
+.section-title { font-size: clamp(28px,4vw,44px); margin-bottom: 14px; }
+.section-sub {
+  color: var(--muted); font-size: 16px; font-weight: 300;
+  max-width: 520px; margin-bottom: 48px; line-height: 1.7;
+}
+
+/* Servicios */
+.services-grid {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(230px,1fr));
+  gap: 18px;
+}
+.service-card {
+  background: var(--light); border: 1px solid var(--border);
+  border-radius: 14px; padding: 28px 24px;
+  transition: all .2s; position: relative; overflow: hidden;
+}
+.service-card::after {
+  content: ''; position: absolute; bottom: 0; left: 0; right: 0;
+  height: 3px; background: var(--accent);
+  transform: scaleX(0); transform-origin: left; transition: transform .3s;
+}
+.service-card:hover { border-color: var(--warm); transform: translateY(-3px); }
+.service-card:hover::after { transform: scaleX(1); }
+.service-icon { font-size: 28px; margin-bottom: 14px; }
+.service-name {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 20px; margin-bottom: 8px;
+}
+.service-desc { font-size: 13px; color: var(--muted); line-height: 1.6; }
+
+/* Portfolio grid */
+.portfolio-grid {
+  display: grid; grid-template-columns: repeat(3,1fr); gap: 14px;
+}
+.portfolio-item {
+  border-radius: 12px; overflow: hidden;
+  aspect-ratio: 4/3; position: relative; cursor: pointer;
+}
+.portfolio-img {
+  width: 100%; height: 100%; object-fit: cover; transition: transform .4s;
+}
+.portfolio-item:hover .portfolio-img { transform: scale(1.05); }
+.portfolio-overlay {
+  position: absolute; inset: 0;
+  background: linear-gradient(to top, rgba(24,16,10,.75), transparent);
+  opacity: 0; transition: opacity .3s;
+  display: flex; align-items: flex-end; padding: 16px;
+}
+.portfolio-item:hover .portfolio-overlay { opacity: 1; }
+.portfolio-label { color: #fff; font-size: 13px; font-weight: 500; }
+
+/* Contacto */
+.contact-wrap {
+  background: var(--deep); padding: 80px 40px;
+  text-align: center; position: relative; overflow: hidden;
+}
+.contact-wrap::before {
+  content: ''; position: absolute; inset: 0;
+  background: radial-gradient(ellipse 80% 60% at 50% 110%, rgba(201,111,40,.14), transparent 70%);
+}
+.contact-wrap h2 {
+  font-size: clamp(28px,4vw,48px); color: var(--cream);
+  margin-bottom: 14px; position: relative;
+}
+.contact-wrap p {
+  color: var(--warm); font-weight: 300; font-size: 16px;
+  margin-bottom: 36px; position: relative;
+}
+.contact-info {
+  display: flex; justify-content: center; gap: 48px;
+  position: relative; flex-wrap: wrap;
+}
+.contact-item { text-align: center; }
+.contact-item-label {
+  font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+  color: var(--accent); margin-bottom: 6px;
+}
+.contact-item-val { font-size: 16px; color: var(--cream); }
+
+/* Footer */
+.footer {
+  background: var(--ink); padding: 28px 40px;
+  display: flex; justify-content: space-between; align-items: center;
+  flex-wrap: wrap; gap: 12px;
+}
+.footer-brand {
+  font-family: 'Cormorant Garamond', serif;
+  color: var(--cream); font-size: 17px;
+}
+.footer-info { font-size: 12px; color: var(--muted); text-align: right; line-height: 1.8; }
+
+/* ════════════════════════════════════════════════
+   PESTAÑA 2: PRESUPUESTO
+════════════════════════════════════════════════ */
+.config-wrap { max-width: 820px; margin: 0 auto; padding: 48px 32px 80px; }
+.config-header { text-align: center; margin-bottom: 44px; }
+.config-header h2 { font-size: 40px; margin-bottom: 8px; }
+.config-header p { color: var(--muted); font-weight: 300; font-size: 15px; }
+
+/* Stepper */
+.stepper { display: flex; align-items: center; margin-bottom: 44px; }
+.step-it { display: flex; align-items: center; gap: 8px; flex: 1; }
+.step-it:last-child { flex: 0; }
+.step-dot {
+  width: 30px; height: 30px; border-radius: 50%; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 12px; font-weight: 600; transition: all .3s;
+  border: 2px solid var(--border); background: var(--light); color: var(--muted);
+}
+.step-it.done .step-dot  { background: var(--ok); border-color: var(--ok); color: #fff; }
+.step-it.act  .step-dot  { background: var(--accent); border-color: var(--accent); color: #fff; }
+.step-line { flex: 1; height: 1px; background: var(--border); margin: 0 6px; transition: background .3s; }
+.step-it.done .step-line  { background: var(--ok); }
+.step-lbl { font-size: 12px; color: var(--muted); white-space: nowrap; }
+.step-it.act  .step-lbl  { color: var(--accent); font-weight: 500; }
+.step-it.done .step-lbl  { color: var(--ok); }
+
+/* Paneles */
+.step-panel { display: none; }
+.step-panel.active { display: block; animation: fadeUp .3s ease; }
+@keyframes fadeUp { from { opacity:0; transform:translateY(10px); } to { opacity:1; transform:translateY(0); } }
+
+.panel-title { font-size: 26px; margin-bottom: 6px; }
+.panel-sub { color: var(--muted); font-size: 14px; margin-bottom: 24px; font-weight: 300; }
+
+/* Opciones de selección */
+.opt-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px,1fr)); gap: 12px; margin-bottom: 24px; }
+.opt-card {
+  border: 2px solid var(--border); border-radius: 12px;
+  padding: 18px 14px; cursor: pointer; transition: all .2s;
+  background: var(--light); position: relative;
+}
+.opt-card:hover { border-color: var(--warm); }
+.opt-card.sel { border-color: var(--accent); background: #fff; box-shadow: 0 0 0 3px rgba(201,111,40,.1); }
+.opt-check {
+  position: absolute; top: 10px; right: 10px;
+  width: 20px; height: 20px; border-radius: 50%;
+  background: var(--accent); color: #fff; font-size: 10px;
+  display: flex; align-items: center; justify-content: center;
+  opacity: 0; transition: opacity .2s;
+}
+.opt-card.sel .opt-check { opacity: 1; }
+.opt-icon { font-size: 26px; margin-bottom: 10px; }
+.opt-name { font-weight: 500; font-size: 14px; margin-bottom: 3px; }
+.opt-desc { font-size: 12px; color: var(--muted); line-height: 1.5; }
+
+/* Productos scrapeados */
+.prod-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px,1fr)); gap: 14px; margin-bottom: 24px; }
+.prod-card {
+  border: 2px solid var(--border); border-radius: 12px;
+  overflow: hidden; cursor: pointer; transition: all .2s; background: #fff; position: relative;
+}
+.prod-card:hover { border-color: var(--warm); transform: translateY(-2px); }
+.prod-card.sel { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(201,111,40,.12); }
+.prod-card .opt-check { opacity: 0; }
+.prod-card.sel .opt-check { opacity: 1; }
+.prod-img { width: 100%; height: 120px; object-fit: cover; background: var(--stone); }
+.prod-body { padding: 11px 12px; }
+.prod-brand { font-size: 9px; text-transform: uppercase; letter-spacing: 1px; color: var(--muted); margin-bottom: 3px; }
+.prod-name  { font-size: 12px; font-weight: 500; line-height: 1.4; margin-bottom: 6px; }
+.prod-foot  { display: flex; justify-content: space-between; align-items: baseline; }
+.prod-price { font-size: 15px; font-weight: 600; color: var(--terra); }
+.prod-unit  { font-size: 11px; color: var(--muted); }
+.prod-src   { font-size: 10px; color: var(--accent); margin-top: 3px; }
+.m2-row {
+  margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--border);
+  display: flex; align-items: center; gap: 6px;
+}
+.m2-row input {
+  width: 58px; padding: 4px 8px; border: 1px solid var(--border);
+  border-radius: 6px; font-size: 13px; text-align: center; background: var(--cream);
+}
+.m2-row input:focus { outline: 2px solid var(--accent); border-color: transparent; }
+.m2-row label { font-size: 12px; color: var(--muted); }
+.prod-loading { text-align: center; padding: 40px; color: var(--muted); font-size: 14px; }
+
+/* Superficie */
+.surf-box {
+  background: var(--light); border: 1.5px solid var(--border);
+  border-radius: 12px; padding: 24px 28px;
+  display: flex; justify-content: space-between;
+  align-items: center; margin-bottom: 20px;
+}
+.surf-ctrl { display: flex; align-items: center; gap: 14px; }
+.surf-btn {
+  width: 36px; height: 36px; border-radius: 50%;
+  border: 1.5px solid var(--border); background: var(--cream);
+  font-size: 20px; cursor: pointer; display: flex;
+  align-items: center; justify-content: center;
+  transition: all .2s; color: var(--ink);
+}
+.surf-btn:hover { border-color: var(--accent); color: var(--accent); }
+.surf-num {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 40px; color: var(--ink); min-width: 60px; text-align: center;
+}
+
+/* Calidad */
+.cal-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 12px; margin-bottom: 24px; }
+
+/* Habitaciones */
+.hab-row { display: flex; gap: 10px; margin-bottom: 24px; }
+.hab-btn {
+  flex: 1; border: 2px solid var(--border); border-radius: 10px;
+  padding: 12px 6px; text-align: center; cursor: pointer;
+  background: var(--light); transition: all .2s;
+}
+.hab-btn.sel { border-color: var(--accent); background: #fff; }
+.hab-num { font-family: 'Cormorant Garamond', serif; font-size: 24px; }
+.hab-txt { font-size: 11px; color: var(--muted); }
+
+/* Formulario */
+.form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 20px; }
+.form-group { display: flex; flex-direction: column; gap: 5px; }
+.form-group.full { grid-column: 1 / -1; }
+.form-label { font-size: 11px; font-weight: 500; color: var(--muted); text-transform: uppercase; letter-spacing: .5px; }
+.form-input {
+  padding: 10px 14px; border: 1.5px solid var(--border); border-radius: 8px;
+  font-size: 14px; background: var(--light); color: var(--ink); transition: border-color .2s;
+}
+.form-input:focus { outline: none; border-color: var(--accent); background: #fff; }
+.form-input::placeholder { color: var(--warm); }
+textarea.form-input { resize: vertical; min-height: 80px; }
+
+/* RGPD */
+.rgpd-row {
+  display: flex; gap: 12px; align-items: flex-start;
+  background: var(--light); border: 1px solid var(--border);
+  border-radius: 8px; padding: 14px; margin-bottom: 20px;
+}
+.rgpd-box {
+  width: 18px; height: 18px; border: 1.5px solid var(--border);
+  border-radius: 4px; flex-shrink: 0; margin-top: 2px;
+  cursor: pointer; background: var(--cream);
+  display: flex; align-items: center; justify-content: center;
+  transition: all .2s; font-size: 10px; color: #fff;
+}
+.rgpd-box.on { background: var(--accent); border-color: var(--accent); }
+.rgpd-txt { font-size: 12px; color: var(--muted); line-height: 1.6; }
+.rgpd-txt a { color: var(--accent); }
+
+/* Presupuesto resultado */
+.budget-box {
+  background: var(--deep); border-radius: 14px; padding: 28px 32px;
+  margin-bottom: 20px; position: relative; overflow: hidden;
+}
+.budget-box::before {
+  content: ''; position: absolute; inset: 0;
+  background: radial-gradient(ellipse 100% 80% at 100% 0%, rgba(201,111,40,.18), transparent 60%);
+}
+.budget-lbl { font-size: 11px; letter-spacing: 2px; text-transform: uppercase; color: var(--warm); margin-bottom: 8px; position: relative; }
+.budget-total { font-family: 'Cormorant Garamond', serif; font-size: 54px; color: var(--cream); line-height: 1; position: relative; }
+.budget-cur { font-size: 24px; color: var(--warm); vertical-align: super; margin-right: 4px; }
+.budget-iva { font-size: 13px; color: var(--warm); margin-top: 8px; font-weight: 300; position: relative; }
+.budget-disc { font-size: 11px; color: rgba(196,180,154,.4); position: relative; margin-top: 4px; }
+
+.desglose-wrap { background: var(--light); border: 1px solid var(--border); border-radius: 10px; overflow: hidden; margin-bottom: 20px; }
+.desglose-row { display: flex; justify-content: space-between; align-items: center; padding: 11px 18px; border-bottom: 1px solid var(--border); font-size: 13px; }
+.desglose-row:last-child { border-bottom: none; }
+.desglose-row.tot { background: var(--stone); font-weight: 600; font-size: 14px; }
+.desglose-row.tot .dval { color: var(--terra); }
+
+/* Acciones de paso */
+.step-actions { display: flex; gap: 12px; margin-top: 8px; }
+.btn-next {
+  flex: 1; padding: 14px; background: var(--accent); color: #fff;
+  border: none; border-radius: 10px; font-size: 15px; font-weight: 500;
+  cursor: pointer; transition: all .2s;
+}
+.btn-next:hover { background: #b8621f; }
+.btn-next:disabled { opacity: .4; cursor: not-allowed; }
+.btn-back {
+  padding: 14px 22px; background: transparent;
+  border: 1.5px solid var(--border); border-radius: 10px;
+  font-size: 14px; color: var(--muted); cursor: pointer; transition: all .2s;
+}
+.btn-back:hover { border-color: var(--warm); color: var(--ink); }
+
+/* Éxito */
+.success-screen { text-align: center; padding: 48px 0; }
+.success-icon {
+  width: 72px; height: 72px; border-radius: 50%;
+  background: rgba(58,102,72,.12); border: 2px solid rgba(58,102,72,.25);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 30px; margin: 0 auto 24px;
+  animation: popIn .5s cubic-bezier(.34,1.56,.64,1);
+}
+@keyframes popIn { from{transform:scale(0);opacity:0} to{transform:scale(1);opacity:1} }
+.success-title { font-size: 36px; margin-bottom: 10px; }
+.success-box {
+  display: inline-block; background: var(--light); border: 1px solid var(--border);
+  border-radius: 8px; padding: 14px 24px; font-size: 13px;
+  color: var(--muted); margin: 14px 0 28px; text-align: left;
+}
+.success-box strong { color: var(--ink); }
+
+/* ════════════════════════════════════════════════
+   PESTAÑA 3: ADMIN
+════════════════════════════════════════════════ */
+
+/* Login */
+.login-screen {
+  min-height: calc(100vh - 56px); display: flex;
+  align-items: center; justify-content: center;
+  background: var(--cream);
+}
+.login-card {
+  background: #fff; border: 1px solid var(--border);
+  border-radius: 16px; padding: 44px; width: 380px;
+}
+.login-card h2 { font-size: 26px; margin-bottom: 4px; }
+.login-sub { color: var(--muted); font-size: 14px; margin-bottom: 24px; }
+.login-hint {
+  background: #fdf6ee; border: 1px solid #f0d5b0;
+  border-radius: 8px; padding: 10px 14px;
+  font-size: 13px; color: #7a4e0a; margin-bottom: 24px;
+}
+.lfield { margin-bottom: 16px; }
+.lfield label { display: block; font-size: 13px; font-weight: 500; margin-bottom: 6px; color: var(--muted); }
+.lfield input {
+  width: 100%; padding: 10px 14px; border: 1.5px solid var(--border);
+  border-radius: 8px; font-size: 14px; transition: border-color .2s;
+}
+.lfield input:focus { outline: none; border-color: var(--accent); }
+.btn-login {
+  width: 100%; padding: 12px; background: var(--accent); color: #fff;
+  border: none; border-radius: 8px; font-size: 15px; font-weight: 500;
+  cursor: pointer; transition: opacity .15s;
+}
+.btn-login:hover { opacity: .88; }
+.login-err { color: var(--danger); font-size: 13px; margin-top: 10px; min-height: 18px; }
+
+/* Panel shell */
+.admin-shell { display: flex; height: calc(100vh - 56px); }
+
+/* Sidebar */
+.sidebar {
+  width: 220px; background: #1a1208; flex-shrink: 0;
+  display: flex; flex-direction: column;
+  position: sticky; top: 56px; height: calc(100vh - 56px);
+}
+.sb-head { padding: 20px 18px 16px; border-bottom: 1px solid rgba(255,255,255,.08); }
+.sb-biz  { font-size: 14px; font-weight: 500; color: var(--cream); }
+.sb-plan { font-size: 11px; color: var(--muted); margin-top: 2px; }
+.sb-nav  { padding: 10px 0; flex: 1; }
+.sb-btn {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 18px; font-size: 13px; color: #9a8a7a;
+  background: none; border: none; width: 100%; text-align: left;
+  cursor: pointer; transition: all .15s;
+}
+.sb-btn:hover { color: var(--cream); background: rgba(255,255,255,.04); }
+.sb-btn.active { color: var(--accent); background: rgba(201,111,40,.1); }
+.sb-icon { font-size: 15px; opacity: .7; }
+.sb-foot { padding: 14px 18px; border-top: 1px solid rgba(255,255,255,.08); }
+.sb-email { font-size: 11px; color: var(--muted); word-break: break-all; }
+.sb-logout { font-size: 12px; color: var(--danger); background: none; border: none; cursor: pointer; margin-top: 6px; }
+
+/* Admin main */
+.admin-main { flex: 1; overflow-y: auto; padding: 28px 32px; background: #f0ece4; }
+.apage { display: none; }
+.apage.active { display: block; }
+.apage-head { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 24px; flex-wrap: wrap; gap: 12px; }
+.apage-title { font-size: 22px; font-weight: 500; }
+.apage-sub   { font-size: 13px; color: var(--muted); margin-top: 2px; }
+
+/* Stat cards */
+.stat-grid4 { display: grid; grid-template-columns: repeat(4,1fr); gap: 14px; margin-bottom: 22px; }
+.astat { background: #fff; border: 1px solid var(--border); border-radius: var(--r); padding: 18px; }
+.astat-lbl { font-size: 11px; text-transform: uppercase; letter-spacing: .5px; color: var(--muted); margin-bottom: 8px; }
+.astat-val { font-size: 28px; font-weight: 600; line-height: 1; }
+.astat-sub { font-size: 11px; color: var(--muted); margin-top: 4px; }
+
+/* Tabla admin */
+.table-wrap { background: #fff; border: 1px solid var(--border); border-radius: var(--r); overflow: hidden; }
+.table-toolbar { display: flex; justify-content: space-between; align-items: center; padding: 12px 16px; border-bottom: 1px solid var(--border); gap: 10px; flex-wrap: wrap; }
+.fpills { display: flex; gap: 6px; flex-wrap: wrap; }
+.fpill { padding: 4px 12px; border-radius: 20px; border: 1px solid var(--border); font-size: 12px; background: #fff; cursor: pointer; transition: all .15s; }
+.fpill.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+table { width: 100%; border-collapse: collapse; }
+th { background: #f8f5f0; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .4px; color: var(--muted); padding: 10px 14px; text-align: left; border-bottom: 1px solid var(--border); }
+td { padding: 12px 14px; border-bottom: 1px solid var(--border); vertical-align: middle; font-size: 13px; }
+tr:last-child td { border-bottom: none; }
+tr:hover td { background: #faf8f4; }
+
+/* Thumb producto */
+.thumb { width: 44px; height: 44px; border-radius: 6px; object-fit: cover; background: var(--stone); flex-shrink: 0; }
+.td-prod { display: flex; align-items: center; gap: 10px; }
+.td-name { font-weight: 500; font-size: 13px; }
+.td-meta { font-size: 11px; color: var(--muted); margin-top: 1px; }
+
+/* Badge */
+.badge { display: inline-block; padding: 2px 9px; border-radius: 12px; font-size: 11px; font-weight: 500; }
+.b-ok   { background: #e2f0e8; color: #1f5c35; }
+.b-warn { background: #faeeda; color: #6b3f0b; }
+.b-info { background: #e6f0fb; color: #0c447c; }
+.b-mute { background: #f0ece4; color: #5f5e5a; }
+.b-err  { background: #fce8e8; color: #7a1f1f; }
+
+/* Precio editable */
+.price-cell { display: flex; align-items: center; gap: 6px; }
+.price-inp {
+  width: 72px; padding: 4px 8px; border: 1px solid var(--border);
+  border-radius: 6px; font-size: 13px; text-align: right;
+}
+.price-inp:focus { outline: 2px solid var(--accent); border-color: transparent; }
+.price-changed { border-color: var(--accent) !important; }
+
+/* Toggle visibilidad */
+.vis-wrap { display: flex; align-items: center; gap: 6px; cursor: pointer; }
+.vis-track { width: 30px; height: 17px; border-radius: 9px; background: var(--border); position: relative; transition: background .2s; flex-shrink: 0; }
+.vis-track.on { background: var(--ok); }
+.vis-knob { position: absolute; top: 2px; left: 2px; width: 13px; height: 13px; background: #fff; border-radius: 50%; transition: transform .2s; }
+.vis-track.on .vis-knob { transform: translateX(13px); }
+
+/* Sparkline */
+.spark { display: flex; align-items: flex-end; gap: 2px; height: 22px; }
+.spark-bar { width: 5px; border-radius: 2px 2px 0 0; background: var(--stone); }
+.spark-bar.hi    { background: var(--accent); }
+.spark-bar.alert { background: var(--danger); }
+
+/* Botones admin */
+.abtn { padding: 6px 14px; border-radius: 7px; border: none; font-size: 12px; font-weight: 500; cursor: pointer; transition: opacity .15s; }
+.abtn:hover { opacity: .85; }
+.abtn-primary { background: var(--accent); color: #fff; }
+.abtn-ghost   { background: transparent; border: 1px solid var(--border); color: var(--ink); }
+.abtn-ok      { background: var(--ok); color: #fff; }
+.abtn-run {
+  display: flex; align-items: center; gap: 7px;
+  background: var(--deep); color: var(--cream);
+  padding: 8px 18px; border-radius: 8px; border: none;
+  font-size: 13px; font-weight: 500; cursor: pointer; transition: opacity .2s;
+}
+.abtn-run:hover { opacity: .85; }
+.abtn-run.running { opacity: .55; pointer-events: none; }
+
+/* Config panel */
+.cfg-card { background: #fff; border: 1px solid var(--border); border-radius: var(--r); padding: 28px; max-width: 580px; margin-bottom: 20px; }
+.cfg-card h3 { font-size: 17px; margin-bottom: 20px; font-family: 'DM Sans', sans-serif; font-weight: 500; }
+.cfg-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.cfg-field { display: flex; flex-direction: column; gap: 5px; }
+.cfg-label { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .5px; color: var(--muted); }
+.cfg-input {
+  padding: 9px 12px; border: 1.5px solid var(--border);
+  border-radius: 8px; font-size: 14px; background: #faf8f4;
+}
+.cfg-input:focus { outline: 2px solid var(--accent); border-color: transparent; background: #fff; }
+select.cfg-input { cursor: pointer; }
+.cfg-toggle-row { display: flex; align-items: center; gap: 10px; }
+
+/* Modal */
+.modal-bg {
+  display: none; position: fixed; inset: 0;
+  background: rgba(0,0,0,.4); z-index: 999;
+  align-items: center; justify-content: center;
+}
+.modal-bg.open { display: flex; }
+.modal {
+  background: #fff; border-radius: 14px; padding: 32px;
+  width: 540px; max-height: 80vh; overflow-y: auto;
+}
+.modal h3 { font-size: 18px; margin-bottom: 20px; font-family: 'DM Sans', sans-serif; font-weight: 500; }
+.modal-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid var(--border); font-size: 14px; }
+.modal-row:last-child { border-bottom: none; }
+.modal-total { display: flex; justify-content: space-between; padding: 12px 0 0; font-weight: 600; font-size: 16px; }
+
+/* Toast */
+#toast {
+  position: fixed; bottom: 24px; right: 24px;
+  padding: 11px 20px; border-radius: 9px; color: #fff;
+  font-size: 13px; font-weight: 500; opacity: 0;
+  transform: translateY(8px); pointer-events: none;
+  transition: opacity .25s, transform .25s; z-index: 9999;
+  max-width: 320px; line-height: 1.4;
+}
+#toast.show { opacity: 1; transform: translateY(0); }
+#toast.ok   { background: #3a6648; }
+#toast.warn { background: #7a4e0a; }
+#toast.err  { background: #963030; }
+
+/* Responsive */
+@media (max-width: 640px) {
+  .portfolio-grid { grid-template-columns: 1fr 1fr; }
+  .stat-grid4     { grid-template-columns: 1fr 1fr; }
+  .stats-bar      { flex-wrap: wrap; }
+  .form-grid, .cfg-grid { grid-template-columns: 1fr; }
+  .main-nav { padding: 0 16px; }
+  .hero, .section, .config-wrap { padding-left: 20px; padding-right: 20px; }
+  .sidebar { display: none; }
+  .admin-main { padding: 20px; }
+}
+</style>
+</head>
+<body>
+
+<!-- ══════════════════════════════════════════
+     NAVEGACIÓN PRINCIPAL
+══════════════════════════════════════════ -->
+<nav class="main-nav">
+  <div class="nav-logo" onclick="switchTab('portfolio')">Anatoliy <span>Reformas</span></div>
+  <div class="nav-tabs">
+    <button class="nav-tab active" id="tab-portfolio"   onclick="switchTab('portfolio')">Portfolio</button>
+    <button class="nav-tab"        id="tab-presupuesto" onclick="switchTab('presupuesto')">Presupuesto</button>
+    <button class="nav-tab"        id="tab-admin"       onclick="switchTab('admin')">Admin</button>
+  </div>
+  <div class="nav-contact">Madrid · +34 600 000 000</div>
+</nav>
+
+<!-- ══════════════════════════════════════════
+     PESTAÑA 1: PORTFOLIO
+══════════════════════════════════════════ -->
+<div class="view active" id="view-portfolio">
+
+  <section class="hero">
+    <div class="hero-pattern"></div>
+    <div class="hero-glow"></div>
+    <div class="hero-tag">Reformas en Madrid desde 2014</div>
+    <h1>Tu hogar,<br>tu <em>mejor reforma</em></h1>
+    <p class="hero-sub">Profesionales certificados. Presupuesto sin compromiso en 24 horas.</p>
+    <div class="hero-btns">
+      <button class="btn-hero btn-hero-primary" onclick="switchTab('presupuesto')">Pedir presupuesto</button>
+      <button class="btn-hero btn-hero-ghost"   onclick="document.getElementById('portfolio-sec').scrollIntoView({behavior:'smooth'})">Ver trabajos</button>
+    </div>
+  </section>
+
+  <div class="stats-bar">
+    <div class="stat-item">
+      <div class="stat-num">+200</div>
+      <div class="stat-lbl">Reformas completadas</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-num">10</div>
+      <div class="stat-lbl">Años de experiencia</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-num">4.8★</div>
+      <div class="stat-lbl">Valoración media</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-num">48h</div>
+      <div class="stat-lbl">Respuesta garantizada</div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-tag">Nuestros servicios</div>
+    <h2 class="section-title">Todo lo que necesita<br>tu reforma</h2>
+    <p class="section-sub">Desde una habitación hasta la vivienda completa, gestionamos cada detalle con precisión.</p>
+    <div class="services-grid">
+      <div class="service-card">
+        <div class="service-icon">🏠</div>
+        <div class="service-name">Reforma integral</div>
+        <div class="service-desc">Renovación completa de la vivienda. Coordinamos todos los gremios.</div>
+      </div>
+      <div class="service-card">
+        <div class="service-icon">🚿</div>
+        <div class="service-name">Baños y cocinas</div>
+        <div class="service-desc">Alicatado, fontanería, electricidad y mobiliario a medida.</div>
+      </div>
+      <div class="service-card">
+        <div class="service-icon">🪵</div>
+        <div class="service-name">Suelos y pavimentos</div>
+        <div class="service-desc">Parquet, tarima, gres y microcemento con instalación incluida.</div>
+      </div>
+      <div class="service-card">
+        <div class="service-icon">🎨</div>
+        <div class="service-name">Pintura y acabados</div>
+        <div class="service-desc">Pintura plástica, decorativa y tratamientos especiales.</div>
+      </div>
+      <div class="service-card">
+        <div class="service-icon">🧱</div>
+        <div class="service-name">Tabiquería Pladur</div>
+        <div class="service-desc">Divisiones, techos continuos y trasdosados con aislamiento.</div>
+      </div>
+      <div class="service-card">
+        <div class="service-icon">🔌</div>
+        <div class="service-name">Instalaciones</div>
+        <div class="service-desc">Electricidad, fontanería y climatización certificadas.</div>
+      </div>
+    </div>
+  </div>
+
+  <div id="portfolio-sec" style="background:var(--light);padding:72px 40px">
+    <div style="max-width:1080px;margin:0 auto">
+      <div class="section-tag">Trabajos realizados</div>
+      <h2 class="section-title">Nuestro portfolio</h2>
+      <p class="section-sub">Cada proyecto es único. Aquí algunos de los que más nos enorgullecen.</p>
+      <div class="portfolio-grid">
+        <div class="portfolio-item">
+          <img class="portfolio-img" src="https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?w=600&q=80" alt="Cocina">
+          <div class="portfolio-overlay"><div class="portfolio-label">Cocina — Majadahonda · 2024</div></div>
+        </div>
+        <div class="portfolio-item">
+          <img class="portfolio-img" src="https://images.unsplash.com/photo-1552321554-5fefe8c9ef14?w=600&q=80" alt="Baño">
+          <div class="portfolio-overlay"><div class="portfolio-label">Baño principal — Pozuelo · 2024</div></div>
+        </div>
+        <div class="portfolio-item">
+          <img class="portfolio-img" src="https://images.unsplash.com/photo-1617806118233-18e1de247200?w=600&q=80" alt="Salón">
+          <div class="portfolio-overlay"><div class="portfolio-label">Salón integral — Las Rozas · 2023</div></div>
+        </div>
+        <div class="portfolio-item">
+          <img class="portfolio-img" src="https://images.unsplash.com/photo-1541123437800-1bb1317badc2?w=600&q=80" alt="Suelo">
+          <div class="portfolio-overlay"><div class="portfolio-label">Tarima roble — Madrid · 2024</div></div>
+        </div>
+        <div class="portfolio-item">
+          <img class="portfolio-img" src="https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=600&q=80" alt="Azulejo">
+          <div class="portfolio-overlay"><div class="portfolio-label">Porcelánico — Alcobendas · 2023</div></div>
+        </div>
+        <div class="portfolio-item">
+          <img class="portfolio-img" src="https://images.unsplash.com/photo-1497366216548-37526070297c?w=600&q=80" alt="Oficina">
+          <div class="portfolio-overlay"><div class="portfolio-label">Oficina pladur — Madrid · 2024</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="contact-wrap">
+    <h2>¿Listo para tu reforma?</h2>
+    <p>Calcula tu presupuesto orientativo en menos de 2 minutos. Sin compromiso.</p>
+    <div class="contact-info">
+      <div class="contact-item">
+        <div class="contact-item-label">Teléfono</div>
+        <div class="contact-item-val">+34 600 000 000</div>
+      </div>
+      <div class="contact-item">
+        <div class="contact-item-label">Email</div>
+        <div class="contact-item-val">info@anatoliyreformas.es</div>
+      </div>
+      <div class="contact-item">
+        <div class="contact-item-label">Zona de trabajo</div>
+        <div class="contact-item-val">Madrid y alrededores</div>
+      </div>
+    </div>
+    <div style="margin-top:36px;position:relative">
+      <button class="btn-hero btn-hero-primary" style="font-size:16px;padding:16px 40px" onclick="switchTab('presupuesto')">
+        Calcular presupuesto ahora
+      </button>
+    </div>
+  </div>
+
+  <footer class="footer">
+    <div class="footer-brand">Anatoliy Reformas S.L.</div>
+    <div class="footer-info">
+      CIF B-00000000 · Madrid<br>
+      info@anatoliyreformas.es · +34 600 000 000
+    </div>
+  </footer>
+</div>
+
+<!-- ══════════════════════════════════════════
+     PESTAÑA 2: PRESUPUESTO
+══════════════════════════════════════════ -->
+<div class="view" id="view-presupuesto">
+  <div class="config-wrap">
+    <div class="config-header">
+      <h2>Tu presupuesto</h2>
+      <p>Configura tu reforma y recibe una estimación al instante · Precios de Obramart actualizados</p>
+    </div>
+
+    <div class="stepper" id="stepper">
+      <div class="step-it act" id="sp1"><div class="step-dot">1</div><span class="step-lbl">Tipo</span><div class="step-line"></div></div>
+      <div class="step-it"     id="sp2"><div class="step-dot">2</div><span class="step-lbl">Materiales</span><div class="step-line"></div></div>
+      <div class="step-it"     id="sp3"><div class="step-dot">3</div><span class="step-lbl">Superficie</span><div class="step-line"></div></div>
+      <div class="step-it"     id="sp4"><div class="step-dot">4</div><span class="step-lbl">Presupuesto</span><div class="step-line"></div></div>
+      <div class="step-it"     id="sp5"><div class="step-dot">5</div><span class="step-lbl">Tus datos</span></div>
+    </div>
+
+    <!-- PASO 1 -->
+    <div class="step-panel active" id="p1">
+      <div class="panel-title">¿Qué quieres reformar?</div>
+      <div class="panel-sub">Elige el tipo de intervención y la calidad de los materiales.</div>
+      <div class="opt-grid">
+        <div class="opt-card" onclick="selOpt(this,'tipo','integral')"><div class="opt-check">✓</div><div class="opt-icon">🏠</div><div class="opt-name">Reforma integral</div><div class="opt-desc">Toda la vivienda</div></div>
+        <div class="opt-card" onclick="selOpt(this,'tipo','parcial')"><div class="opt-check">✓</div><div class="opt-icon">🔨</div><div class="opt-name">Reforma parcial</div><div class="opt-desc">Estancias concretas</div></div>
+        <div class="opt-card" onclick="selOpt(this,'tipo','bano')"><div class="opt-check">✓</div><div class="opt-icon">🚿</div><div class="opt-name">Baño</div><div class="opt-desc">Completo o reforma</div></div>
+        <div class="opt-card" onclick="selOpt(this,'tipo','cocina')"><div class="opt-check">✓</div><div class="opt-icon">🍳</div><div class="opt-name">Cocina</div><div class="opt-desc">Suelo, paredes…</div></div>
+        <div class="opt-card" onclick="selOpt(this,'tipo','pintura')"><div class="opt-check">✓</div><div class="opt-icon">🎨</div><div class="opt-name">Pintura</div><div class="opt-desc">Paredes y techos</div></div>
+        <div class="opt-card" onclick="selOpt(this,'tipo','suelo')"><div class="opt-check">✓</div><div class="opt-icon">🪵</div><div class="opt-name">Suelo nuevo</div><div class="opt-desc">Parquet, gres…</div></div>
+      </div>
+      <div class="panel-sub" style="margin-bottom:14px">Calidad de los materiales</div>
+      <div class="cal-grid">
+        <div class="opt-card" onclick="selOpt(this,'calidad','basica')"><div class="opt-check">✓</div><div class="opt-icon">💰</div><div class="opt-name">Básica</div><div class="opt-desc">Económica y funcional</div></div>
+        <div class="opt-card sel" onclick="selOpt(this,'calidad','media')"><div class="opt-check">✓</div><div class="opt-icon">⭐</div><div class="opt-name">Media</div><div class="opt-desc">La más solicitada</div></div>
+        <div class="opt-card" onclick="selOpt(this,'calidad','premium')"><div class="opt-check">✓</div><div class="opt-icon">💎</div><div class="opt-name">Premium</div><div class="opt-desc">Alta gama</div></div>
+      </div>
+      <div class="step-actions"><button class="btn-next" onclick="goStep(2)">Siguiente →</button></div>
+    </div>
+
+    <!-- PASO 2 -->
+    <div class="step-panel" id="p2">
+      <div class="panel-title">Elige los materiales</div>
+      <div class="panel-sub">Precios actualizados desde Obramart · selecciona y añade los metros cuadrados</div>
+      <div class="panel-sub" style="margin-bottom:12px;margin-top:-12px">Suelos</div>
+      <div class="prod-grid" id="grid-suelo"><div class="prod-loading">Cargando productos…</div></div>
+      <div class="panel-sub" style="margin-bottom:12px">Pintura y tabiquería</div>
+      <div class="prod-grid" id="grid-otros"><div class="prod-loading">Cargando productos…</div></div>
+      <div class="step-actions">
+        <button class="btn-back" onclick="goStep(1)">← Atrás</button>
+        <button class="btn-next" onclick="goStep(3)">Siguiente →</button>
+      </div>
+    </div>
+
+    <!-- PASO 3 -->
+    <div class="step-panel" id="p3">
+      <div class="panel-title">Dimensiones</div>
+      <div class="panel-sub">Superficie total de la zona a reformar</div>
+      <div class="surf-box">
+        <div><div style="font-weight:500;font-size:15px">Superficie total</div><div style="font-size:13px;color:var(--muted);margin-top:3px">Metros cuadrados afectados</div></div>
+        <div class="surf-ctrl">
+          <button class="surf-btn" onclick="changeM2(-5)">−</button>
+          <div><div class="surf-num" id="m2disp">60</div><div style="text-align:center;font-size:12px;color:var(--muted)">m²</div></div>
+          <button class="surf-btn" onclick="changeM2(5)">+</button>
+        </div>
+      </div>
+      <div class="panel-sub" style="margin-bottom:14px">Habitaciones afectadas</div>
+      <div class="hab-row">
+        <div class="hab-btn" onclick="selHab(this,1)"><div class="hab-num">1</div><div class="hab-txt">hab.</div></div>
+        <div class="hab-btn sel" onclick="selHab(this,2)"><div class="hab-num">2</div><div class="hab-txt">hab.</div></div>
+        <div class="hab-btn" onclick="selHab(this,3)"><div class="hab-num">3</div><div class="hab-txt">hab.</div></div>
+        <div class="hab-btn" onclick="selHab(this,4)"><div class="hab-num">4</div><div class="hab-txt">hab.</div></div>
+        <div class="hab-btn" onclick="selHab(this,5)"><div class="hab-num">5+</div><div class="hab-txt">hab.</div></div>
+      </div>
+      <div class="step-actions">
+        <button class="btn-back" onclick="goStep(2)">← Atrás</button>
+        <button class="btn-next" onclick="calcular()">Ver presupuesto →</button>
+      </div>
+    </div>
+
+    <!-- PASO 4 -->
+    <div class="step-panel" id="p4">
+      <div class="panel-title">Tu presupuesto orientativo</div>
+      <div class="panel-sub">Calculado con los precios reales de Obramart</div>
+      <div class="budget-box">
+        <div class="budget-lbl">Estimación total IVA incluido</div>
+        <div class="budget-total"><span class="budget-cur">€</span><span id="total-disp">—</span></div>
+        <div class="budget-iva" id="iva-disp">—</div>
+        <div class="budget-disc">Presupuesto orientativo · no vinculante · válido 30 días</div>
+      </div>
+      <div class="desglose-wrap" id="desglose-wrap"></div>
+      <div class="step-actions">
+        <button class="btn-back" onclick="goStep(3)">← Modificar</button>
+        <button class="btn-next" onclick="goStep(5)">Solicitar este presupuesto →</button>
+      </div>
+    </div>
+
+    <!-- PASO 5 -->
+    <div class="step-panel" id="p5">
+      <div class="panel-title">¿A quién enviamos el presupuesto?</div>
+      <div class="panel-sub">Recibirás el detalle completo por email</div>
+      <div class="form-grid">
+        <div class="form-group"><label class="form-label">Nombre *</label><input class="form-input" type="text" id="c-nom" placeholder="Tu nombre completo"></div>
+        <div class="form-group"><label class="form-label">Teléfono</label><input class="form-input" type="tel" id="c-tel" placeholder="600 000 000"></div>
+        <div class="form-group full"><label class="form-label">Email *</label><input class="form-input" type="email" id="c-email" placeholder="tu@email.com"></div>
+        <div class="form-group full"><label class="form-label">Cuéntanos más (opcional)</label><textarea class="form-input" id="c-notas" placeholder="Ej: piso de 80m² en Madrid, cocina y salón…"></textarea></div>
+      </div>
+      <div class="rgpd-row">
+        <div class="rgpd-box" id="rgpd-box" onclick="toggleRgpd()"></div>
+        <div class="rgpd-txt">He leído y acepto la <a href="#">política de privacidad</a>. Mis datos serán tratados por Anatoliy Reformas S.L. únicamente para gestionar este presupuesto. Puedo revocar el consentimiento en cualquier momento.</div>
+      </div>
+      <div class="step-actions">
+        <button class="btn-back" onclick="goStep(4)">← Ver presupuesto</button>
+        <button class="btn-next" id="btn-enviar" onclick="enviar()" disabled>Enviar solicitud</button>
+      </div>
+    </div>
+
+    <!-- ÉXITO -->
+    <div class="step-panel" id="p-exito">
+      <div class="success-screen">
+        <div class="success-icon">✓</div>
+        <h2 class="success-title">¡Solicitud enviada!</h2>
+        <p style="color:var(--muted);font-size:15px;font-weight:300;max-width:400px;margin:0 auto 14px">Anatoliy Reformas revisará tu solicitud y te contactará en las próximas horas.</p>
+        <div class="success-box" id="exito-detalle"></div>
+        <button class="btn-next" style="max-width:260px;margin:0 auto" onclick="resetConfig()">Hacer otra consulta</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════
+     PESTAÑA 3: ADMIN
+══════════════════════════════════════════ -->
+<div class="view" id="view-admin">
+
+  <!-- LOGIN -->
+  <div class="login-screen" id="login-screen">
+    <div class="login-card">
+      <h2>Panel de administración</h2>
+      <p class="login-sub">Anatoliy Reformas S.L.</p>
+      <div class="login-hint">
+        Usuario: <strong>admin@anatoliyreformas.es</strong><br>
+        Contraseña: <strong>admin1234</strong>
+      </div>
+      <div class="lfield">
+        <label>Email</label>
+        <input type="email" id="l-email" value="admin@anatoliyreformas.es" onkeydown="if(event.key==='Enter')doLogin()">
+      </div>
+      <div class="lfield">
+        <label>Contraseña</label>
+        <input type="password" id="l-pass" value="admin1234" onkeydown="if(event.key==='Enter')doLogin()">
+      </div>
+      <button class="btn-login" onclick="doLogin()">Entrar al panel</button>
+      <p class="login-err" id="login-err"></p>
+    </div>
+  </div>
+
+  <!-- PANEL -->
+  <div class="admin-shell" id="admin-panel" style="display:none">
+    <aside class="sidebar">
+      <div class="sb-head">
+        <div class="sb-biz">Anatoliy Reformas</div>
+        <div class="sb-plan">Plan básico · conectado</div>
+      </div>
+      <nav class="sb-nav">
+        <button class="sb-btn active" onclick="showAdmin('dashboard',this)"><span class="sb-icon">▦</span> Resumen</button>
+        <button class="sb-btn" onclick="showAdmin('catalogo',this)"><span class="sb-icon">⊞</span> Catálogo precios</button>
+        <button class="sb-btn" onclick="showAdmin('presupuestos',this)"><span class="sb-icon">📋</span> Presupuestos</button>
+        <button class="sb-btn" onclick="showAdmin('configuracion',this)"><span class="sb-icon">⚙</span> Configuración</button>
+      </nav>
+      <div class="sb-foot">
+        <div class="sb-email">admin@anatoliyreformas.es</div>
+        <button class="sb-logout" onclick="doLogout()">Cerrar sesión</button>
+      </div>
+    </aside>
+
+    <main class="admin-main">
+
+      <!-- DASHBOARD -->
+      <div class="apage active" id="ap-dashboard">
+        <div class="apage-head">
+          <div><div class="apage-title">Resumen</div><div class="apage-sub" id="fecha-hoy"></div></div>
+        </div>
+        <div class="stat-grid4">
+          <div class="astat"><div class="astat-lbl">Presupuestos este mes</div><div class="astat-val">4</div><div class="astat-sub">+2 vs mes anterior</div></div>
+          <div class="astat"><div class="astat-lbl">Pendientes revisión</div><div class="astat-val" style="color:var(--terra)">2</div><div class="astat-sub">Requieren aprobación</div></div>
+          <div class="astat"><div class="astat-lbl">Productos indexados</div><div class="astat-val">7</div><div class="astat-sub">Desde Obramart</div></div>
+          <div class="astat"><div class="astat-lbl">Alertas de precio</div><div class="astat-val" style="color:var(--danger)" id="num-alertas">1</div><div class="astat-sub">Variación &gt;5%</div></div>
+        </div>
+        <div class="table-wrap">
+          <div class="table-toolbar"><div style="font-weight:500;font-size:14px">Últimos presupuestos</div></div>
+          <table>
+            <thead><tr><th>Cliente</th><th>Reforma</th><th>Total</th><th>Estado</th><th>Fecha</th><th></th></tr></thead>
+            <tbody>
+              <tr><td><strong>María Sánchez</strong><br><span style="font-size:11px;color:var(--muted)">maria@email.es</span></td><td>Integral 80m²</td><td><strong>8.334€</strong></td><td><span class="badge b-warn">pendiente</span></td><td style="color:var(--muted);font-size:12px">Hoy</td><td><button class="abtn abtn-ok" onclick="aprobarDemo(this,'María Sánchez')">Aprobar</button></td></tr>
+              <tr><td><strong>Carlos Ruiz</strong><br><span style="font-size:11px;color:var(--muted)">carlos@email.es</span></td><td>Baño completo</td><td><strong>3.210€</strong></td><td><span class="badge b-warn">pendiente</span></td><td style="color:var(--muted);font-size:12px">Ayer</td><td><button class="abtn abtn-ok" onclick="aprobarDemo(this,'Carlos Ruiz')">Aprobar</button></td></tr>
+              <tr><td><strong>Ana López</strong><br><span style="font-size:11px;color:var(--muted)">ana@email.es</span></td><td>Pintura 50m²</td><td><strong>1.911€</strong></td><td><span class="badge b-ok">enviado</span></td><td style="color:var(--muted);font-size:12px">01/04</td><td>—</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- CATÁLOGO PRECIOS -->
+      <div class="apage" id="ap-catalogo">
+        <div class="apage-head">
+          <div><div class="apage-title">Catálogo de precios</div><div class="apage-sub">Scraping Obramart · última ejecución hoy 06:00</div></div>
+          <button class="abtn-run" id="btn-run" onclick="runScraper()"><span id="run-icon">↻</span> Actualizar precios</button>
+        </div>
+        <div class="table-wrap">
+          <div class="table-toolbar">
+            <div class="fpills">
+              <button class="fpill active" onclick="filtrarCat('todos',this)">Todos</button>
+              <button class="fpill" onclick="filtrarCat('suelo',this)">Suelos</button>
+              <button class="fpill" onclick="filtrarCat('pintura',this)">Pinturas</button>
+              <button class="fpill" onclick="filtrarCat('tabiqueria',this)">Tabiquería</button>
+              <button class="fpill" onclick="filtrarCat('alertas',this)">⚠ Alertas</button>
+            </div>
+            <div style="font-size:12px;color:var(--muted)">Precio manual tiene prioridad</div>
+          </div>
+          <table>
+            <thead><tr><th>Producto</th><th>Categ.</th><th>Precio scrapeado</th><th>Precio manual</th><th>Historial 5d</th><th>Stock</th><th>Visible</th></tr></thead>
+            <tbody id="tbody-cat"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- PRESUPUESTOS -->
+      <div class="apage" id="ap-presupuestos">
+        <div class="apage-head">
+          <div><div class="apage-title">Presupuestos</div><div class="apage-sub">Generados desde el configurador web</div></div>
+          <select id="filtro-estado" onchange="renderQuotes()" style="padding:8px 12px;border:1px solid var(--border);border-radius:8px;font-size:13px;background:#fff">
+            <option value="">Todos</option>
+            <option value="pendiente_revision">Pendientes</option>
+            <option value="enviado">Enviados</option>
+            <option value="caducado">Caducados</option>
+          </select>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Cliente</th><th>Reforma</th><th>Total</th><th>Estado</th><th>Válido hasta</th><th>Acciones</th></tr></thead>
+            <tbody id="tbody-quotes"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- CONFIGURACIÓN -->
+      <div class="apage" id="ap-configuracion">
+        <div class="apage-head"><div class="apage-title">Configuración del motor</div></div>
+        <div class="cfg-card">
+          <h3>Parámetros de cálculo</h3>
+          <div class="cfg-grid">
+            <div class="cfg-field"><label class="cfg-label">Modo de margen</label>
+              <select class="cfg-input" id="cfg-tipo">
+                <option value="porcentaje_total" selected>% sobre el total</option>
+                <option value="porcentaje_materiales">% sobre materiales</option>
+                <option value="precio_hora">Precio por hora</option>
+              </select>
+            </div>
+            <div class="cfg-field"><label class="cfg-label">Valor del margen</label><input class="cfg-input" type="number" id="cfg-margen" value="22" step="0.5" min="0"></div>
+            <div class="cfg-field"><label class="cfg-label">IVA (%)</label><input class="cfg-input" type="number" id="cfg-iva" value="21"></div>
+            <div class="cfg-field"><label class="cfg-label">Presupuesto mínimo (€)</label><input class="cfg-input" type="number" id="cfg-minimo" value="500"></div>
+            <div class="cfg-field"><label class="cfg-label">Validez (días)</label><input class="cfg-input" type="number" id="cfg-validez" value="30"></div>
+            <div class="cfg-field"><label class="cfg-label">Desplazamiento (€)</label><input class="cfg-input" type="number" id="cfg-desplaz" value="80"></div>
+          </div>
+          <div class="cfg-toggle-row" style="margin-top:16px">
+            <div class="vis-wrap" onclick="toggleAutoEnvio()">
+              <div class="vis-track" id="auto-track"><div class="vis-knob"></div></div>
+              <span style="font-size:13px;color:var(--muted)" id="auto-label">Revisión previa activada</span>
+            </div>
+          </div>
+          <button class="abtn abtn-primary" style="margin-top:20px" onclick="guardarConfig()">Guardar configuración</button>
+        </div>
+        <div class="cfg-card">
+          <h3>Conexión al backend</h3>
+          <div style="font-size:13px;color:var(--muted);line-height:1.8">
+            <div style="margin-bottom:6px">API: <code style="background:#f0ece4;padding:2px 6px;border-radius:4px">https://api-reformas-production.up.railway.app</code></div>
+            <div>Motor: <code style="background:#f0ece4;padding:2px 6px;border-radius:4px">https://web-production-50094.up.railway.app</code></div>
+          </div>
+        </div>
+      </div>
+
+    </main>
+  </div>
+</div>
+
+<!-- Modal presupuesto -->
+<div class="modal-bg" id="modal-bg" onclick="if(event.target===this)closeModal()">
+  <div class="modal">
+    <h3 id="modal-title">Detalle del presupuesto</h3>
+    <div id="modal-body"></div>
+    <div style="display:flex;gap:10px;margin-top:24px">
+      <button class="abtn abtn-ok" id="modal-aprobar" onclick="aprobarDesdeModal()">Aprobar y enviar</button>
+      <button class="abtn abtn-ghost" onclick="closeModal()">Cerrar</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+'use strict';
+
+// ═══════════════════════════════════════════════════════════
+//  CONFIGURACIÓN — edita estos valores para cada cliente
+// ═══════════════════════════════════════════════════════════
+const CFG = {
+  API_URL:      "https://api-reformas-production.up.railway.app",
+  MOTOR_URL:    "https://web-production-50094.up.railway.app",
+  TENANT_SLUG:  "reformas-demo",
+  LOGIN_EMAIL:  "admin@anatoliyreformas.es",
+  LOGIN_PASS:   "admin1234",
+};
+
+const MOTOR = {
+  margen_tipo:          "porcentaje_total",
+  margen_valor:         22,
+  iva:                  21,
+  minimo_presupuesto:   500,
+  coste_desplazamiento: 80,
+  dias_validez:         30,
+};
+
+// ═══════════════════════════════════════════════════════════
+//  DATOS MOCK (en producción vienen de Supabase via API)
+// ═══════════════════════════════════════════════════════════
+const COEF = { basica: 0.85, media: 1.0, premium: 1.35 };
+
+let PRODUCTOS = [
+  { id:"p1", cat:"suelo",      nombre:"Azulejo porcelánico Travertino Beige 60×60", marca:"Aparici",  precio:18.90, unidad:"m2", proveedor:"Obramart", img:"https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=400&q=80", stock:true, visible:true, hist:[17.70,17.70,18.10,18.50,18.90], alerta:true  },
+  { id:"p2", cat:"suelo",      nombre:"Parquet laminado Roble Natural AC5 8mm",      marca:"Kronotex", precio:16.50, unidad:"m2", proveedor:"Obramart", img:"https://images.unsplash.com/photo-1541123437800-1bb1317badc2?w=400&q=80", stock:true, visible:true, hist:[16.50,16.50,16.50,16.50,16.50], alerta:false },
+  { id:"p3", cat:"suelo",      nombre:"Gres porcelánico Cemento Gris 80×80",         marca:"Vives",    precio:24.30, unidad:"m2", proveedor:"Obramart", img:"https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?w=400&q=80", stock:true, visible:true, hist:[24.30,24.30,24.00,24.00,24.30], alerta:false },
+  { id:"p4", cat:"pintura",    nombre:"Pintura plástica blanca mate 15L",             marca:"Titanlux", precio:32.50, unidad:"l",  proveedor:"Obramart", img:"https://images.unsplash.com/photo-1589939705384-5185137a7f0f?w=400&q=80", stock:true, visible:true, hist:[30.00,30.00,31.20,31.20,32.50], alerta:false },
+  { id:"p5", cat:"pintura",    nombre:"Esmalte satinado blanco paredes 4L",           marca:"Valentine",precio:18.90, unidad:"l",  proveedor:"Obramart", img:"https://images.unsplash.com/photo-1562259929-b4e1fd3aef09?w=400&q=80", stock:true, visible:true, hist:[18.90,18.90,18.90,18.90,18.90], alerta:false },
+  { id:"p6", cat:"tabiqueria", nombre:"Placa Pladur N 15mm 120×260 cm",              marca:"Pladur",   precio:11.20, unidad:"m2", proveedor:"Obramart", img:"https://images.unsplash.com/photo-1504307651254-35680f356dfd?w=400&q=80", stock:true, visible:true, hist:[11.00,11.00,11.00,11.20,11.20], alerta:false },
+  { id:"p7", cat:"tabiqueria", nombre:"Placa Pladur WA antihumedad 15mm",            marca:"Pladur",   precio:14.80, unidad:"m2", proveedor:"Obramart", img:"https://images.unsplash.com/photo-1497366216548-37526070297c?w=400&q=80", stock:true, visible:true, hist:[14.80,14.80,14.80,14.80,14.80], alerta:false },
+];
+
+let QUOTES = [
+  { id:"q1", cliente_nombre:"María Sánchez",  cliente_email:"maria@email.es",  tipo:"Integral 80m²",    total:8334.48, estado:"pendiente_revision", caduca_at:"2026-05-04", desglose:[{concepto:"Parquet laminado AC4",precio_ud:30.38,cantidad:80,subtotal:2430},{concepto:"Mano de obra 120h×25€",precio_ud:25,cantidad:120,subtotal:3000},{concepto:"Margen 22%",precio_ud:1188,cantidad:1,subtotal:1188}], iva:1446.48 },
+  { id:"q2", cliente_nombre:"Carlos Ruiz",    cliente_email:"carlos@email.es", tipo:"Baño 15m²",        total:3210.00, estado:"pendiente_revision", caduca_at:"2026-05-03", desglose:[{concepto:"Azulejo porcelánico",precio_ud:35,cantidad:18,subtotal:630},{concepto:"Mano de obra",precio_ud:28,cantidad:40,subtotal:1120},{concepto:"Margen 22%",precio_ud:385,cantidad:1,subtotal:385}], iva:545.13 },
+  { id:"q3", cliente_nombre:"Ana López",      cliente_email:"ana@email.es",    tipo:"Pintura 50m²",     total:1911.68, estado:"enviado",             caduca_at:"2026-05-01", desglose:[{concepto:"Pintura blanca",precio_ud:4.5,cantidad:50,subtotal:225},{concepto:"Margen 22%",precio_ud:284,cantidad:1,subtotal:284}], iva:331.78 },
+  { id:"q4", cliente_nombre:"Pedro Martín",   cliente_email:"pedro@email.es",  tipo:"Suelo parquet 60m²",total:4950.00, estado:"caducado",            caduca_at:"2026-04-01", desglose:[{concepto:"Parquet laminado",precio_ud:22.5,cantidad:60,subtotal:1350}], iva:848.47 },
+];
+
+// ═══════════════════════════════════════════════════════════
+//  ESTADO
+// ═══════════════════════════════════════════════════════════
+const S = { paso:1, tipo:null, calidad:"media", m2:60, habs:2, rgpd:false, seleccion:{}, resultado:null };
+let autoEnvio = false;
+let modalQId  = null;
+let filtroActual = 'todos';
+
+// ═══════════════════════════════════════════════════════════
+//  NAVEGACIÓN PRINCIPAL
+// ═══════════════════════════════════════════════════════════
+function switchTab(name) {
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+  document.querySelectorAll('.nav-tab').forEach(b => b.classList.remove('active'));
+  document.getElementById('view-' + name).classList.add('active');
+  document.getElementById('tab-' + name).classList.add('active');
+  if (name === 'presupuesto') renderProductos();
+  if (name === 'admin') {
+    document.getElementById('fecha-hoy').textContent =
+      new Date().toLocaleDateString('es-ES', {weekday:'long', day:'numeric', month:'long', year:'numeric'});
+  }
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+// ═══════════════════════════════════════════════════════════
+//  CONFIGURADOR: navegación de pasos
+// ═══════════════════════════════════════════════════════════
+function goStep(n) {
+  if (n === 2 && !S.tipo) { toast('Elige un tipo de reforma', 'warn'); return; }
+  S.paso = n;
+  document.querySelectorAll('.step-panel').forEach(p => p.classList.remove('active'));
+  document.getElementById(n <= 5 ? 'p' + n : 'p-exito').classList.add('active');
+  for (let i = 1; i <= 5; i++) {
+    const sp = document.getElementById('sp' + i);
+    if (!sp) continue;
+    sp.classList.remove('act', 'done');
+    if (i < n)  { sp.classList.add('done'); sp.querySelector('.step-dot').textContent = '✓'; }
+    if (i === n){ sp.classList.add('act');  sp.querySelector('.step-dot').textContent = i; }
+    if (i > n)    sp.querySelector('.step-dot').textContent = i;
+  }
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function selOpt(el, campo, valor) {
+  el.closest('.opt-grid, .cal-grid').querySelectorAll('.opt-card').forEach(c => c.classList.remove('sel'));
+  el.classList.add('sel');
+  S[campo] = valor;
+}
+
+function selHab(el, n) {
+  el.parentElement.querySelectorAll('.hab-btn').forEach(b => b.classList.remove('sel'));
+  el.classList.add('sel');
+  S.habs = n;
+}
+
+function changeM2(d) {
+  S.m2 = Math.max(5, Math.min(2000, S.m2 + d));
+  document.getElementById('m2disp').textContent = S.m2;
+}
+
+// ═══════════════════════════════════════════════════════════
+//  RENDER PRODUCTOS (paso 2)
+// ═══════════════════════════════════════════════════════════
+function renderProductos() {
+  const suelos = PRODUCTOS.filter(p => p.cat === 'suelo' && p.visible && p.stock);
+  const otros  = PRODUCTOS.filter(p => p.cat !== 'suelo' && p.visible && p.stock);
+  document.getElementById('grid-suelo').innerHTML = suelos.map(prodCard).join('') || '<div class="prod-loading">Sin productos disponibles</div>';
+  document.getElementById('grid-otros').innerHTML = otros.map(prodCard).join('') || '<div class="prod-loading">Sin productos disponibles</div>';
+}
+
+function prodCard(p) {
+  const sel = S.seleccion[p.id] !== undefined;
+  return `<div class="prod-card ${sel?'sel':''}" id="pc-${p.id}" onclick="toggleProd('${p.id}')">
+    <div class="opt-check">✓</div>
+    <img class="prod-img" src="${p.img}" alt="${p.nombre}" loading="lazy">
+    <div class="prod-body">
+      <div class="prod-brand">${p.marca} · ${p.proveedor}</div>
+      <div class="prod-name">${p.nombre}</div>
+      <div class="prod-foot">
+        <div><div class="prod-price">${p.precio.toFixed(2)} €</div><div class="prod-unit">por ${p.unidad}</div></div>
+        <div class="prod-src">↻ live</div>
+      </div>
+      ${sel ? `<div class="m2-row" onclick="event.stopPropagation()">
+        <input type="number" min="1" max="2000" placeholder="m²" id="m2-${p.id}"
+               value="${S.seleccion[p.id]||''}" oninput="setM2('${p.id}',this.value)">
+        <label>m²</label></div>` : ''}
+    </div>
+  </div>`;
+}
+
+function toggleProd(id) {
+  if (S.seleccion[id] !== undefined) delete S.seleccion[id];
+  else S.seleccion[id] = 0;
+  renderProductos();
+  setTimeout(() => { const i = document.getElementById('m2-' + id); if (i) i.focus(); }, 50);
+}
+
+function setM2(id, val) { S.seleccion[id] = parseFloat(val) || 0; }
+
+// ═══════════════════════════════════════════════════════════
+//  MOTOR DE CÁLCULO (local — idéntico al motor Python)
+// ═══════════════════════════════════════════════════════════
+function r(v) { return Math.round(v * 100) / 100; }
+
+function calcular() {
+  const coef = COEF[S.calidad] || 1;
+  const lineas = [];
+  let costeMat = 0;
+  const mats = Object.entries(S.seleccion).filter(([,m]) => m > 0);
+
+  if (mats.length) {
+    mats.forEach(([id, m2]) => {
+      const p = PRODUCTOS.find(x => x.id === id);
+      if (!p) return;
+      const pu  = r(p.precio * coef);
+      const sub = r(pu * m2);
+      costeMat += sub;
+      lineas.push({ concepto: p.nombre, cantidad: m2, unidad: p.unidad, precio_ud: pu, subtotal: sub });
+    });
+  } else {
+    const bases = { integral:280, parcial:180, bano:220, cocina:260, pintura:45, suelo:65 };
+    const pb  = (bases[S.tipo] || 150) * coef;
+    const sub = r(pb * S.m2);
+    costeMat  = sub;
+    lineas.push({ concepto: `Estimación ${S.tipo} · calidad ${S.calidad}`, cantidad: S.m2, unidad: 'm²', precio_ud: r(pb), subtotal: sub });
+  }
+
+  const fijos = MOTOR.coste_desplazamiento;
+  if (fijos > 0) lineas.push({ concepto: 'Desplazamiento y gestión', cantidad: 1, unidad: 'ud', precio_ud: fijos, subtotal: fijos });
+
+  const subtotal = r(costeMat + fijos);
+  let margen = 0;
+  if (MOTOR.margen_tipo === 'porcentaje_total') {
+    margen = r(subtotal * (MOTOR.margen_valor / 100));
+    lineas.push({ concepto: `Margen profesional (${MOTOR.margen_valor}%)`, cantidad: 1, unidad: 'ud', precio_ud: margen, subtotal: margen });
+  } else if (MOTOR.margen_tipo === 'porcentaje_materiales') {
+    margen = r(costeMat * (MOTOR.margen_valor / 100));
+    lineas.push({ concepto: `Margen sobre materiales (${MOTOR.margen_valor}%)`, cantidad: 1, unidad: 'ud', precio_ud: margen, subtotal: margen });
+  }
+
+  const base  = r(subtotal + margen);
+  const iva   = r(base * (MOTOR.iva / 100));
+  let total   = r(base + iva);
+  const aviso = total < MOTOR.minimo_presupuesto;
+  if (aviso) total = MOTOR.minimo_presupuesto;
+
+  S.resultado = { lineas, costeMat: r(costeMat), margen, base, iva, total, aviso };
+
+  document.getElementById('total-disp').textContent = total.toLocaleString('es-ES', { minimumFractionDigits: 2 });
+  document.getElementById('iva-disp').textContent =
+    `Base imponible ${base.toLocaleString('es-ES', { minimumFractionDigits: 2 })}€ + IVA ${iva.toLocaleString('es-ES', { minimumFractionDigits: 2 })}€ (${MOTOR.iva}%)`;
+
+  document.getElementById('desglose-wrap').innerHTML =
+    lineas.map(l => `
+      <div class="desglose-row">
+        <span>${l.concepto}</span>
+        <span style="color:var(--muted);font-size:12px">${l.cantidad > 1 && !l.concepto.startsWith('Margen') ? `${l.cantidad} ${l.unidad} × ${l.precio_ud}€` : ''}</span>
+        <span><strong>${l.subtotal.toLocaleString('es-ES', { minimumFractionDigits: 2 })}€</strong></span>
+      </div>`).join('') +
+    `<div class="desglose-row"><span style="color:var(--muted)">IVA (${MOTOR.iva}%)</span><span></span><span>${iva.toLocaleString('es-ES',{minimumFractionDigits:2})}€</span></div>
+     <div class="desglose-row tot"><span>Total orientativo IVA incl.</span><span></span><span class="dval">${total.toLocaleString('es-ES',{minimumFractionDigits:2})}€</span></div>
+     ${aviso ? `<div style="padding:8px 18px;font-size:11px;color:var(--muted);font-style:italic">* Ajustado al mínimo de ${MOTOR.minimo_presupuesto}€</div>` : ''}`;
+
+  goStep(4);
+}
+
+// ═══════════════════════════════════════════════════════════
+//  RGPD Y ENVÍO
+// ═══════════════════════════════════════════════════════════
+function toggleRgpd() {
+  S.rgpd = !S.rgpd;
+  const el = document.getElementById('rgpd-box');
+  el.classList.toggle('on', S.rgpd);
+  el.textContent = S.rgpd ? '✓' : '';
+  document.getElementById('btn-enviar').disabled = !S.rgpd;
+}
+
+async function enviar() {
+  const nombre = document.getElementById('c-nom').value.trim();
+  const email  = document.getElementById('c-email').value.trim();
+  if (!nombre) { document.getElementById('c-nom').focus(); return; }
+  if (!email || !email.includes('@')) { document.getElementById('c-email').focus(); return; }
+
+  const payload = {
+    tenant_slug:       CFG.TENANT_SLUG,
+    cliente:           { nombre, email, tel: document.getElementById('c-tel').value, notas: document.getElementById('c-notas').value },
+    inputs:            { tipo_reforma: S.tipo, calidad: S.calidad, m2_total: S.m2, habitaciones: S.habs,
+                         materiales: Object.entries(S.seleccion).filter(([,m])=>m>0).map(([id,m2]) => {
+                           const p = PRODUCTOS.find(x=>x.id===id);
+                           return { nombre: p?.nombre, cantidad: m2, precio_base: p?.precio, unidad: p?.unidad };
+                         })},
+    resultado_calculo: S.resultado,
+    rgpd_consent:      true,
+  };
+
+  // En producción: descomentar para enviar a la API real
+  // try {
+  //   const res = await fetch(CFG.API_URL + '/quotes', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload) });
+  //   const data = await res.json();
+  // } catch(e) { console.error(e); }
+
+  console.log('PAYLOAD → API:', JSON.stringify(payload, null, 2));
+
+  const ref = 'REF-' + Date.now().toString().slice(-6);
+  document.getElementById('exito-detalle').innerHTML =
+    `<strong>Nombre:</strong> ${nombre}<br>
+     <strong>Email:</strong> ${email}<br>
+     <strong>Reforma:</strong> ${S.tipo || 'general'} · ${S.m2}m²<br>
+     <strong>Total estimado:</strong> ${S.resultado?.total?.toLocaleString('es-ES',{minimumFractionDigits:2})}€<br>
+     <strong>Referencia:</strong> ${ref}`;
+
+  goStep(99);
+  QUOTES.unshift({ id:'q'+Date.now(), cliente_nombre:nombre, cliente_email:email, tipo:`${S.tipo} ${S.m2}m²`, total:S.resultado?.total||0, estado:'pendiente_revision', caduca_at: new Date(Date.now()+30*864e5).toLocaleDateString('es-ES'), desglose:S.resultado?.lineas||[], iva:S.resultado?.iva||0 });
+}
+
+function resetConfig() {
+  S.tipo=null; S.calidad='media'; S.m2=60; S.habs=2;
+  S.rgpd=false; S.seleccion={}; S.resultado=null;
+  document.getElementById('btn-enviar').disabled=true;
+  document.getElementById('rgpd-box').classList.remove('on');
+  document.getElementById('rgpd-box').textContent='';
+  document.getElementById('m2disp').textContent='60';
+  document.querySelectorAll('#p1 .opt-card').forEach(c=>c.classList.remove('sel'));
+  document.querySelector('.cal-grid .opt-card:nth-child(2)')?.classList.add('sel');
+  goStep(1);
+  renderProductos();
+}
+
+// ═══════════════════════════════════════════════════════════
+//  ADMIN: AUTH
+// ═══════════════════════════════════════════════════════════
+function doLogin() {
+  const email = document.getElementById('l-email').value.trim();
+  const pass  = document.getElementById('l-pass').value;
+  if (email === CFG.LOGIN_EMAIL && pass === CFG.LOGIN_PASS) {
+    document.getElementById('login-screen').style.display = 'none';
+    document.getElementById('admin-panel').style.display  = 'flex';
+    document.getElementById('fecha-hoy').textContent =
+      new Date().toLocaleDateString('es-ES', {weekday:'long',day:'numeric',month:'long',year:'numeric'});
+    renderCatalogo('todos');
+    renderQuotes();
+  } else {
+    document.getElementById('login-err').textContent = 'Email o contraseña incorrectos';
+  }
+}
+
+function doLogout() {
+  document.getElementById('admin-panel').style.display  = 'none';
+  document.getElementById('login-screen').style.display = 'flex';
+  document.getElementById('login-err').textContent = '';
+}
+
+// ═══════════════════════════════════════════════════════════
+//  ADMIN: NAVEGACIÓN
+// ═══════════════════════════════════════════════════════════
+function showAdmin(name, btn) {
+  document.querySelectorAll('.apage').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.sb-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('ap-' + name).classList.add('active');
+  if (btn) btn.classList.add('active');
+  if (name === 'catalogo')     renderCatalogo(filtroActual);
+  if (name === 'presupuestos') renderQuotes();
+}
+
+// ═══════════════════════════════════════════════════════════
+//  ADMIN: CATÁLOGO / SCRAPING
+// ═══════════════════════════════════════════════════════════
+function renderCatalogo(filtro) {
+  filtroActual = filtro;
+  const lista = filtro === 'todos'   ? PRODUCTOS
+    : filtro === 'alertas' ? PRODUCTOS.filter(p => p.alerta)
+    : PRODUCTOS.filter(p => p.cat === filtro);
+
+  document.getElementById('tbody-cat').innerHTML = lista.map(p => {
+    const maxH = Math.max(...p.hist);
+    const spark = p.hist.map((v, i) => {
+      const h   = Math.round((v / maxH) * 20);
+      const cls = i === p.hist.length - 1 ? (p.alerta ? 'alert' : 'hi') : '';
+      return `<div class="spark-bar ${cls}" style="height:${h}px"></div>`;
+    }).join('');
+
+    return `<tr style="${p.alerta ? 'background:#fffaf4' : ''}">
+      <td><div class="td-prod">
+        <img class="thumb" src="${p.img}" alt="" loading="lazy">
+        <div>
+          <div class="td-name">${p.nombre}</div>
+          <div class="td-meta">${p.marca} · ${p.proveedor} ${p.alerta ? '&nbsp;<span class="badge b-warn">⚠ variación</span>' : ''}</div>
+        </div>
+      </div></td>
+      <td><span class="badge b-mute">${p.cat}</span></td>
+      <td><div style="font-weight:600">${p.precio.toFixed(2)} €/${p.unidad}</div>${p.alerta?'<div style="font-size:11px;color:var(--danger)">↑ vs semana</div>':''}</td>
+      <td>
+        <div class="price-cell">
+          <input class="price-inp" type="number" step="0.01" placeholder="${p.precio.toFixed(2)}"
+                 id="pm-${p.id}" oninput="this.classList.add('price-changed')">
+          <button class="abtn abtn-ghost" style="font-size:11px;padding:3px 8px" onclick="guardarPrecio('${p.id}')">✓</button>
+        </div>
+      </td>
+      <td><div class="spark">${spark}</div></td>
+      <td><span class="badge ${p.stock ? 'b-ok' : 'b-err'}">${p.stock ? 'Stock' : 'Agotado'}</span></td>
+      <td>
+        <div class="vis-wrap" onclick="toggleVisible('${p.id}')">
+          <div class="vis-track ${p.visible ? 'on' : ''}" id="vt-${p.id}"><div class="vis-knob"></div></div>
+          <span style="font-size:11px;color:var(--muted)">${p.visible ? 'Sí' : 'No'}</span>
+        </div>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+function filtrarCat(f, btn) {
+  document.querySelectorAll('.fpill').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  renderCatalogo(f);
+}
+
+function guardarPrecio(id) {
+  const val = parseFloat(document.getElementById('pm-' + id)?.value);
+  if (isNaN(val) || val <= 0) { toast('Introduce un precio válido', 'err'); return; }
+  const p = PRODUCTOS.find(x => x.id === id);
+  if (!p) return;
+  p.precio = val;
+  p.hist.push(val);
+  document.getElementById('pm-' + id)?.classList.remove('price-changed');
+  toast(`"${p.nombre}" actualizado a ${val.toFixed(2)}€`);
+  renderCatalogo(filtroActual);
+  renderProductos();
+}
+
+function toggleVisible(id) {
+  const p = PRODUCTOS.find(x => x.id === id);
+  if (!p) return;
+  p.visible = !p.visible;
+  document.getElementById('vt-' + id)?.classList.toggle('on', p.visible);
+  toast(p.visible ? 'Producto visible al cliente' : 'Producto oculto');
+  renderCatalogo(filtroActual);
+}
+
+function runScraper() {
+  const btn  = document.getElementById('btn-run');
+  const icon = document.getElementById('run-icon');
+  btn.classList.add('running');
+  let deg = 0;
+  const spin = setInterval(() => { deg += 30; icon.style.transform = `rotate(${deg}deg)`; }, 100);
+  setTimeout(() => {
+    clearInterval(spin);
+    icon.style.transform = '';
+    btn.classList.remove('running');
+    const az = PRODUCTOS.find(p => p.id === 'p1');
+    if (az) { az.precio = r(az.precio * 1.063); az.hist.push(az.precio); az.alerta = true; }
+    document.getElementById('num-alertas').textContent = PRODUCTOS.filter(p => p.alerta).length;
+    renderCatalogo(filtroActual);
+    renderProductos();
+    toast('Scraping completado · 1 alerta: azulejo +6.3%', 'warn');
+  }, 2800);
+}
+
+// ═══════════════════════════════════════════════════════════
+//  ADMIN: PRESUPUESTOS
+// ═══════════════════════════════════════════════════════════
+function renderQuotes() {
+  const filtro = document.getElementById('filtro-estado')?.value || '';
+  const lista  = filtro ? QUOTES.filter(q => q.estado === filtro) : QUOTES;
+  const bc = { pendiente_revision:'b-warn', enviado:'b-ok', aprobado:'b-info', caducado:'b-mute' };
+
+  document.getElementById('tbody-quotes').innerHTML = lista.length ? lista.map(q => `
+    <tr>
+      <td><strong>${q.cliente_nombre}</strong><br><span style="font-size:11px;color:var(--muted)">${q.cliente_email}</span></td>
+      <td>${q.tipo}</td>
+      <td><strong>${q.total.toLocaleString('es-ES',{minimumFractionDigits:2})}€</strong></td>
+      <td><span class="badge ${bc[q.estado]||'b-mute'}">${q.estado.replace('_',' ')}</span></td>
+      <td style="font-size:12px;color:var(--muted)">${q.caduca_at}</td>
+      <td style="display:flex;gap:6px;flex-wrap:wrap">
+        <button class="abtn abtn-ghost" onclick="verDetalle('${q.id}')">Ver</button>
+        ${q.estado==='pendiente_revision'?`<button class="abtn abtn-ok" onclick="aprobarQuote('${q.id}')">Aprobar</button>`:''}
+      </td>
+    </tr>`).join('')
+    : `<tr><td colspan="6" style="text-align:center;color:var(--muted);padding:36px">Sin presupuestos</td></tr>`;
+}
+
+function aprobarQuote(id) {
+  if (!confirm('¿Enviar este presupuesto al cliente por email?')) return;
+  const q = QUOTES.find(q => q.id === id);
+  if (!q) return;
+  q.estado = 'enviado';
+  toast(`Presupuesto enviado a ${q.cliente_email}`);
+  renderQuotes();
+  closeModal();
+}
+
+function aprobarDemo(btn, nombre) {
+  btn.textContent = '✓ Enviado';
+  btn.style.background = 'var(--muted)';
+  btn.disabled = true;
+  toast(`Presupuesto de ${nombre} aprobado y enviado`);
+}
+
+function verDetalle(id) {
+  const q = QUOTES.find(q => q.id === id);
+  if (!q) return;
+  modalQId = id;
+  document.getElementById('modal-title').textContent = `Presupuesto — ${q.cliente_nombre} · ${q.tipo}`;
+  document.getElementById('modal-aprobar').style.display = q.estado === 'pendiente_revision' ? 'inline-block' : 'none';
+  document.getElementById('modal-body').innerHTML = `
+    <p style="font-size:13px;color:var(--muted);margin-bottom:16px">${q.cliente_email} · Válido hasta ${q.caduca_at}</p>
+    ${q.desglose.map(d => `
+      <div class="modal-row">
+        <span>${d.concepto}</span>
+        <span style="color:var(--muted);font-size:12px">${d.cantidad} × ${d.precio_ud.toFixed?.(2)||d.precio_ud}€</span>
+        <span><strong>${d.subtotal.toLocaleString('es-ES',{minimumFractionDigits:2})}€</strong></span>
+      </div>`).join('')}
+    <div class="modal-row" style="color:var(--muted)"><span>IVA (21%)</span><span></span><span>${q.iva.toLocaleString('es-ES',{minimumFractionDigits:2})}€</span></div>
+    <div class="modal-total"><span>Total orientativo</span><span>${q.total.toLocaleString('es-ES',{minimumFractionDigits:2})}€</span></div>
+    <p style="font-size:11px;color:var(--muted);margin-top:14px;font-style:italic">Presupuesto orientativo · no vinculante</p>`;
+  document.getElementById('modal-bg').classList.add('open');
+}
+
+function aprobarDesdeModal() { aprobarQuote(modalQId); }
+function closeModal() { document.getElementById('modal-bg').classList.remove('open'); }
+
+// ═══════════════════════════════════════════════════════════
+//  ADMIN: CONFIGURACIÓN
+// ═══════════════════════════════════════════════════════════
+function toggleAutoEnvio() {
+  autoEnvio = !autoEnvio;
+  document.getElementById('auto-track').classList.toggle('on', autoEnvio);
+  document.getElementById('auto-label').textContent = autoEnvio
+    ? 'Envío automático al cliente' : 'Revisión previa activada';
+}
+
+function guardarConfig() {
+  MOTOR.margen_tipo          = document.getElementById('cfg-tipo').value;
+  MOTOR.margen_valor         = parseFloat(document.getElementById('cfg-margen').value) || 22;
+  MOTOR.iva                  = parseFloat(document.getElementById('cfg-iva').value) || 21;
+  MOTOR.minimo_presupuesto   = parseFloat(document.getElementById('cfg-minimo').value) || 500;
+  MOTOR.dias_validez         = parseInt(document.getElementById('cfg-validez').value) || 30;
+  MOTOR.coste_desplazamiento = parseFloat(document.getElementById('cfg-desplaz').value) || 0;
+  toast('Configuración guardada — afecta a todos los presupuestos nuevos');
+}
+
+// ═══════════════════════════════════════════════════════════
+//  TOAST
+// ═══════════════════════════════════════════════════════════
+function toast(msg, tipo) {
+  tipo = tipo || 'ok';
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.className = 'show ' + tipo;
+  clearTimeout(el._t);
+  el._t = setTimeout(() => { el.className = ''; }, 3500);
+}
+
+function aprobarQuote(id) {
+  if (!confirm('¿Enviar este presupuesto al cliente por email?')) return;
+  const q = QUOTES.find(q => q.id === id);
+  if (!q) return;
+  q.estado = 'enviado';
+  toast('Presupuesto enviado a ' + q.cliente_email);
+  renderQuotes();
+  closeModal();
+}
+</script>
+</body>
+</html>
