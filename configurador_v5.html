@@ -1970,7 +1970,7 @@ function renderMateriales() {
     const compartido    = S.matCompartidos[compartidoKey] || false;
 
     if (espIdsForCat.length > 1) {
-      html += '<div class="mat-compartir-row" onclick="toggleMatCompartido('' + compartidoKey + '')">' +
+      html += '<div class="mat-compartir-row" onclick="toggleMatCompartido(\'' + compartidoKey + '\')">' +
         '<span class="mat-compartir-check' + (compartido?' on':'') + '">' + (compartido?'✓':'') + '</span>' +
         '<span>Usar el mismo <strong>' + (catLabels[cat]||cat).toLowerCase() + '</strong> para todos los espacios que lo necesiten</span>' +
         '</div>';
@@ -1992,7 +1992,7 @@ function renderMateriales() {
       block += '<div class="prod-grid">';
       prods.forEach(p => {
         const sel = selInfo?.prodId === p.id;
-        block += '<div class="prod-card' + (sel?' sel':'') + '" onclick="selMatEsp('' + espId + '','' + cat + '','' + p.id + '',' + compartido + ',' + JSON.stringify(espIdsForCat) + ')" style="cursor:pointer">' +
+        block += '<div class="prod-card' + (sel?' sel':'') + '" onclick="selMatEsp(\'' + espId + '\',\'' + cat + '\',\'' + p.id + '\',' + compartido + ',' + JSON.stringify(espIdsForCat) + ')" style="cursor:pointer">' +
           '<div class="opt-check">✓</div>' +
           '<img class="prod-img" src="' + p.img + '" alt="' + p.nombre + '" loading="lazy">' +
           '<div class="prod-body">' +
@@ -2002,7 +2002,7 @@ function renderMateriales() {
           '</div></div>';
       });
       // "Sin preferencia" button
-      block += '<div class="mat-none-btn' + (!selInfo?' active':'') + '" onclick="selMatEsp('' + espId + '','' + cat + '',null,' + compartido + ',' + JSON.stringify(espIdsForCat) + ')" style="cursor:pointer">🎨 Sin preferencia <span style="font-size:10px">(precio estándar)</span></div>';
+      block += '<div class="mat-none-btn' + (!selInfo?' active':'') + '" onclick="selMatEsp(\'' + espId + '\',\'' + cat + '\',null,' + compartido + ',' + JSON.stringify(espIdsForCat) + ')" style="cursor:pointer">🎨 Sin preferencia <span style="font-size:10px">(precio estándar)</span></div>';
       block += '</div>';
 
       // m² input if product selected
@@ -2013,7 +2013,7 @@ function renderMateriales() {
           '<span>' + selProd.nombre + ' ·</span>' +
           '<input class="mat-m2-inp" type="number" min="0.5" max="2000" step="0.5"' +
           ' value="' + cantStr + '" placeholder="' + estM2 + '" id="mm2-' + espId + '-' + cat + '"' +
-          ' oninput="setCantMat2('' + espId + '','' + cat + '',this.value,' + compartido + ',' + JSON.stringify(espIdsForCat) + ')">' +
+          ' oninput="setCantMat2(\'' + espId + '\',\'' + cat + '\',this.value,' + compartido + ',' + JSON.stringify(espIdsForCat) + ')">' +
           '<span class="mat-m2-est">' + selProd.unidad + '  <span style="color:var(--accent)">' + (cant ? '' : '(estimación: ' + estM2 + ' ' + selProd.unidad + ')') + '</span></span>' +
           '</div>';
       }
