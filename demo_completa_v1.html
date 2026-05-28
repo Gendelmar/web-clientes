@@ -995,10 +995,13 @@ function fmtEur(v){ return r(v).toLocaleString('es-ES',{minimumFractionDigits:2}
 
 // ── DEMO NAV ─────────────────────────────────────────────────────
 function switchView(view) {
-  document.getElementById('view-conf').style.display  = view==='conf'  ? '' : 'none';
-  document.getElementById('view-admin').style.display = view==='admin' ? '' : 'none';
+  document.getElementById('view-conf').style.display  = view==='conf'  ? 'block' : 'none';
+  document.getElementById('view-admin').style.display = view==='admin' ? 'block' : 'none';
   document.getElementById('tab-conf').classList.toggle('active',  view==='conf');
   document.getElementById('tab-admin').classList.toggle('active', view==='admin');
+  if (view==='admin' && document.getElementById('admin-panel')?.style.display==='flex') {
+    renderDashboard(); renderQuotes();
+  }
 }
 
 // ── PRODUCTOS UNIFICADOS ─────────────────────────────────────────
