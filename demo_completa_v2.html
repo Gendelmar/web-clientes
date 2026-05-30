@@ -2721,14 +2721,33 @@ function handleJsonFile(input) {
   const f = input.files[0];
   if (f) loadJsonFile(f);
 }
+function sanitizeJsonText(text) {
+  // Corrije el bug de locale español en VBA: "0,22" → "0.22" en posiciones de valor numérico
+  // Patrón: colon + espacio + integer + COMA + digits + (coma/cierre/espacio)
+  // No toca comas dentro de strings ni entre claves
+  return text.replace(/(:\s*-?(?:\d+)),(\d+)(?=[,\}\]\s\r\n])/g, '$1.$2');
+}
+
 function loadJsonFile(file) {
   const reader = new FileReader();
   reader.onload = ev => {
     try {
-      const cfg = JSON.parse(ev.target.result);
+      const raw = ev.target.result;
+      const sanitized = sanitizeJsonText(raw);
+      let cfg;
+      try {
+        cfg = JSON.parse(sanitized);
+      } catch(e2) {
+        // Intentar con el texto original por si la sanitización empeoró algo
+        try { cfg = JSON.parse(raw); } catch(e3) { throw e2; }
+      }
       showImportPreview(cfg);
     } catch(err) {
-      toast('Error al leer el JSON: ' + err.message, 'err');
+      const hint = err.message.includes('position')
+        ? ' — Revisa que el archivo sea un JSON válido generado por el Excel de onboarding.'
+        : '';
+      toast('Error al leer el JSON: ' + err.message + hint, 'err');
+      console.error('JSON parse error:', err, '\nTexto recibido (primeros 300 chars):', ev.target.result.slice(0,300));
     }
   };
   reader.readAsText(file, 'utf-8');
@@ -2776,8 +2795,17 @@ function confirmarImport() {
 }
 
 function applyConfig(cfg) {
-  // MOTOR
-  if (cfg.motor) Object.assign(MOTOR, cfg.motor);
+  // MOTOR — normalizar valores que vengan en decimal en lugar de porcentaje
+  // (pasa cuando el usuario introduce "22%" en Excel con formato %, queda almacenado como 0.22)
+  if (cfg.motor) {
+    const m = { ...cfg.motor };
+    if (m.margen_valor != null && m.margen_valor > 0 && m.margen_valor < 1)
+      m.margen_valor = Math.round(m.margen_valor * 100 * 10) / 10;
+    if (m.iva != null && m.iva > 0 && m.iva < 1)
+      m.iva = Math.round(m.iva * 100 * 10) / 10;
+    Object.assign(MOTOR, m);
+    cfg.motor = m; // propagar corrección para el formulario
+  }
 
   // CALIDAD_COEF
   if (cfg.calidad_coef) Object.assign(CALIDAD_COEF, cfg.calidad_coef);

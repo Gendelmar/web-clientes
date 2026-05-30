@@ -23,7 +23,13 @@ Function NumStr(v As Variant) As String
     If IsEmpty(v) Or IsNull(v) Or v = "" Then
         NumStr = "0"
     ElseIf IsNumeric(v) Then
-        NumStr = CStr(CDbl(v))
+        Dim s As String
+        s = CStr(CDbl(v))
+        ' Forzar punto como separador decimal independientemente del locale
+        If Application.DecimalSeparator <> "." Then
+            s = Replace(s, Application.DecimalSeparator, ".")
+        End If
+        NumStr = s
     Else
         NumStr = "0"
     End If
@@ -205,20 +211,30 @@ Function BuildTrabajos() As String
     Dim curEsp As String: curEsp = ""
     Dim firstTrab As Boolean: firstTrab = True
 
+    ' Determinar última fila con datos en col C o D (ignora cabeceras de grupo)
+    Dim lastRow As Long
+    lastRow = ws.Cells(ws.Rows.Count, 4).End(xlUp).Row
+    Dim lastRowC As Long
+    lastRowC = ws.Cells(ws.Rows.Count, 3).End(xlUp).Row
+    If lastRowC > lastRow Then lastRow = lastRowC
+
     Dim fila As Integer
     fila = 5
-    Do While ws.Cells(fila, 3).Value <> "" Or ws.Cells(fila, 4).Value <> ""
-        If Not CeldaBool(ws, fila, 1) Then
-            fila = fila + 1
-            GoTo ContinueTrab
-        End If
-
+    Do While fila <= lastRow + 1
         Dim espacio As String
         espacio = Trim(CStr(ws.Cells(fila, 3).Value))
         Dim clave As String
         clave = Trim(CStr(ws.Cells(fila, 4).Value))
 
+        ' Saltar cabeceras de grupo (celdas combinadas con etiqueta en col A, C y D vacías)
+        ' y filas separadoras en blanco
         If espacio = "" Or clave = "" Then
+            fila = fila + 1
+            GoTo ContinueTrab
+        End If
+
+        ' Saltar filas inactivas (col A = "NO")
+        If Not CeldaBool(ws, fila, 1) Then
             fila = fila + 1
             GoTo ContinueTrab
         End If
@@ -421,12 +437,28 @@ Sub GuardarJSON()
         Exit Sub
     End If
 
-    ' Escribir el archivo
-    Dim fileNum As Integer
-    fileNum = FreeFile()
-    Open ruta For Output As #fileNum
-    Print #fileNum, json
-    Close #fileNum
+    ' Escribir en UTF-8 con ADODB.Stream para preservar emojis y acentos
+    On Error Resume Next
+    Dim stream As Object
+    Set stream = CreateObject("ADODB.Stream")
+    If Err.Number <> 0 Or stream Is Nothing Then
+        ' Fallback: escritura estándar si ADODB no está disponible
+        On Error GoTo ErrGuardar
+        Dim fileNum As Integer
+        fileNum = FreeFile()
+        Open ruta For Output As #fileNum
+        Print #fileNum, json
+        Close #fileNum
+    Else
+        On Error GoTo ErrGuardar
+        stream.Type = 2        ' adTypeText
+        stream.Charset = "UTF-8"
+        stream.Open
+        stream.WriteText json
+        stream.SaveToFile ruta, 2  ' adSaveCreateOverWrite
+        stream.Close
+        Set stream = Nothing
+    End If
 
     MsgBox "¡JSON guardado correctamente!" & Chr(10) & Chr(10) & _
            "Ruta: " & ruta & Chr(10) & Chr(10) & _

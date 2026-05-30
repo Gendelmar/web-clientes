@@ -400,9 +400,9 @@ def build_motor(wb):
         ("Tipo de margen", "porcentaje_total",
          None, "porcentaje_total · margen_fijo · por_partida"),
         ("Margen (%)", 22,
-         "0.0%", "Porcentaje sobre el total (ej: 22 = 22%)"),
+         "0.0", "Porcentaje sobre el total (ej: 22 = 22%). Introducir como número, no como porcentaje."),
         ("IVA (%)", 21,
-         "0%", "IVA aplicado en la factura (España: 10% reformas, 21% general)"),
+         "0", "IVA aplicado en la factura (España: 10% reformas, 21% general). Número entero."),
         ("Presupuesto mínimo (€)", 500,
          "#,##0 €", "El presupuesto no puede salir por debajo de este importe"),
         ("Validez del presupuesto (días)", 30,
@@ -476,7 +476,7 @@ def build_motor(wb):
     campos_pago = [
         ("Forma de pago", "50_50", None, "50_50 · 30_70 · 100_inicio · 100_fin · personalizado"),
         ("Días de pago (plazo)", 30, "0", "Días desde la emisión para el pago final"),
-        ("Penalización por retraso (%)", 1.5, "0.0%", "Interés mensual por pago tardío"),
+        ("Penalización por retraso (%)", 1.5, "0.0", "Interés mensual por pago tardío (ej: 1.5 = 1.5%). Número decimal."),
     ]
     for i, (lbl, val, fmt, ayuda) in enumerate(campos_pago):
         r = 19 + i
