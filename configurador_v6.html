@@ -721,6 +721,25 @@ textarea.field-inp { resize: vertical; min-height: 90px; }
 }
 .ver-mas-btn:hover { border-color: var(--accent); color: var(--accent); }
 
+/* ── OBRA COMPLETA/PARCIAL: image cards ── */
+.obra-eleccion { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 16px; }
+.obra-card { border: 2px solid var(--border); border-radius: 12px; overflow: hidden; cursor: pointer; transition: all .2s; background: #fff; }
+.obra-card:hover { border-color: var(--accent); transform: translateY(-2px); box-shadow: 0 4px 16px rgba(0,0,0,.1); }
+.obra-card-img { width: 100%; height: 150px; object-fit: cover; }
+.obra-card-body { padding: 12px 14px; }
+.obra-card-title { font-weight: 600; font-size: 14px; margin-bottom: 4px; }
+.obra-card-desc { font-size: 12px; color: var(--muted); line-height: 1.4; }
+.obra-confirm-card { display: flex; align-items: center; gap: 12px; margin-bottom: 14px; padding: 10px 14px; background: var(--light); border: 1.5px solid var(--accent); border-radius: 10px; cursor: pointer; transition: all .15s; }
+.obra-confirm-card:hover { background: rgba(201,111,40,.06); }
+.obra-confirm-img { width: 64px; height: 48px; object-fit: cover; border-radius: 6px; flex-shrink: 0; }
+.obra-confirm-body { flex: 1; }
+.obra-confirm-lbl { font-size: 12px; font-weight: 600; color: var(--accent); }
+.obra-confirm-msg { font-size: 13px; color: var(--ink); margin-top: 2px; }
+@media (max-width: 480px) {
+  .obra-eleccion { grid-template-columns: 1fr; }
+  .obra-card-img { height: 120px; }
+}
+
 /* ── AVISO MATERIALES ORIENTATIVOS (C15) ── */
 .mat-orientativo-notice {
   background: #fff8e6; border: 1px solid #f0c060; border-radius: 8px;
@@ -867,7 +886,7 @@ textarea.field-inp { resize: vertical; min-height: 90px; }
 
     <div id="trabajos-form"></div>
 
-    <div class="m2-surf">
+    <div class="m2-surf" id="m2-surf">
       <div>
         <div style="font-weight:500;font-size:14px">Superficie de este espacio</div>
         <div style="font-size:12px;color:var(--muted);margin-top:2px" id="m2-hint">Metros cuadrados · puedes editarlo directamente</div>
@@ -1422,7 +1441,7 @@ const S = {
   cliente:       {nombre:'', email:'', tel:'', canal:'email', horario:'cualquiera', rgpd:false},
   materialesPorEspacio: {},
   matCompartidos: {},
-  matShowAll: {},
+  matShowN: {},
   matEspacioIdx: 0,
   maxPaso: 1,
   obraHabitada: false,
@@ -1682,9 +1701,13 @@ function renderEspacioForm() {
   const total = S.espacios.length;
   const idx   = S.espacioIdx;
 
-  document.getElementById('esp-progress').innerHTML = S.espacios.map((e, i) =>
-    '<div class="esp-dot ' + (i < idx ? 'done' : i === idx ? 'act' : '') + '"></div>'
-  ).join('') + '<span style="font-size:11px;color:var(--muted);margin-left:4px">' + (idx+1) + ' de ' + total + '</span>';
+  // Progress dots — clickable if that space already has trabajos selected
+  document.getElementById('esp-progress').innerHTML = S.espacios.map((e, i) => {
+    const done  = S.cfgEspacios[e]?.trabajos?.length > 0;
+    const isAct = i === idx;
+    return '<div class="esp-dot' + (done && !isAct ? ' done' : isAct ? ' act' : '') + '"' +
+      (done && !isAct ? ' onclick="goEspacioTrab(' + i + ')" style="cursor:pointer" title="' + getLabelEspacio(e) + '"' : '') + '></div>';
+  }).join('') + '<span style="font-size:11px;color:var(--muted);margin-left:4px">' + (idx+1) + ' de ' + total + '</span>';
 
   document.getElementById('esp-badge').textContent  = getLabelConEmoji(espId);
   document.getElementById('esp-titulo').textContent = '¿Qué quieres hacer en ' + preposEsp(espId) + '?';
@@ -1702,33 +1725,86 @@ function renderEspacioForm() {
       }).join('') + '</div></div>';
   }
 
-  // C1: Obra completa/parcial (solo baño/aseo)
-  let obraHtml = '';
+  const m2El   = document.getElementById('m2-surf');
+  const comsEl = document.getElementById('comentarios-esp');
+  const btnSig = document.getElementById('btn-siguiente-esp');
+
+  // ── BAÑO/ASEO: two-step flow ──────────────────────────────────
   if (tipo === 'bano' || tipo === 'aseo') {
     const oc = cfg.obraCompleta;
-    obraHtml = '<div class="obra-tipo-sect">' +
-      '<div class="obra-tipo-lbl">Tipo de reforma</div>' +
-      '<div class="obra-tipo-opts">' +
-      '<div class="obra-tipo-btn' + (oc==='completa'?' sel':'') + '" onclick="setObraCompleta(\'' + espId + '\',\'completa\')">🔨 Obra completa</div>' +
-      '<div class="obra-tipo-btn' + (oc==='parcial'?' sel':'') + '" onclick="setObraCompleta(\'' + espId + '\',\'parcial\')">🔧 Reforma parcial</div>' +
-      '</div>' +
-      (oc==='parcial' ? '<div style="font-size:12px;color:var(--muted);margin-top:8px">Indica qué elementos específicos quieres cambiar.</div>' : '') +
-      '</div>';
+    const imgCompleta = tipo === 'bano'
+      ? 'https://www.reforcam.com/wp-content/uploads/bath01b.jpg'
+      : 'https://www.microcementec.com/wp-content/uploads/2022/03/Imagen-1-1.png';
+    const imgParcial = 'https://st3.idealista.com/news/archivos/styles/amp_1200x675_16_9/public/2019-10/banos-pequenos-reformados.png?VersionId=r0eZvb1GqykhX9Lfo32g8cUGfv_NSBw1&itok=H-ZRKkMb';
+
+    if (!oc) {
+      // Step 1: ONLY show the two choice cards
+      document.getElementById('trabajos-form').innerHTML = plantaHtml +
+        '<div class="obra-eleccion">' +
+        '<div class="obra-card" onclick="setObraCompleta(\'' + espId + '\',\'completa\')">' +
+        '<img src="' + imgCompleta + '" alt="Obra completa" class="obra-card-img" loading="lazy">' +
+        '<div class="obra-card-body">' +
+        '<div class="obra-card-title">🔨 Obra completa</div>' +
+        '<div class="obra-card-desc">Te renovamos el ' + (tipo === 'bano' ? 'baño' : 'aseo') + ' por completo</div>' +
+        '</div></div>' +
+        '<div class="obra-card" onclick="setObraCompleta(\'' + espId + '\',\'parcial\')">' +
+        '<img src="' + imgParcial + '" alt="Reforma parcial" class="obra-card-img" loading="lazy">' +
+        '<div class="obra-card-body">' +
+        '<div class="obra-card-title">🔧 Reforma parcial</div>' +
+        '<div class="obra-card-desc">Arreglamos los puntos que nos indiques</div>' +
+        '</div></div>' +
+        '</div>';
+      if (m2El)   m2El.style.display   = 'none';
+      if (comsEl) comsEl.style.display = 'none';
+      if (btnSig) { btnSig.textContent = 'Siguiente →'; btnSig.disabled = true; }
+      return;
+    }
+
+    // Selection made — show m2 and comments
+    if (m2El)   m2El.style.display   = '';
+    if (comsEl) comsEl.style.display = '';
+  } else {
+    if (m2El)   m2El.style.display   = '';
+    if (comsEl) comsEl.style.display = '';
   }
 
-  let html = obraHtml + plantaHtml;
-  const hasDemo = cfg.trabajos.some(k => DEMO_TRABAJOS.has(k));
+  // ── CONFIRMATORY CARD for bano/aseo ──────────────────────────
+  let html = '';
+  if (tipo === 'bano' || tipo === 'aseo') {
+    const oc = cfg.obraCompleta;
+    const imgCompleta = tipo === 'bano'
+      ? 'https://www.reforcam.com/wp-content/uploads/bath01b.jpg'
+      : 'https://www.microcementec.com/wp-content/uploads/2022/03/Imagen-1-1.png';
+    const imgParcial = 'https://st3.idealista.com/news/archivos/styles/amp_1200x675_16_9/public/2019-10/banos-pequenos-reformados.png?VersionId=r0eZvb1GqykhX9Lfo32g8cUGfv_NSBw1&itok=H-ZRKkMb';
+    const img = oc === 'completa' ? imgCompleta : imgParcial;
+    const msg = oc === 'completa'
+      ? 'Te renovamos el ' + (tipo === 'bano' ? 'baño' : 'aseo') + ' por completo'
+      : 'Arreglamos los puntos que nos indiques';
+    html += '<div class="obra-confirm-card" onclick="setObraCompleta(\'' + espId + '\',null)" title="Clic para cambiar tipo de reforma">' +
+      '<img src="' + img + '" alt="Tipo reforma" class="obra-confirm-img" loading="lazy">' +
+      '<div class="obra-confirm-body">' +
+      '<div class="obra-confirm-lbl">' + (oc === 'completa' ? '🔨 Obra completa' : '🔧 Reforma parcial') + ' <span style="font-size:10px;color:var(--muted)">(clic para cambiar)</span></div>' +
+      '<div class="obra-confirm-msg">' + msg + '</div>' +
+      '</div></div>';
+    if (oc === 'completa') {
+      html += '<div class="cat-aviso" style="margin-bottom:12px"><span class="cat-aviso-icon">✅</span><span>Las opciones más habituales vienen <strong>preseleccionadas</strong>. Puedes desmarcar o añadir lo que necesites.</span></div>';
+    }
+  }
+
+  html += plantaHtml;
+
+  // ── CATEGORIES LOOP ───────────────────────────────────────────
+  const hasDemo      = cfg.trabajos.some(k => DEMO_TRABAJOS.has(k));
   const TABIQUE_KEYS = new Set(['redistribucion_tabiques','mover_distribucion']);
   const VENTANA_KEYS = new Set(['cambiar_ventana','cambiar_ventanas']);
   const SANITARIO_KEYS = new Set(['instalar_ducha','instalar_banera','instalar_inodoro','instalar_lavabo']);
   const hasSanitarioSel = cfg.trabajos.some(k => SANITARIO_KEYS.has(k));
-  const tieneTabiqueSel = cfg.trabajos.some(k => TABIQUE_KEYS.has(k));
-  const tieneVentanaSel = cfg.trabajos.some(k => VENTANA_KEYS.has(k));
   const TERRAZA_OBRA_KEYS = new Set(['cerrar_terraza','cambiar_barandilla','pergola_toldo']);
   const hasTerrazaObra = cfg.trabajos.some(k => TERRAZA_OBRA_KEYS.has(k));
+  const duchaSelBano   = tipo === 'bano' && cfg.trabajos.includes('instalar_ducha');
 
   cats.forEach(({cat, items, avisoEstimado, avisoCaldera, avisoTerrazaObra}) => {
-    const esDemo    = cat === 'DEMOLICIÓN';
+    const esDemo = cat === 'DEMOLICIÓN';
     const needsAvisoEstimado = (avisoEstimado && hasSanitarioSel) ||
                                (avisoCaldera && cfg.trabajos.includes('instalar_caldera')) ||
                                (avisoTerrazaObra && hasTerrazaObra);
@@ -1747,26 +1823,38 @@ function renderEspacioForm() {
     items.forEach(tKey => {
       const t = TRABAJOS[tipo]?.[tKey];
       if (!t) return;
+
+      // Hide bañera completely if ducha selected in baño
+      if (tKey === 'instalar_banera' && duchaSelBano) return;
+
       const sel    = cfg.trabajos.includes(tKey);
       const isUd   = t.unidad === 'ud';
       const isMl   = t.unidad === 'ml';
-      const udLbl  = t.udLabel || 'uds';
       const defQty = t.defQty || 1;
       const cantUd = cfg.cantUd[tKey] != null ? cfg.cantUd[tKey] : defQty;
       const cantMl = cfg.mlOvr[tKey] || (ML_ESTIMATE[tipo]?.[tKey] || 3);
-      // C4: ducha/bañera mutual exclusion visual hint
-      const isBanera = tKey === 'instalar_banera' && tipo === 'bano';
-      const isDucha  = tKey === 'instalar_ducha'  && tipo === 'bano';
-      const otroSel  = (isBanera && cfg.trabajos.includes('instalar_ducha')) || (isDucha && cfg.trabajos.includes('instalar_banera'));
-      html += '<div class="chk-card' + (sel ? ' sel' : '') + (otroSel ? ' disabled' : '') + '" id="chk-' + tKey + '" onclick="toggleTrabajo(\'' + espId + '\',\'' + tKey + '\')" style="' + (otroSel ? 'opacity:.45;cursor:not-allowed' : '') + '">' +
+
+      // Label + nota overrides for obra completa context
+      let displayLabel = t.label;
+      let displayNota  = t.nota || '';
+      if ((tipo === 'bano' || tipo === 'aseo') && cfg.obraCompleta === 'completa') {
+        if (tKey === 'cambiar_suelo')    { displayLabel = 'Instalación de suelo'; displayNota = ''; }
+        if (tKey === 'cambiar_baldosas' && tipo === 'bano')  { displayLabel = 'Instalar baldosas zona húmeda/ducha'; displayNota = 'Incluye impermeabilización'; }
+        if (tKey === 'cambiar_baldosas' && tipo === 'aseo')  { displayLabel = 'Instalar baldosas'; }
+      }
+      // Special qty labels
+      const udLbl = tKey === 'renovar_fontaneria'   ? 'puntos de agua'
+                  : tKey === 'renovar_electricidad' ? 'puntos de luz'
+                  : (t.udLabel || 'uds');
+
+      html += '<div class="chk-card' + (sel ? ' sel' : '') + '" id="chk-' + tKey + '" onclick="toggleTrabajo(\'' + espId + '\',\'' + tKey + '\')">' +
         '<div class="chk-box"></div>' +
-        '<div style="flex:1"><div>' + t.label + (otroSel ? ' <span style="font-size:10px;color:var(--muted)">(excluye la otra opción)</span>' : '') + '</div>' +
-        (t.nota ? '<div class="trabajo-nota">✦ ' + t.nota + '</div>' : '') +
-        (isUd && sel && !t.noQty ? '<div class="qty-row" onclick="event.stopPropagation()"><input class="qty-inp" type="number" min="1" max="20" value="' + cantUd + '" id="qu-' + tKey + '" oninput="setCantUd(\'' + espId + '\',\'' + tKey + '\',this.value)"><span class="qty-lbl">' + udLbl + '</span></div>' : '') +
+        '<div style="flex:1"><div>' + displayLabel + '</div>' +
+        (displayNota ? '<div class="trabajo-nota">✦ ' + displayNota + '</div>' : '') +
+        (isUd && sel && !t.noQty ? '<div class="qty-row" onclick="event.stopPropagation()"><input class="qty-inp" type="number" min="1" max="30" value="' + cantUd + '" id="qu-' + tKey + '" oninput="setCantUd(\'' + espId + '\',\'' + tKey + '\',this.value)"><span class="qty-lbl">' + udLbl + '</span></div>' : '') +
         (isMl && sel ? '<div class="qty-row" onclick="event.stopPropagation()"><input class="qty-inp" type="number" min="0.5" max="30" step="0.5" value="' + cantMl + '" id="ml-' + tKey + '" oninput="setMlOvr(\'' + espId + '\',\'' + tKey + '\',this.value)"><span class="qty-lbl">ml</span></div>' : '') +
         '</div></div>';
 
-      // Sub-opciones: suelo warning
       if (tKey === 'cambiar_suelo' && sel) {
         html += '<div class="suelo-aviso">💧 Al cambiar el suelo revisaremos el estado de la fontanería existente. En caso necesario, se podrá presupuestar su renovación durante la visita técnica.</div>';
       }
@@ -1786,19 +1874,17 @@ function renderEspacioForm() {
         '</div></div>';
     }
 
-    // Tabiques sub-questionnaire (C2)
+    // Tabiques sub-questionnaire
     const tabiqueTKey = items.find(k => TABIQUE_KEYS.has(k));
     if (tabiqueTKey && cfg.trabajos.includes(tabiqueTKey)) {
       const nTabiques = cfg.cantUd[tabiqueTKey] || 1;
-      if (nTabiques !== cfg.tabiquesConfig.length) {
-        while (cfg.tabiquesConfig.length < nTabiques) cfg.tabiquesConfig.push({material:'pladur',accion:'demoler_levantar'});
-        while (cfg.tabiquesConfig.length > nTabiques) cfg.tabiquesConfig.pop();
-      }
+      while (cfg.tabiquesConfig.length < nTabiques) cfg.tabiquesConfig.push({material:'pladur',accion:'demoler_levantar'});
+      while (cfg.tabiquesConfig.length > nTabiques) cfg.tabiquesConfig.pop();
       html += '<div class="tabique-set">';
       cfg.tabiquesConfig.forEach((tc, i) => {
         const accion = tc.accion || 'demoler_levantar';
         html += '<div class="tabique-card">' +
-          '<div class="tabique-card-title">Tabique ' + (i+1) + '</div>' +
+          '<div class="tabique-card-title">Tabique ' + (i+1) + ' — se tira y se levanta otro</div>' +
           '<div class="tabique-opts">' +
           '<span style="font-size:12px;color:var(--muted);margin-right:4px">Material:</span>' +
           '<button class="tab-btn' + (tc.material==='pladur'?' sel':'') + '" onclick="setTabiqueMat(\'' + espId + '\',' + i + ',\'pladur\')">Pladur</button>' +
@@ -1810,19 +1896,15 @@ function renderEspacioForm() {
           '<button class="tab-accion-btn' + (accion==='solo_levantar'?' sel':'') + '" onclick="setTabiqueAccion(\'' + espId + '\',' + i + ',\'solo_levantar\')">Solo levantar</button>' +
           '<button class="tab-accion-btn' + (accion==='demoler_levantar'?' sel':'') + '" onclick="setTabiqueAccion(\'' + espId + '\',' + i + ',\'demoler_levantar\')">Demoler + Levantar</button>' +
           '<button class="tab-accion-btn' + (accion==='demoler_revestir'?' sel':'') + '" onclick="setTabiqueAccion(\'' + espId + '\',' + i + ',\'demoler_revestir\')">Demoler + Levantar + Revestir</button>' +
-          '</div>' +
-          '</div>';
+          '</div></div>';
       });
       html += '</div>';
     }
 
     // Pintura con muebles
-    const pinturaIdx = items.indexOf('pintar_paredes');
-    if (pinturaIdx !== -1 && cfg.trabajos.includes('pintar_paredes')) {
+    if (items.includes('pintar_paredes') && cfg.trabajos.includes('pintar_paredes')) {
       const pm = cfg.pinturaConMuebles;
-      html += '<div class="pintura-sub">' +
-        '<div class="pintura-sub-lbl">¿Hay mobiliario que gestionar?</div>' +
-        '<div class="pintura-opts">' +
+      html += '<div class="pintura-sub"><div class="pintura-sub-lbl">¿Hay mobiliario que gestionar?</div><div class="pintura-opts">' +
         '<button class="pintura-btn' + (pm==='sin_muebles'?' sel':'') + '" onclick="setPinturaConMuebles(\'' + espId + '\',\'sin_muebles\')">Sin muebles</button>' +
         '<button class="pintura-btn' + (pm==='tapar'?' sel':'') + '" onclick="setPinturaConMuebles(\'' + espId + '\',\'tapar\')">Tapar con plásticos</button>' +
         '<button class="pintura-btn' + (pm==='desmontar'?' sel':'') + '" onclick="setPinturaConMuebles(\'' + espId + '\',\'desmontar\')">Desmontar muebles</button>' +
@@ -1835,16 +1917,13 @@ function renderEspacioForm() {
       const nVentanas = cfg.cantUd[ventanaTKey] || 1;
       while (cfg.ventanasConfig.length < nVentanas) cfg.ventanasConfig.push({apertura:'',material:'',vidrio:'',open:true});
       while (cfg.ventanasConfig.length > nVentanas) cfg.ventanasConfig.pop();
-
-      html += '<div class="vent-aviso">ℹ️ Se aplicará un <strong>precio medio estimado</strong> según las opciones que elijas. Si no especificas nada, usaremos un precio orientativo genérico. El modelo definitivo y su precio se acordará tras la visita técnica. ' +
-        '<a href="https://www.leroymerlin.es/productos/puertas-ventanas-y-escaleras/ventanas/" target="_blank" style="color:var(--terra)">Ver tipos de ventanas →</a></div>';
-
+      html += '<div class="vent-aviso">ℹ️ Se aplicará un <strong>precio medio estimado</strong>. El modelo definitivo se acordará tras la visita técnica.</div>';
       html += '<div class="ventanas-set">';
       cfg.ventanasConfig.forEach((vc, i) => {
         const statusParts = [];
-        if (vc.apertura)  statusParts.push(VENTANA_APERTURAS.find(x=>x.val===vc.apertura)?.label || '');
-        if (vc.material)  statusParts.push(VENTANA_MATERIALES.find(x=>x.val===vc.material)?.label || '');
-        if (vc.vidrio)    statusParts.push(VENTANA_VIDRIOS.find(x=>x.val===vc.vidrio)?.label || '');
+        if (vc.apertura) statusParts.push(VENTANA_APERTURAS.find(x=>x.val===vc.apertura)?.label||'');
+        if (vc.material) statusParts.push(VENTANA_MATERIALES.find(x=>x.val===vc.material)?.label||'');
+        if (vc.vidrio)   statusParts.push(VENTANA_VIDRIOS.find(x=>x.val===vc.vidrio)?.label||'');
         const status = statusParts.filter(Boolean).join(' · ') || 'Sin especificar';
         const open   = vc.open;
         html += '<div class="ventana-card">' +
@@ -1852,33 +1931,14 @@ function renderEspacioForm() {
           '<span class="ventana-card-head-lbl">Ventana ' + (i+1) + '</span>' +
           '<span class="ventana-status">' + status + '</span>' +
           '<span class="ventana-arrow' + (open?' open':'') + '">▼</span>' +
-          '</div>' +
-          '<div class="ventana-body' + (open?' open':'') + '">' +
-          // Apertura
-          '<div class="vent-step-lbl">1. Tipo de apertura</div>' +
-          '<div class="vent-opts">' +
-          VENTANA_APERTURAS.map(a =>
-            '<button class="vent-btn' + (vc.apertura===a.val?' sel':'') + '" onclick="setVentana(\'' + espId + '\',' + i + ',\'apertura\',\'' + a.val + '\')">' +
-            '<span class="vent-btn-icon">' + a.icon + '</span>' + a.label + '</button>'
-          ).join('') +
-          '</div>' +
-          // Material
-          '<div class="vent-step-lbl">2. Material del marco</div>' +
-          '<div class="vent-opts">' +
-          VENTANA_MATERIALES.map(m =>
-            '<button class="vent-btn' + (vc.material===m.val?' sel':'') + '" onclick="setVentana(\'' + espId + '\',' + i + ',\'material\',\'' + m.val + '\')">' +
-            '<span class="vent-btn-icon">' + m.icon + '</span>' + m.label + '</button>'
-          ).join('') +
-          '</div>' +
-          // Vidrio
-          '<div class="vent-step-lbl">3. Tipo de vidrio</div>' +
-          '<div class="vent-opts">' +
-          VENTANA_VIDRIOS.map(v =>
-            '<button class="vent-btn' + (vc.vidrio===v.val?' sel':'') + '" onclick="setVentana(\'' + espId + '\',' + i + ',\'vidrio\',\'' + v.val + '\')">' +
-            '<span class="vent-btn-icon">' + v.icon + '</span>' + v.label + '</button>'
-          ).join('') +
-          '</div>' +
-          '</div></div>';
+          '</div><div class="ventana-body' + (open?' open':'') + '">' +
+          '<div class="vent-step-lbl">1. Apertura</div><div class="vent-opts">' +
+          VENTANA_APERTURAS.map(a => '<button class="vent-btn' + (vc.apertura===a.val?' sel':'') + '" onclick="setVentana(\'' + espId + '\',' + i + ',\'apertura\',\'' + a.val + '\')"><span class="vent-btn-icon">' + a.icon + '</span>' + a.label + '</button>').join('') + '</div>' +
+          '<div class="vent-step-lbl">2. Marco</div><div class="vent-opts">' +
+          VENTANA_MATERIALES.map(m => '<button class="vent-btn' + (vc.material===m.val?' sel':'') + '" onclick="setVentana(\'' + espId + '\',' + i + ',\'material\',\'' + m.val + '\')"><span class="vent-btn-icon">' + m.icon + '</span>' + m.label + '</button>').join('') + '</div>' +
+          '<div class="vent-step-lbl">3. Vidrio</div><div class="vent-opts">' +
+          VENTANA_VIDRIOS.map(v => '<button class="vent-btn' + (vc.vidrio===v.val?' sel':'') + '" onclick="setVentana(\'' + espId + '\',' + i + ',\'vidrio\',\'' + v.val + '\')"><span class="vent-btn-icon">' + v.icon + '</span>' + v.label + '</button>').join('') +
+          '</div></div></div>';
       });
       html += '</div>';
     }
@@ -1886,7 +1946,7 @@ function renderEspacioForm() {
 
   // Mueble de baño / aseo
   if (tipo === 'bano' || tipo === 'aseo') {
-    const cantMueble  = cfg.cantUd['instalar_mueble'] || 0;
+    const cantMueble = cfg.cantUd['instalar_mueble'] || 0;
     const tieneEnTrab = cfg.trabajos.includes('instalar_mueble');
     const valSelect   = tieneEnTrab ? (cantMueble || 1) : 0;
     html += '<div class="mueble-wrap">' +
@@ -1904,7 +1964,6 @@ function renderEspacioForm() {
   document.getElementById('m2-display').value = cfg.m2;
   updateM2Hint();
 
-  // Restaurar notas del espacio
   const notasEl = document.getElementById('notas-espacio');
   const bodyEl  = document.getElementById('comentarios-body');
   const arrowEl = document.getElementById('coment-arrow');
@@ -1915,8 +1974,15 @@ function renderEspacioForm() {
     if (arrowEl) arrowEl.textContent   = hasNotas ? '▼' : '▶';
   }
 
-  const btnSig = document.getElementById('btn-siguiente-esp');
-  if (btnSig) btnSig.textContent = idx < total - 1 ? 'Siguiente espacio →' : 'Continuar →';
+  if (btnSig) { btnSig.textContent = idx < total - 1 ? 'Siguiente espacio →' : 'Continuar →'; btnSig.disabled = false; }
+}
+
+function goEspacioTrab(i) {
+  if (S.cfgEspacios[S.espacios[i]]?.trabajos?.length > 0) {
+    S.espacioIdx = i;
+    renderEspacioForm();
+    window.scrollTo({top:0, behavior:'smooth'});
+  }
 }
 
 function preposEsp(espId) {
@@ -2045,7 +2111,22 @@ function updateM2Hint() {
   if (el) el.textContent = (hints[tipo] || 'Metros cuadrados') + ' · puedes editarlo directamente';
 }
 function setObraCompleta(espId, val) {
-  S.cfgEspacios[espId].obraCompleta = val;
+  const cfg  = S.cfgEspacios[espId];
+  const tipo = getTipoBase(espId);
+  cfg.obraCompleta = val;
+  if (val === 'completa') {
+    const preselect = ['demolicion_completa','pintar_paredes','cambiar_suelo','falso_techo','cambiar_baldosas','renovar_fontaneria'];
+    preselect.forEach(k => {
+      if (TRABAJOS[tipo]?.[k] && !cfg.trabajos.includes(k)) cfg.trabajos.push(k);
+    });
+    if (TRABAJOS[tipo]?.renovar_fontaneria) {
+      if (!cfg.qtys) cfg.qtys = {};
+      cfg.qtys['renovar_fontaneria'] = TRABAJOS[tipo].renovar_fontaneria.defQty || 3;
+    }
+  } else if (val === null) {
+    cfg.trabajos = [];
+    cfg.qtys     = {};
+  }
   renderEspacioForm();
 }
 function setTabiqueAccion(espId, i, val) {
@@ -2055,7 +2136,13 @@ function setTabiqueAccion(espId, i, val) {
 
 function siguienteEspacio() {
   const espId = S.espacios[S.espacioIdx];
-  if (S.cfgEspacios[espId].trabajos.length === 0) {
+  const cfg   = S.cfgEspacios[espId];
+  const tipo  = getTipoBase(espId);
+  if ((tipo === 'bano' || tipo === 'aseo') && !cfg.obraCompleta) {
+    toast('Elige entre obra completa u obra parcial para continuar', 'warn');
+    return;
+  }
+  if (cfg.trabajos.length === 0) {
     toast('Marca al menos un trabajo para ' + getLabelEspacio(espId), 'warn');
     return;
   }
@@ -2136,10 +2223,10 @@ function renderMateriales() {
     const selProd = selInfo ? PRODUCTOS.find(p => p.id === selInfo.prodId) : null;
     const estM2   = estimarCantMat(cat, m2);
 
-    // C11: "Ver más" toggle — show first 3, expand on demand
+    // C11: "Ver más" — show 3 initially, each click reveals 3 more
     const showAllKey = espId + '_' + cat;
-    const showAll    = S.matShowAll?.[showAllKey] || false;
-    const visProds   = showAll ? prods : prods.slice(0, 3);
+    const showN      = S.matShowN?.[showAllKey] || 3;
+    const visProds   = prods.slice(0, showN);
 
     html += '<div class="mat-cat-group">';
     html += '<div class="mat-section-title">' + (catLabels[cat] || cat) + '</div>';
@@ -2157,12 +2244,9 @@ function renderMateriales() {
     });
     html += '</div>';
 
-    if (prods.length > 3) {
-      if (!showAll) {
-        html += '<button class="ver-mas-btn" onclick="toggleMatShowAll(\'' + espId + '\',\'' + cat + '\')">▼ Ver más opciones (' + (prods.length-3) + ' más)</button>';
-      } else {
-        html += '<button class="ver-mas-btn" onclick="toggleMatShowAll(\'' + espId + '\',\'' + cat + '\')">▲ Ver menos</button>';
-      }
+    if (prods.length > showN) {
+      const restantes = Math.min(3, prods.length - showN);
+      html += '<button class="ver-mas-btn" onclick="toggleMatShowAll(\'' + espId + '\',\'' + cat + '\')">▼ Ver más opciones (' + restantes + ' más)</button>';
     }
 
     html += '<div class="mat-none-btn' + (!selInfo?' active':'') + '" onclick="selMatEsp(\'' + espId + '\',\'' + cat + '\',null)" style="cursor:pointer">🎨 Sin preferencia <span style="font-size:10px">(precio estándar)</span></div>';
@@ -2188,7 +2272,7 @@ function renderMateriales() {
   if (S.matEspacioIdx < total-1) {
     html += '<button class="btn-next" onclick="navMatEsp(1)">Siguiente espacio →</button>';
   } else {
-    html += '<button class="btn-next" onclick="goStep(5)">Continuar →</button>';
+    html += '<button class="btn-next" onclick="matContinuar()">Continuar →</button>';
   }
   html += '</div>';
 
@@ -2199,24 +2283,61 @@ function renderMateriales() {
   }, 60);
 }
 
+function matEspCompleto(espId) {
+  const cfg  = S.cfgEspacios[espId] || {};
+  const cats = [...new Set((cfg.trabajos || []).map(k => TRABAJO_CAT_MAP[k]).filter(Boolean))];
+  if (!cats.length) return true;
+  const dict = getMatDict(espId);
+  return cats.every(c => c in dict);
+}
+
 function navMatEsp(d) {
   const espConMats = S.espacios.filter(espId =>
     (S.cfgEspacios[espId]?.trabajos || []).some(k => TRABAJO_CAT_MAP[k])
   );
+  if (d > 0) {
+    const curId = espConMats[S.matEspacioIdx];
+    if (!matEspCompleto(curId)) {
+      toast('Elige un material o "Sin preferencia" en cada categoría antes de continuar', 'warn');
+      return;
+    }
+  }
   S.matEspacioIdx = Math.max(0, Math.min(espConMats.length-1, S.matEspacioIdx+d));
   renderMateriales();
   window.scrollTo({top:0, behavior:'smooth'});
 }
 function navMatEspTo(idx) {
+  if (idx > S.matEspacioIdx) {
+    const espConMats = S.espacios.filter(espId =>
+      (S.cfgEspacios[espId]?.trabajos || []).some(k => TRABAJO_CAT_MAP[k])
+    );
+    const curId = espConMats[S.matEspacioIdx];
+    if (!matEspCompleto(curId)) {
+      toast('Completa los materiales de este espacio antes de avanzar', 'warn');
+      return;
+    }
+  }
   S.matEspacioIdx = idx;
   renderMateriales();
   window.scrollTo({top:0, behavior:'smooth'});
 }
 function toggleMatShowAll(espId, cat) {
-  if (!S.matShowAll) S.matShowAll = {};
-  const key = espId + '_' + cat;
-  S.matShowAll[key] = !S.matShowAll[key];
+  if (!S.matShowN) S.matShowN = {};
+  const key   = espId + '_' + cat;
+  const total = PRODUCTOS.filter(p => p.cat === cat).length;
+  S.matShowN[key] = Math.min((S.matShowN[key] || 3) + 3, total);
   renderMateriales();
+}
+function matContinuar() {
+  const espConMats = S.espacios.filter(espId =>
+    (S.cfgEspacios[espId]?.trabajos || []).some(k => TRABAJO_CAT_MAP[k])
+  );
+  const curId = espConMats[S.matEspacioIdx];
+  if (!matEspCompleto(curId)) {
+    toast('Elige un material o "Sin preferencia" en cada categoría antes de continuar', 'warn');
+    return;
+  }
+  goStep(5);
 }
 function toggleMatCompartido(key) {
   S.matCompartidos[key] = !S.matCompartidos[key];
@@ -2762,7 +2883,7 @@ function reiniciar() {
   S.espaciosSingle = new Set();
   S.espacios    = []; S.cfgEspacios = {};
   S.calidad     = 'media'; S.materiales = [];
-  S.materialesPorEspacio = {}; S.matCompartidos = {}; S.matShowAll = {}; S.matEspacioIdx = 0;
+  S.materialesPorEspacio = {}; S.matCompartidos = {}; S.matShowN = {}; S.matEspacioIdx = 0;
   S.extras      = new Set();
   S.urgencia    = 'sin_prisa'; S.notas = ''; S.adjuntos = []; S.resultado = null;
   S.maxPaso = 1; S.obraHabitada = false;
