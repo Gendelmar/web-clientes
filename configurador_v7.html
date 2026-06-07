@@ -119,7 +119,7 @@ button, input, select, textarea { font-family: inherit; }
 
 /* ── PASO 3: TRABAJOS (checkboxes por categoría) ── */
 .espacio-progress {
-  display: flex; gap: 8px; align-items: center; margin-bottom: 20px;
+  display: flex; gap: 8px; align-items: center; justify-content: center; margin-bottom: 20px;
 }
 .esp-dot {
   width: 8px; height: 8px; border-radius: 50%;
@@ -187,7 +187,7 @@ button, input, select, textarea { font-family: inherit; }
   color: var(--accent); font-weight: 600; margin: 22px 0 10px;
   padding-bottom: 6px; border-bottom: 1px solid var(--border);
 }
-.prod-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; margin-bottom: 4px; }
+.prod-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 4px; }
 .prod-card {
   border: 2px solid var(--border); border-radius: 11px;
   overflow: hidden; cursor: pointer; transition: all .18s; background: #fff; position: relative;
@@ -692,8 +692,8 @@ textarea.field-inp { resize: vertical; min-height: 90px; }
 .tab-accion-btn.sel { background: var(--terra); color: #fff; border-color: var(--terra); }
 
 /* ── MATERIALES NAVEGACIÓN (C9) ── */
-.mat-nav { display: flex; align-items: center; gap: 10px; margin-bottom: 16px; }
-.mat-nav-dots { display: flex; gap: 6px; align-items: center; flex: 1; }
+.mat-nav { display: flex; align-items: center; justify-content: center; gap: 10px; margin-bottom: 16px; }
+.mat-nav-dots { display: flex; gap: 6px; align-items: center; }
 .mat-nav-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--border); transition: all .2s; cursor: pointer; }
 .mat-nav-dot.done { background: var(--ok); }
 .mat-nav-dot.act { background: var(--accent); width: 20px; border-radius: 4px; }
@@ -752,7 +752,7 @@ textarea.field-inp { resize: vertical; min-height: 90px; }
 .chk-card.preset .chk-box::after { content: "✓"; color: #fff; font-size: 10px; }
 
 /* ── MAT-NAV CENTERED ── */
-.mat-nav-dots { flex-wrap: wrap; justify-content: center; max-width: 200px; }
+.mat-nav-dots { flex-wrap: wrap; justify-content: center; }
 
 /* ── MAT SURFACE NOTE ── */
 .mat-surface-note { font-size: 10px; color: var(--muted); font-style: italic; margin-left: auto; text-align: right; line-height: 1.3; flex-shrink: 0; }
@@ -1220,6 +1220,7 @@ const TRABAJOS = {
     // CARPINTERÍA
     cambiar_puerta:         {label:"Cambiar puerta",                     unidad:"ud",       mo:150, mat:290, dias:0.5},
     cambiar_ventana:        {label:"Cambiar ventana",                    unidad:"ud",       mo:200, mat:430, dias:0.5},
+    aire_acondicionado:     {label:"Aire acondicionado split",           unidad:"ud",       mo:300, mat:900, dias:1.0},
   },
   aseo: {
     // DEMOLICIÓN
@@ -1245,6 +1246,7 @@ const TRABAJOS = {
     // CARPINTERÍA
     cambiar_puerta:         {label:"Cambiar puerta",                     unidad:"ud",       mo:150, mat:290, dias:0.5},
     cambiar_ventana:        {label:"Cambiar ventana",                    unidad:"ud",       mo:200, mat:380, dias:0.5},
+    aire_acondicionado:     {label:"Aire acondicionado split",           unidad:"ud",       mo:300, mat:900, dias:1.0},
   },
   cocina: {
     // DEMOLICIÓN
@@ -1269,6 +1271,7 @@ const TRABAJOS = {
     // CARPINTERÍA
     cambiar_puerta:         {label:"Cambiar puerta",                     unidad:"ud",       mo:150, mat:290, dias:0.5},
     cambiar_ventana:        {label:"Cambiar ventana",                    unidad:"ud",       mo:200, mat:430, dias:0.5},
+    aire_acondicionado:     {label:"Aire acondicionado split",           unidad:"ud",       mo:300, mat:900, dias:1.0},
   },
   habitacion: {
     // DEMOLICIÓN
@@ -1290,6 +1293,7 @@ const TRABAJOS = {
     aire_acondicionado:     {label:"Aire acondicionado split",           unidad:"ud",       mo:300, mat:900, dias:1.0},
     suelo_radiante:         {label:"Suelo radiante",                     unidad:"m2",       mo:35,  mat:40,  dias:0.4},
     radiadores:             {label:"Instalar radiador",                  unidad:"ud",       mo:150, mat:280, dias:0.5},
+    montaje_muebles:        {label:"Montaje de muebles/estanterías",     unidad:"ud",       mo:100, mat:50,  dias:0.3, udLabel:"muebles"},
   },
   salon: {
     // DEMOLICIÓN
@@ -1309,6 +1313,7 @@ const TRABAJOS = {
     aire_acondicionado:     {label:"Aire acondicionado split",           unidad:"ud",       mo:300, mat:900, dias:1.0},
     suelo_radiante:         {label:"Suelo radiante",                     unidad:"m2",       mo:35,  mat:40,  dias:0.5},
     radiadores:             {label:"Radiador",                           unidad:"ud",       mo:150, mat:280, dias:0.5},
+    montaje_muebles:        {label:"Montaje de muebles/estanterías",     unidad:"ud",       mo:100, mat:50,  dias:0.3, udLabel:"muebles"},
   },
   pasillo: {
     // DEMOLICIÓN
@@ -1322,6 +1327,7 @@ const TRABAJOS = {
     // INSTALACIONES
     puntos_de_luz:          {label:"Puntos de luz y enchufes",           unidad:"ud",       mo:80,  mat:30,  dias:0.3},
     renovar_electricidad:   {label:"Instalación eléctrica",              unidad:"ud",       mo:300, mat:180, dias:1.0, defQty:4},
+    aire_acondicionado:     {label:"Aire acondicionado split",           unidad:"ud",       mo:300, mat:900, dias:1.0},
     suelo_radiante:         {label:"Suelo radiante",                     unidad:"m2",       mo:35,  mat:40,  dias:0.4},
     radiadores:             {label:"Instalar radiador",                  unidad:"ud",       mo:150, mat:280, dias:0.5},
   },
@@ -1344,6 +1350,7 @@ const TRABAJOS = {
     // INSTALACIONES
     puntos_de_luz:          {label:"Puntos de luz y enchufes",           unidad:"ud",       mo:80,  mat:30,  dias:0.3},
     renovar_electricidad:   {label:"Instalación eléctrica",              unidad:"ud",       mo:300, mat:180, dias:1.0, defQty:4},
+    aire_acondicionado:     {label:"Aire acondicionado split",           unidad:"ud",       mo:300, mat:900, dias:1.0},
     radiadores:             {label:"Instalar radiador/calefactor",       unidad:"ud",       mo:150, mat:280, dias:0.5},
   },
 };
@@ -1352,21 +1359,21 @@ const TRABAJOS = {
 const TRABAJOS_CATS = {
   bano: [
     {cat:"DEMOLICIÓN",              items:["demolicion_completa","solo_revestimientos","mover_distribucion"]},
-    {cat:"INSTALACIONES",           items:["renovar_fontaneria","renovar_electricidad","calefaccion_group"]},
+    {cat:"INSTALACIONES",           items:["renovar_fontaneria","renovar_electricidad","aire_acondicionado","calefaccion_group"]},
     {cat:"¿QUÉ QUIERES CAMBIAR?",  items:["cambiar_baldosas","cambiar_suelo","pintar_paredes","falso_techo"]},
     {cat:"SANITARIOS",              items:["instalar_ducha","instalar_banera","instalar_inodoro","instalar_lavabo"],avisoEstimado:true},
     {cat:"CARPINTERÍA",             items:["cambiar_puerta","cambiar_ventana"]},
   ],
   aseo: [
     {cat:"DEMOLICIÓN",              items:["demolicion_completa","solo_revestimientos","mover_distribucion"]},
-    {cat:"INSTALACIONES",           items:["renovar_fontaneria","renovar_electricidad","calefaccion_group"]},
+    {cat:"INSTALACIONES",           items:["renovar_fontaneria","renovar_electricidad","aire_acondicionado","calefaccion_group"]},
     {cat:"¿QUÉ QUIERES CAMBIAR?",  items:["cambiar_baldosas","cambiar_suelo","pintar_paredes","falso_techo"]},
     {cat:"SANITARIOS",              items:["instalar_ducha","instalar_inodoro","instalar_lavabo"],avisoEstimado:true},
     {cat:"CARPINTERÍA",             items:["cambiar_puerta","cambiar_ventana"]},
   ],
   cocina: [
     {cat:"DEMOLICIÓN",              items:["demolicion_completa","mover_distribucion"]},
-    {cat:"INSTALACIONES",           items:["renovar_fontaneria","renovar_electricidad","calefaccion_group"]},
+    {cat:"INSTALACIONES",           items:["renovar_fontaneria","renovar_electricidad","aire_acondicionado","calefaccion_group"]},
     {cat:"¿QUÉ QUIERES CAMBIAR?",  items:["alicatar_paredes","cambiar_suelo","pintar_paredes","falso_techo"]},
     {cat:"MOBILIARIO",              items:["instalar_muebles","encimera","instalar_campana","instalar_fregadero"]},
     {cat:"CARPINTERÍA",             items:["cambiar_puerta","cambiar_ventana"]},
@@ -1375,18 +1382,18 @@ const TRABAJOS_CATS = {
     {cat:"DEMOLICIÓN",              items:["tirar_pared","redistribucion_tabiques","abrir_hueco"]},
     {cat:"REVESTIMIENTOS",          items:["pintar_paredes","papel_pintado","cambiar_suelo","pulir_parquet","falso_techo"]},
     {cat:"CARPINTERÍA",             items:["cambiar_ventanas","armario_empotrado","cambiar_puerta"]},
-    {cat:"INSTALACIONES",           items:["puntos_de_luz","calefaccion_group"]},
+    {cat:"INSTALACIONES",           items:["puntos_de_luz","aire_acondicionado","calefaccion_group"]},
   ],
   salon: [
     {cat:"DEMOLICIÓN",              items:["tirar_pared","redistribucion_tabiques"]},
     {cat:"REVESTIMIENTOS",          items:["pintar_paredes","papel_pintado","cambiar_suelo","pulir_parquet","falso_techo"]},
     {cat:"CARPINTERÍA",             items:["cambiar_puerta","cambiar_ventanas"]},
-    {cat:"INSTALACIONES",           items:["puntos_de_luz","calefaccion_group"]},
+    {cat:"INSTALACIONES",           items:["puntos_de_luz","aire_acondicionado","calefaccion_group"]},
   ],
   pasillo: [
     {cat:"DEMOLICIÓN",              items:["tirar_pared","redistribucion_tabiques"]},
     {cat:"ACABADOS",                items:["pintar_paredes","cambiar_suelo","falso_techo","cambiar_puerta"]},
-    {cat:"INSTALACIONES",           items:["puntos_de_luz","renovar_electricidad","calefaccion_group"]},
+    {cat:"INSTALACIONES",           items:["renovar_electricidad","aire_acondicionado","calefaccion_group"]},
   ],
   toda_la_obra: [
     {cat:"TODA LA VIVIENDA",        items:["pintura_integral","suelos_integral","electricidad_integral","fontaneria_integral","demolicion_integral"]},
@@ -1395,7 +1402,7 @@ const TRABAJOS_CATS = {
     {cat:"ACABADOS",                items:["limpiar_rejuntar","cambiar_suelo","pintar_paredes","falso_techo"]},
     {cat:"OBRA",                    items:["impermeabilizar","cerrar_terraza","cambiar_barandilla"],avisoTerrazaObra:true},
     {cat:"EQUIPAMIENTO",            items:["pergola_toldo"],avisoTerrazaCerramiento:true},
-    {cat:"INSTALACIONES",           items:["puntos_de_luz","renovar_electricidad","calefaccion_group"]},
+    {cat:"INSTALACIONES",           items:["renovar_electricidad","aire_acondicionado","calefaccion_group"]},
   ],
 };
 
@@ -1404,8 +1411,8 @@ const CALEFACCION_ITEMS = {
   bano:       ['suelo_radiante','radiador_toallero'],
   aseo:       ['suelo_radiante','radiadores'],
   cocina:     ['suelo_radiante','instalar_caldera','radiadores'],
-  habitacion: ['suelo_radiante','radiadores','aire_acondicionado'],
-  salon:      ['suelo_radiante','radiadores','aire_acondicionado'],
+  habitacion: ['suelo_radiante','radiadores'],
+  salon:      ['suelo_radiante','radiadores'],
   pasillo:    ['suelo_radiante','radiadores'],
   terraza:    ['radiadores'],
   toda_la_obra: [],
@@ -1413,7 +1420,7 @@ const CALEFACCION_ITEMS = {
 
 // Extras logísticos
 const EXTRAS_CONFIG = {
-  sin_ascensor:           {label:"Edificio sin ascensor",             desc:"El recargo por planta se incluye automáticamente en el presupuesto", icon:"🏗️", importe:0, esDinamico:true},
+  sin_ascensor:           {label:"Edificio sin ascensor",             desc:"", icon:"🏗️", importe:0, esDinamico:true},
   gestion_residuos:       {label:"Gestión de residuos y escombros",    desc:"Retirada y vertedero incluidos",          icon:"🗑️", importe:280},
   necesita_grua:          {label:"Necesito grúa o montacargas",        desc:"Para muebles o maquinaria pesada",        icon:"🏋️", importe:450},
   proteccion_zonas:       {label:"Protección de zonas no reformadas",  desc:"Mobiliario y suelos protegidos",          icon:"🛡️", importe:180},
@@ -1496,7 +1503,7 @@ const TRABAJO_GRUPOS = {
   instalar_ducha:'Sanitarios', instalar_banera:'Sanitarios',
   instalar_inodoro:'Sanitarios', instalar_lavabo:'Sanitarios',
   instalar_mueble:'Mobiliario de baño', instalar_espejo:'Mobiliario de baño', radiador_toallero:'Mobiliario de baño',
-  instalar_muebles:'Mobiliario de cocina', encimera:'Mobiliario de cocina',
+  montaje_muebles:'Mobiliario', instalar_muebles:'Mobiliario de cocina', encimera:'Mobiliario de cocina',
   instalar_campana:'Mobiliario de cocina', instalar_fregadero:'Mobiliario de cocina',
   cambiar_puerta:'Carpintería', cambiar_ventana:'Carpintería',
   cambiar_ventanas:'Carpintería', armario_empotrado:'Carpintería', cambiar_barandilla:'Carpintería',
@@ -1684,8 +1691,9 @@ function getIntegralPresets(tipo) {
   if (tipo === 'bano')      return [...base,'cambiar_baldosas','renovar_fontaneria'];
   if (tipo === 'aseo')      return [...base,'cambiar_baldosas','renovar_fontaneria'];
   if (tipo === 'cocina')    return [...base,'alicatar_paredes'];
-  if (tipo === 'habitacion' || tipo === 'salon' || tipo === 'pasillo') return [...base,'puntos_de_luz'];
-  if (tipo === 'terraza')   return ['pintar_paredes','cambiar_suelo','puntos_de_luz','renovar_electricidad'];
+  if (tipo === 'habitacion' || tipo === 'salon') return [...base,'puntos_de_luz'];
+  if (tipo === 'pasillo') return base;
+  if (tipo === 'terraza')   return ['pintar_paredes','cambiar_suelo','renovar_electricidad'];
   return base;
 }
 
@@ -2161,8 +2169,16 @@ function renderEspacioForm() {
         : regularItems;
 
       html += '<div class="chk-grid">';
-      filteredItems.forEach(tKey => { html += chkHtml(tKey); });
+      filteredItems.forEach(tKey => {
+        if (tipo === 'cocina' && (tKey === 'instalar_muebles' || tKey === 'encimera')) return;
+        html += chkHtml(tKey);
+      });
       html += '</div>';
+
+      // Cocina: dropdown selectors for muebles de cocina and encimera
+      if (tipo === 'cocina' && cat === 'MOBILIARIO') {
+        html += renderCocinaMueblesHtml(espId, cfg);
+      }
 
       // Demo sub-question (after DEMOLICIÓN items)
       if (esDemo && showDemoQ) html += demoSubHtml();
@@ -2190,22 +2206,30 @@ function renderEspacioForm() {
     });
   }
 
-  // Mueble de baño / aseo (includes espejo option)
+  // Mueble de baño / aseo (espejo inline a la derecha)
   if (isBanoAseo && cfg.obraCompleta) {
     const cantMueble = cfg.cantUd['instalar_mueble'] || 0;
     const tieneEnTrab = cfg.trabajos.includes('instalar_mueble');
     const valSelect   = tieneEnTrab ? (cantMueble || 1) : 0;
     html += '<div class="mueble-wrap">' +
+      '<div style="display:flex;align-items:flex-start;gap:16px;flex-wrap:wrap">' +
+      '<div style="flex:1;min-width:160px">' +
       '<span class="field-lbl">Montaje de mueble de ' + (tipo === 'bano' ? 'baño' : 'aseo') + '</span>' +
-      '<select class="mueble-select" id="sel-mueble-' + espId + '" onchange="setMueblesSelect(\'' + espId + '\',this.value)">' +
+      '<select class="mueble-select" style="max-width:100%" id="sel-mueble-' + espId + '" onchange="setMueblesSelect(\'' + espId + '\',this.value)">' +
       '<option value="0"' + (valSelect===0?' selected':'') + '>Sin mueble nuevo</option>' +
       '<option value="1"' + (valSelect===1?' selected':'') + '>1 mueble</option>' +
       '<option value="2"' + (valSelect===2?' selected':'') + '>2 muebles</option>' +
       '<option value="3"' + (valSelect===3?' selected':'') + '>3 muebles</option>' +
       '<option value="4"' + (valSelect===4?' selected':'') + '>4 o más muebles</option>' +
-      '</select>' +
-      '<div style="margin-top:10px"><div class="chk-grid">' + chkHtml('instalar_espejo') + '</div></div>' +
+      '</select></div>' +
+      '<div style="flex:0 0 auto;padding-top:20px"><div class="chk-grid">' + chkHtml('instalar_espejo') + '</div></div>' +
+      '</div>' +
       '</div>';
+  }
+
+  // Mueble section for habitacion and salon
+  if (tipo === 'habitacion' || tipo === 'salon') {
+    html += renderHabMueblesHtml(espId, cfg);
   }
 
   document.getElementById('trabajos-form').innerHTML = html;
@@ -2301,6 +2325,71 @@ function setMueblesSelect(espId, val) {
   } else {
     if (idx !== -1) cfg.trabajos.splice(idx, 1);
     delete cfg.cantUd['instalar_mueble'];
+  }
+}
+function renderCocinaMueblesHtml(espId, cfg) {
+  const mlMuebles = cfg.mlOvr?.['instalar_muebles'];
+  const valMuebles = cfg.trabajos.includes('instalar_muebles') ? (mlMuebles || 4) : 0;
+  const mlEncimera = cfg.mlOvr?.['encimera'];
+  const valEncimera = cfg.trabajos.includes('encimera') ? (mlEncimera || 3) : 0;
+  return '<div class="mueble-wrap" style="margin-top:8px">' +
+    '<div style="display:flex;gap:16px;flex-wrap:wrap">' +
+    '<div style="flex:1;min-width:140px">' +
+    '<span class="field-lbl">Muebles de cocina</span>' +
+    '<select class="mueble-select" style="max-width:100%" onchange="setCocinaMueblesSelect(\'' + espId + '\',\'instalar_muebles\',this.value)">' +
+    '<option value="0"' + (valMuebles===0?' selected':'') + '>Sin muebles de cocina</option>' +
+    '<option value="1"' + (valMuebles===1?' selected':'') + '>1 módulo (≈1 m)</option>' +
+    '<option value="2"' + (valMuebles===2?' selected':'') + '>2 módulos (≈2 m)</option>' +
+    '<option value="3"' + (valMuebles===3?' selected':'') + '>3 módulos (≈3 m)</option>' +
+    '<option value="4"' + (valMuebles>=4?' selected':'') + '>4 o más módulos</option>' +
+    '</select></div>' +
+    '<div style="flex:1;min-width:140px">' +
+    '<span class="field-lbl">Encimera</span>' +
+    '<select class="mueble-select" style="max-width:100%" onchange="setCocinaMueblesSelect(\'' + espId + '\',\'encimera\',this.value)">' +
+    '<option value="0"' + (valEncimera===0?' selected':'') + '>Sin encimera nueva</option>' +
+    '<option value="1"' + (valEncimera===1?' selected':'') + '>1 módulo (≈1 m)</option>' +
+    '<option value="2"' + (valEncimera===2?' selected':'') + '>2 módulos (≈2 m)</option>' +
+    '<option value="3"' + (valEncimera>=3?' selected':'') + '>3 o más módulos</option>' +
+    '</select></div>' +
+    '</div></div>';
+}
+function setCocinaMueblesSelect(espId, campo, val) {
+  const n = parseInt(val) || 0;
+  const cfg = S.cfgEspacios[espId];
+  const idx = cfg.trabajos.indexOf(campo);
+  if (n > 0) {
+    if (idx === -1) cfg.trabajos.push(campo);
+    if (!cfg.mlOvr) cfg.mlOvr = {};
+    cfg.mlOvr[campo] = n;
+  } else {
+    if (idx !== -1) cfg.trabajos.splice(idx, 1);
+    if (cfg.mlOvr) delete cfg.mlOvr[campo];
+  }
+}
+function renderHabMueblesHtml(espId, cfg) {
+  const cantMueble = cfg.cantUd?.['montaje_muebles'] || 0;
+  const tieneEnTrab = cfg.trabajos.includes('montaje_muebles');
+  const val = tieneEnTrab ? (cantMueble || 1) : 0;
+  return '<div class="mueble-wrap">' +
+    '<span class="field-lbl">Montaje de muebles/estanterías</span>' +
+    '<select class="mueble-select" onchange="setMuebleHabSelect(\'' + espId + '\',this.value)">' +
+    '<option value="0"' + (val===0?' selected':'') + '>Sin montaje de muebles</option>' +
+    '<option value="1"' + (val===1?' selected':'') + '>1 mueble</option>' +
+    '<option value="2"' + (val===2?' selected':'') + '>2 muebles</option>' +
+    '<option value="3"' + (val===3?' selected':'') + '>3 muebles</option>' +
+    '<option value="4"' + (val>=4?' selected':'') + '>4 o más muebles</option>' +
+    '</select></div>';
+}
+function setMuebleHabSelect(espId, val) {
+  const n = parseInt(val) || 0;
+  const cfg = S.cfgEspacios[espId];
+  const idx = cfg.trabajos.indexOf('montaje_muebles');
+  if (n > 0) {
+    if (idx === -1) cfg.trabajos.push('montaje_muebles');
+    cfg.cantUd['montaje_muebles'] = n;
+  } else {
+    if (idx !== -1) cfg.trabajos.splice(idx, 1);
+    delete cfg.cantUd['montaje_muebles'];
   }
 }
 function setTabiqueMat(espId, i, val) {
@@ -2482,7 +2571,7 @@ function renderMateriales() {
   html += '</div>';
 
   html += '<div class="mat-esp-titulo">' + getLabelConEmoji(espId) + '</div>';
-  html += '<div class="mat-skip" style="margin-bottom:16px">Elige el material que prefieras. <em>Tu elección puede ser orientativa en precio, durante la obra podrás elegir cualquier otro material.</em></div>';
+  html += '<div class="mat-skip" style="margin-bottom:16px">Elige el material que prefieras.<br><u><strong>Tu elección puede ser orientativa en precio, durante la obra podrás elegir cualquier otro material.</strong></u></div>';
 
   const tipoEsp = getTipoBase(espId);
   const catsForEsp = [...new Set((cfg.trabajos || []).map(k => TRABAJO_CAT_MAP[k]).filter(Boolean))];
@@ -2507,14 +2596,26 @@ function renderMateriales() {
     html += '<div class="prod-grid">';
     visProds.forEach(p => {
       const sel = selInfo?.prodId === p.id;
-      const precioStr = p.precio != null ? p.precio.toFixed(2) + ' €' : 'Consultar';
+      let precioStr, precioUnit;
+      if (cat === 'pintura') {
+        if (p.precio != null) {
+          const litros = parseInt(p.nombre.match(/(\d+)\s*[Ll]\b/)?.[1]) || 15;
+          precioStr = (p.precio / (litros * 5)).toFixed(2) + ' €';
+          precioUnit = '/m²';
+        } else {
+          precioStr = 'Consultar'; precioUnit = '';
+        }
+      } else {
+        precioStr = p.precio != null ? p.precio.toFixed(2) + ' €' : 'Consultar';
+        precioUnit = p.precio != null ? ' / ' + p.unidad : '';
+      }
       html += '<div class="prod-card' + (sel?' sel':'') + '" onclick="selMatEsp(\'' + espId + '\',\'' + cat + '\',\'' + p.id + '\')" style="cursor:pointer">' +
         '<div class="opt-check">✓</div>' +
         '<img class="prod-img" src="' + p.img + '" alt="' + p.nombre + '" loading="lazy">' +
         '<div class="prod-body">' +
         (p.marca && p.marca !== '—' ? '<div class="prod-brand">' + p.marca + '</div>' : '') +
         '<div class="prod-name">' + p.nombre + '</div>' +
-        '<div class="prod-foot"><div class="prod-price">' + precioStr + '<span class="prod-unit"> / ' + p.unidad + '</span></div>' +
+        '<div class="prod-foot"><div class="prod-price">' + precioStr + '<span class="prod-unit">' + precioUnit + '</span></div>' +
         (p.proveedor ? '<div style="font-size:10px;color:var(--muted)">' + p.proveedor + '</div>' : '') +
         '</div></div></div>';
     });
@@ -2530,14 +2631,30 @@ function renderMateriales() {
     if (selProd) {
       const cant    = selInfo.cantidad;
       const cantStr = cant ? String(cant) : '';
-      html += '<div class="mat-m2-row" style="align-items:flex-start">' +
-        '<span style="padding-top:2px">' + selProd.nombre + ' ·</span>' +
-        '<input class="mat-m2-inp" type="number" min="0.5" max="2000" step="0.5"' +
-        ' value="' + cantStr + '" placeholder="' + estM2 + '" id="mm2-' + espId + '-' + cat + '"' +
-        ' oninput="setCantMat2(\'' + espId + '\',\'' + cat + '\',this.value)">' +
-        '<span class="mat-m2-est">' + selProd.unidad + ' <span style="color:var(--accent)">' + (cant?'':'(estimación: '+estM2+' '+selProd.unidad+')') + '</span></span>' +
-        (hasSurface ? '<span class="mat-surface-note">*La superficie de paredes es ancho pared × alto pared</span>' : '') +
-        '</div>';
+      if (cat === 'pintura') {
+        const litros    = parseInt(selProd.nombre.match(/(\d+)\s*[Ll]\b/)?.[1]) || 15;
+        const botesEst  = Math.ceil(estM2 / (litros * 5));
+        html += '<div class="mat-m2-row" style="align-items:flex-start">' +
+          '<span style="padding-top:2px">' + selProd.nombre + ' ·</span>' +
+          '<input class="mat-m2-inp" type="number" min="0.5" max="5000" step="0.5"' +
+          ' value="' + cantStr + '" placeholder="' + estM2 + '" id="mm2-' + espId + '-' + cat + '"' +
+          ' oninput="setCantMat2(\'' + espId + '\',\'' + cat + '\',this.value)">' +
+          '<span class="mat-m2-est">m² <span style="color:var(--accent)">' + (cant?'':'(estimación: '+estM2+' m²)') + '</span></span>' +
+          (hasSurface ? '<span class="mat-surface-note">*La superficie de paredes es ancho pared × alto pared</span>' : '') +
+          '</div>' +
+          '<div style="font-size:11px;color:var(--muted);margin-top:4px;margin-bottom:6px">' +
+          '→ Estimación: ' + estM2 + ' m² de pared/techo → <strong>' + botesEst + ' bote' + (botesEst!==1?'s':'') + ' de ' + litros + 'L</strong>' +
+          '</div>';
+      } else {
+        html += '<div class="mat-m2-row" style="align-items:flex-start">' +
+          '<span style="padding-top:2px">' + selProd.nombre + ' ·</span>' +
+          '<input class="mat-m2-inp" type="number" min="0.5" max="2000" step="0.5"' +
+          ' value="' + cantStr + '" placeholder="' + estM2 + '" id="mm2-' + espId + '-' + cat + '"' +
+          ' oninput="setCantMat2(\'' + espId + '\',\'' + cat + '\',this.value)">' +
+          '<span class="mat-m2-est">' + selProd.unidad + ' <span style="color:var(--accent)">' + (cant?'':'(estimación: '+estM2+' '+selProd.unidad+')') + '</span></span>' +
+          (hasSurface ? '<span class="mat-surface-note">*La superficie de paredes es ancho pared × alto pared</span>' : '') +
+          '</div>';
+      }
     }
 
     html += '</div>';
@@ -2585,7 +2702,7 @@ function toggleMatShowAll(espId, cat) {
   if (!S.matShowN) S.matShowN = {};
   const key = espId + '_' + cat;
   const cur = S.matShowN[key] || 3;
-  S.matShowN[key] = cur <= 3 ? 6 : 3;
+  S.matShowN[key] = cur <= 3 ? 9 : 3;
   renderMateriales();
 }
 function matContinuar() {
