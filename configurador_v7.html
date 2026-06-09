@@ -1960,8 +1960,8 @@ function renderEspacioForm() {
   const hasTerrazaObra = cfg.trabajos.some(k => TERRAZA_OBRA_KEYS.has(k));
   const duchaSelBano   = tipo === 'bano' && cfg.trabajos.includes('instalar_ducha');
   const baneraSelBano  = tipo === 'bano' && cfg.trabajos.includes('instalar_banera');
-  // Demo/furniture question: skip demo Q if vivienda habitada already set globally.
-  const showDemoQ      = hasDemo && !S.obraHabitada && cfg.primeraPreg !== 'pintura';
+  // Demo Q takes priority whenever demo trabajo selected; furniture Q shown only when no demo.
+  const showDemoQ      = hasDemo && !S.obraHabitada;
   const showFurnitureQ = hasPintura && !showDemoQ;
   // Preset items tracking
   const presets = cfg.presetTrabajos || [];
@@ -2098,8 +2098,17 @@ function renderEspacioForm() {
 
   // ── BAÑO/ASEO OBRA COMPLETA: custom reorganized layout ────────
   if (isBanoAseo && cfg.obraCompleta === 'completa') {
-    // 1. Demo question FIRST (above preselected)
-    html += demoSubHtml();
+    // 1. Demo or furniture question FIRST (above preselected)
+    if (showDemoQ) {
+      html += demoSubHtml();
+    } else if (showFurnitureQ) {
+      const pm = cfg.pinturaConMuebles;
+      html += '<div class="pintura-sub" id="pintura-sub-wrap"><div class="pintura-sub-lbl">¿Hay mobiliario que gestionar?</div><div class="pintura-opts">' +
+        '<button class="pintura-btn' + (pm==='sin_muebles'?' sel':'') + '" onclick="setPinturaConMuebles(\'' + espId + '\',\'sin_muebles\')">Sin muebles</button>' +
+        '<button class="pintura-btn' + (pm==='tapar'?' sel':'') + '" onclick="setPinturaConMuebles(\'' + espId + '\',\'tapar\')">Tapar con plásticos</button>' +
+        '<button class="pintura-btn' + (pm==='desmontar'?' sel':'') + '" onclick="setPinturaConMuebles(\'' + espId + '\',\'desmontar\')">Desmontar muebles</button>' +
+        '</div></div>';
+    }
     // 2. Aviso preseleccionados
     html += '<div class="cat-aviso" style="margin-bottom:10px"><span class="cat-aviso-icon">✅</span><span>Las opciones siguientes vienen <strong>preseleccionadas</strong> para ' + (tipo==='bano'?'baño':'aseo') + ' completo. Puedes desmarcarlas o añadir más abajo.</span></div>';
     // 3. Preselected items section
@@ -2280,15 +2289,6 @@ function toggleTrabajo(espId, tKey) {
   const idx = cfg.trabajos.indexOf(tKey);
   if (idx === -1) cfg.trabajos.push(tKey);
   else cfg.trabajos.splice(idx, 1);
-  // Track primeraPreg for demo/furniture question deduplication
-  if (isAdding && !cfg.primeraPreg) {
-    if (DEMO_TRABAJOS.has(tKey)) cfg.primeraPreg = 'demo';
-    else if (tKey === 'pintar_paredes') cfg.primeraPreg = 'pintura';
-  }
-  // Reset primeraPreg when both are deselected
-  if (!cfg.trabajos.some(k => DEMO_TRABAJOS.has(k)) && !cfg.trabajos.includes('pintar_paredes')) {
-    cfg.primeraPreg = null;
-  }
   renderEspacioForm();
 }
 
@@ -2524,7 +2524,7 @@ function siguienteEspacio() {
   // Validate demo/furniture question answered
   const hasDemo    = cfg.trabajos.some(k => DEMO_TRABAJOS.has(k));
   const hasPintura = cfg.trabajos.includes('pintar_paredes');
-  const showDemoQ  = hasDemo    && !S.obraHabitada && cfg.primeraPreg !== 'pintura';
+  const showDemoQ  = hasDemo    && !S.obraHabitada;
   const showFurnQ  = hasPintura && !showDemoQ;
   if (showDemoQ && !(cfg.demolicionEstados?.length > 0)) {
     toast('Responde cómo está actualmente el espacio para continuar', 'warn');
