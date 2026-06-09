@@ -1832,12 +1832,17 @@ function toggleAireItem(espId, itemKey) {
   const idx  = cfg.trabajos.indexOf(itemKey);
   if (idx === -1) {
     cfg.trabajos.push(itemKey);
-    // Split requires falso_techo — auto-add if not present
-    if (itemKey === 'ac_split' && !cfg.trabajos.includes('falso_techo') && TRABAJOS[tipo]?.falso_techo) {
-      cfg.trabajos.push('falso_techo');
+    if (itemKey === 'ac_split') {
+      if (!cfg.trabajos.includes('falso_techo') && TRABAJOS[tipo]?.falso_techo) {
+        cfg.trabajos.push('falso_techo');
+        cfg.splitAutoAddedTecho = true;
+      } else {
+        cfg.splitAutoAddedTecho = false;
+      }
     }
   } else {
     cfg.trabajos.splice(idx, 1);
+    if (itemKey === 'ac_split') cfg.splitAutoAddedTecho = false;
   }
   renderEspacioForm();
 }
@@ -1852,21 +1857,27 @@ function renderAireHtml(espId, tipo, cfg) {
     '<div class="chk-box"></div><div>❄️ Aire acondicionado / Ventilador</div></div>';
   h += '</div>';
   if (acExp) {
-    h += '<div class="cal-sub"><div class="cal-sub-lbl">Elige tipo:</div><div class="cal-sub-grid">';
+    h += '<div class="cal-sub" id="aire-sub-wrap"><div class="cal-sub-lbl">Elige tipo:</div><div class="cal-sub-grid">';
     acKeys.forEach(aKey => {
       const at = TRABAJOS[tipo]?.[aKey];
       if (!at) return;
       const sel    = cfg.trabajos.includes(aKey);
       const defQty = at.defQty || 1;
       const cantUd = cfg.cantUd?.[aKey] != null ? cfg.cantUd[aKey] : defQty;
-      const splitNotice = (aKey === 'ac_split' && sel)
-        ? '<div class="cat-aviso" style="margin-top:6px;font-size:11px"><span class="cat-aviso-icon">✅</span><span>Se ha incluido hacer el techo/falso techo.</span></div>'
-        : '';
+      let extraHtml = '';
+      if (aKey === 'ac_split' && sel) {
+        const techoPresente = cfg.trabajos.includes('falso_techo');
+        if (cfg.splitAutoAddedTecho && techoPresente) {
+          extraHtml = '<div class="cat-aviso" style="margin-top:6px;font-size:11px"><span class="cat-aviso-icon">✅</span><span>Se ha incluido hacer el techo/falso techo.</span></div>';
+        } else if (!techoPresente) {
+          extraHtml = '<div class="cat-aviso" style="margin-top:6px;font-size:11px;background:#fff3cd;border-color:#e0a800;color:#7a5800"><span class="cat-aviso-icon">⚠️</span><span>El Split requiere techo/falso techo. Actívalo en ¿Qué quieres cambiar?</span></div>';
+        }
+      }
       h += '<div class="chk-card' + (sel ? ' sel' : '') + '" onclick="toggleAireItem(\'' + espId + '\',\'' + aKey + '\')">' +
         '<div class="chk-box"></div>' +
         '<div style="flex:1"><div>' + at.label + '</div>' +
-        (sel ? '<div class="qty-row" onclick="event.stopPropagation()"><input class="qty-inp" type="text" inputmode="numeric" min="1" max="10" value="' + cantUd + '" oninput="setCantUd(\'' + espId + '\',\'' + aKey + '\',this.value)"><span class="qty-lbl">uds</span></div>' : '') +
-        splitNotice +
+        (sel && !at.noQty ? '<div class="qty-row" onclick="event.stopPropagation()"><input class="qty-inp" type="text" inputmode="numeric" min="1" max="10" value="' + cantUd + '" oninput="setCantUd(\'' + espId + '\',\'' + aKey + '\',this.value)"><span class="qty-lbl">uds</span></div>' : '') +
+        extraHtml +
         '</div></div>';
     });
     h += '</div></div>';
@@ -1922,7 +1933,7 @@ function iniciarPaso3() {
         demolicionEstado: null, demolicionEstados: [], plantaEspacio: null,
         tabiquesConfig: [], pinturaConMuebles: null,
         ventanasConfig: [], notas: '',
-        obraCompleta: null, calefaccionExpandida: false, acExpandida: false,
+        obraCompleta: null, calefaccionExpandida: false, acExpandida: false, splitAutoAddedTecho: false,
       };
     } else {
       if (!('calefaccionExpandida' in S.cfgEspacios[espId])) S.cfgEspacios[espId].calefaccionExpandida = false;
@@ -2160,7 +2171,7 @@ function renderEspacioForm() {
   function ventanasHtml(ventanaTKey) {
     if (!cfg.trabajos.includes(ventanaTKey)) return '';
     const nV = cfg.cantUd[ventanaTKey] || 1;
-    while (cfg.ventanasConfig.length < nV) cfg.ventanasConfig.push({apertura:'',material:'',vidrio:'',open:true});
+    while (cfg.ventanasConfig.length < nV) cfg.ventanasConfig.push({apertura:'',material:'',vidrio:'',vidrioPlus:[],open:true});
     while (cfg.ventanasConfig.length > nV) cfg.ventanasConfig.pop();
     let h = '<div class="vent-aviso">ℹ️ Se aplicará un <strong>precio medio estimado</strong>. El modelo definitivo se acordará tras la visita técnica. Si no lo tienes claro, puedes aprender sobre tipos de ventanas <a href="https://www.leroymerlin.es/productos/puertas-ventanas-y-escaleras/ventanas/" target="_blank" rel="noopener" style="color:var(--terra);font-weight:500">aquí</a>.</div>';
     h += '<div class="ventanas-set">';
@@ -2169,6 +2180,7 @@ function renderEspacioForm() {
       if (vc.apertura) parts.push(VENTANA_APERTURAS.find(x=>x.val===vc.apertura)?.label||'');
       if (vc.material) parts.push(VENTANA_MATERIALES.find(x=>x.val===vc.material)?.label||'');
       if (vc.vidrio)   parts.push(VENTANA_VIDRIOS.find(x=>x.val===vc.vidrio)?.label||'');
+      if (vc.vidrioPlus?.length) vc.vidrioPlus.forEach(v => parts.push(VENTANA_VIDRIOS.find(x=>x.val===v)?.label||''));
       const status = parts.filter(Boolean).join(' · ') || 'Sin especificar';
       h += '<div class="ventana-card">' +
         '<div class="ventana-card-head" onclick="toggleVentanaCard(\'' + espId + '\',' + i + ')">' +
@@ -2180,9 +2192,18 @@ function renderEspacioForm() {
         VENTANA_APERTURAS.map(a => '<button class="vent-btn' + (vc.apertura===a.val?' sel':'') + '" onclick="setVentana(\'' + espId + '\',' + i + ',\'apertura\',\'' + a.val + '\')"><span class="vent-btn-icon">' + a.icon + '</span>' + a.label + '</button>').join('') + '</div>' +
         '<div class="vent-step-lbl">2. Marco</div><div class="vent-opts">' +
         VENTANA_MATERIALES.map(m2 => '<button class="vent-btn' + (vc.material===m2.val?' sel':'') + '" onclick="setVentana(\'' + espId + '\',' + i + ',\'material\',\'' + m2.val + '\')"><span class="vent-btn-icon">' + m2.icon + '</span>' + m2.label + '</button>').join('') + '</div>' +
-        '<div class="vent-step-lbl">3. Vidrio</div><div class="vent-opts">' +
-        VENTANA_VIDRIOS.map(v => '<button class="vent-btn' + (vc.vidrio===v.val?' sel':'') + '" onclick="setVentana(\'' + espId + '\',' + i + ',\'vidrio\',\'' + v.val + '\')"><span class="vent-btn-icon">' + v.icon + '</span>' + v.label + '</button>').join('') +
-        '</div></div></div>';
+        '<div class="vent-step-lbl">3. Vidrio</div>' +
+        '<div style="border:1px solid var(--border);border-radius:8px;padding:8px 10px;margin-bottom:6px">' +
+        '<div style="font-size:11px;color:var(--muted);margin-bottom:5px">Tipo de acristalamiento (elige uno)</div>' +
+        '<div class="vent-opts">' +
+        [{val:'doble',label:'Doble acristalamiento',icon:'🪟'},{val:'triple',label:'Triple acristalamiento',icon:'🪟'}].map(v => '<button class="vent-btn' + (vc.vidrio===v.val?' sel':'') + '" onclick="setVentana(\'' + espId + '\',' + i + ',\'vidrio\',\'' + v.val + '\')"><span class="vent-btn-icon">' + v.icon + '</span>' + v.label + '</button>').join('') +
+        '</div></div>' +
+        '<div style="border:1px solid var(--border);border-radius:8px;padding:8px 10px;margin-bottom:6px">' +
+        '<div style="font-size:11px;color:var(--muted);margin-bottom:5px">Prestaciones adicionales (acumulables)</div>' +
+        '<div class="vent-opts">' +
+        [{val:'bajo_em',label:'Bajo emisivo',icon:'♨️'},{val:'seguridad',label:'De seguridad',icon:'🛡️'},{val:'acustico',label:'Acústico',icon:'🔇'}].map(v => '<button class="vent-btn' + ((vc.vidrioPlus||[]).includes(v.val)?' sel':'') + '" onclick="toggleVidrioPlus(\'' + espId + '\',' + i + ',\'' + v.val + '\')"><span class="vent-btn-icon">' + v.icon + '</span>' + v.label + '</button>').join('') +
+        '</div></div>' +
+        '</div></div>';
     });
     return h + '</div>';
   }
@@ -2238,8 +2259,8 @@ function renderEspacioForm() {
     });
     html += '</div></div>';
     // Fontanería aviso (bano/aseo completa always has cambiar_suelo)
-    if (cfg.trabajos.includes('cambiar_suelo')) {
-      html += '<div class="cat-aviso" style="margin-bottom:10px"><span class="cat-aviso-icon">🔧</span><span>Al cambiar el suelo se recomienda revisar el estado de la fontanería para evitar problemas futuros.</span></div>';
+    if (cfg.trabajos.includes('cambiar_suelo') && !cfg.trabajos.includes('renovar_fontaneria')) {
+      html += '<div class="suelo-aviso" style="margin-bottom:10px">🔧 Se revisará el estado de la fontanería al levantar el suelo, en caso necesario se presupuestará durante la obra.</div>';
     }
     // 4. Additional options — start with mover_distribucion
     html += '<div class="obra-adicional-section"><div class="cat-label">OPCIONES ADICIONALES</div>';
@@ -2339,11 +2360,12 @@ function renderEspacioForm() {
       // Aire/Ventilador group
       if (hasAireGrp) html += renderAireHtml(espId, tipo, cfg);
 
-      // Fontanería aviso when cambiar_suelo selected (only baño/aseo/cocina)
+      // Fontanería aviso when cambiar_suelo selected (only baño/aseo/cocina) and no renovar_fontaneria
       if ((tipo === 'bano' || tipo === 'aseo' || tipo === 'cocina') &&
           filteredItems.includes('cambiar_suelo') && cfg.trabajos.includes('cambiar_suelo') &&
+          !cfg.trabajos.includes('renovar_fontaneria') &&
           (cat === '¿QUÉ QUIERES CAMBIAR?')) {
-        html += '<div class="cat-aviso" style="margin-top:6px"><span class="cat-aviso-icon">🔧</span><span>Al cambiar el suelo se recomienda revisar el estado de la fontanería para evitar problemas futuros.</span></div>';
+        html += '<div class="suelo-aviso" style="margin-top:6px">🔧 Se revisará el estado de la fontanería al levantar el suelo, en caso necesario se presupuestará durante la obra.</div>';
       }
     });
   }
@@ -2578,6 +2600,14 @@ function setVentana(espId, i, campo, val) {
   S.cfgEspacios[espId].ventanasConfig[i][campo] = val;
   renderEspacioForm();
 }
+function toggleVidrioPlus(espId, i, val) {
+  const vc = S.cfgEspacios[espId].ventanasConfig[i];
+  if (!vc.vidrioPlus) vc.vidrioPlus = [];
+  const idx = vc.vidrioPlus.indexOf(val);
+  if (idx === -1) vc.vidrioPlus.push(val);
+  else vc.vidrioPlus.splice(idx, 1);
+  renderEspacioForm();
+}
 function toggleVentanaCard(espId, i) {
   const vc = S.cfgEspacios[espId].ventanasConfig[i];
   vc.open = !vc.open;
@@ -2654,14 +2684,14 @@ function setTabiqueAccion(espId, i, val) {
 }
 
 // pasaespacios: brief banner that appears when the user moves between spaces
-function triggerPasaespacios(label, direction) {
+function triggerPasaespacios(label, direction, containerId) {
   const existing = document.getElementById('pasaespacios-banner');
   if (existing) existing.remove();
   const banner = document.createElement('div');
   banner.id        = 'pasaespacios-banner';
   banner.className = 'pasaespacios-banner';
   banner.textContent = (direction === 'next' ? '→ ' : '← ') + label;
-  const form = document.getElementById('trabajos-form');
+  const form = document.getElementById(containerId || 'trabajos-form');
   if (form) form.prepend(banner);
   setTimeout(() => banner.remove(), 1700);
 }
@@ -2699,6 +2729,11 @@ function siguienteEspacio() {
   if (showFurnQ && !cfg.pinturaConMuebles) {
     toast('Responde si hay mobiliario que gestionar para continuar', 'warn');
     scrollToAndHighlight('pintura-sub-wrap');
+    return;
+  }
+  if (cfg.trabajos.includes('ac_split') && !cfg.trabajos.includes('falso_techo')) {
+    toast('El Split requiere techo/falso techo. Actívalo en ¿Qué quieres cambiar?', 'warn');
+    scrollToAndHighlight('aire-sub-wrap');
     return;
   }
   if (S.espacioIdx < S.espacios.length - 1) {
@@ -2832,45 +2867,36 @@ function renderMateriales() {
       const cantStr = cant ? String(cant) : '';
       const showM2Input = (cat === 'azulejo' || cat === 'pintura') &&
                           (tipoEsp === 'bano' || tipoEsp === 'aseo' || tipoEsp === 'cocina');
+      html += '<div style="margin-top:12px;background:var(--light);border:1.5px solid var(--accent);border-radius:10px;padding:12px 14px">';
+      html += '<div style="font-size:11px;font-weight:600;color:var(--accent);margin-bottom:6px">✓ Material seleccionado</div>';
+      html += '<div style="font-size:12px;color:var(--ink);margin-bottom:8px">' + selProd.nombre + '</div>';
       if (cat === 'pintura') {
         const litros   = parseInt(selProd.nombre.match(/(\d+)\s*[Ll]\b/)?.[1]) || 15;
         const botesEst = Math.ceil(estM2 / (litros * 5));
         if (showM2Input) {
-          html += '<div style="margin-top:10px">' +
-            '<div style="font-size:11px;color:var(--muted);margin-bottom:5px">' + selProd.nombre + '</div>' +
-            '<div style="display:flex;align-items:center;gap:8px">' +
+          html += '<div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">' +
             '<input class="mat-m2-inp" type="text" inputmode="decimal" value="' + cantStr + '" placeholder="' + estM2 + '" id="mm2-' + espId + '-' + cat + '" oninput="setCantMat2(\'' + espId + '\',\'' + cat + '\',this.value)">' +
             '<span style="font-size:13px;color:var(--muted)">m²</span>' +
             '</div>' +
-            '<div class="mat-m2-est" style="margin-top:3px">(estimación: ' + estM2 + ' m²)</div>' +
-            '<div class="mat-surface-note">*Superficie de paredes = ancho (m) × alto (m)</div>' +
-            '<div style="font-size:11px;color:var(--muted);margin-top:5px">→ Estimación: ' + estM2 + ' m² → <strong>' + botesEst + ' bote' + (botesEst!==1?'s':'') + ' de ' + litros + 'L</strong></div>' +
-            '</div>';
-        } else {
-          html += '<div style="margin-top:8px;font-size:11px;color:var(--muted)">' +
-            selProd.nombre + ' · Estimación: ' + estM2 + ' m² → <strong>' + botesEst + ' bote' + (botesEst!==1?'s':'') + ' de ' + litros + 'L</strong>' +
-            '</div>';
+            '<div class="mat-m2-est">(estimación: ' + estM2 + ' m²)</div>' +
+            '<div class="mat-surface-note">*Superficie de paredes = ancho (m) × alto (m)</div>';
         }
+        html += '<div style="font-size:11px;color:var(--muted);margin-top:5px">→ Estimación: ' + estM2 + ' m² → <strong>' + botesEst + ' bote' + (botesEst!==1?'s':'') + ' de ' + litros + 'L</strong></div>';
       } else if (cat === 'azulejo') {
         if (showM2Input) {
-          html += '<div style="margin-top:10px">' +
-            '<div style="font-size:11px;color:var(--muted);margin-bottom:5px">' + selProd.nombre + '</div>' +
-            '<div style="display:flex;align-items:center;gap:8px">' +
+          html += '<div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">' +
             '<input class="mat-m2-inp" type="text" inputmode="decimal" value="' + cantStr + '" placeholder="' + estM2 + '" id="mm2-' + espId + '-' + cat + '" oninput="setCantMat2(\'' + espId + '\',\'' + cat + '\',this.value)">' +
             '<span style="font-size:13px;color:var(--muted)">m²</span>' +
             '</div>' +
-            '<div class="mat-m2-est" style="margin-top:3px">(estimación: ' + estM2 + ' m²)</div>' +
-            '<div class="mat-surface-note">*Superficie de paredes = ancho (m) × alto (m)</div>' +
-            '</div>';
+            '<div class="mat-m2-est">(estimación: ' + estM2 + ' m²)</div>' +
+            '<div class="mat-surface-note">*Superficie de paredes = ancho (m) × alto (m)</div>';
         } else {
-          html += '<div style="margin-top:8px;font-size:11px;color:var(--muted)">' +
-            selProd.nombre + ' · Estimación: ' + estM2 + ' m²</div>';
+          html += '<div style="font-size:11px;color:var(--muted)">Estimación: ' + estM2 + ' m²</div>';
         }
       } else {
-        // suelo — always just estimation
-        html += '<div style="margin-top:8px;font-size:11px;color:var(--muted)">' +
-          selProd.nombre + ' · Estimación: ' + estM2 + ' m²</div>';
+        html += '<div style="font-size:11px;color:var(--muted)">Estimación: ' + estM2 + ' m²</div>';
       }
+      html += '</div>';
     }
 
     html += '</div>';
@@ -2907,11 +2933,17 @@ function navMatEsp(d) {
   );
   S.matEspacioIdx = Math.max(0, Math.min(espConMats.length-1, S.matEspacioIdx+d));
   renderMateriales();
+  triggerPasaespacios(getLabelConEmoji(espConMats[S.matEspacioIdx]), d > 0 ? 'next' : 'prev', 'materiales-contenido');
   window.scrollTo({top:0, behavior:'smooth'});
 }
 function navMatEspTo(idx) {
+  const prevIdx = S.matEspacioIdx;
   S.matEspacioIdx = idx;
   renderMateriales();
+  const espConMats = S.espacios.filter(espId =>
+    (S.cfgEspacios[espId]?.trabajos || []).some(k => TRABAJO_CAT_MAP[k])
+  );
+  triggerPasaespacios(getLabelConEmoji(espConMats[idx]), idx >= prevIdx ? 'next' : 'prev', 'materiales-contenido');
   window.scrollTo({top:0, behavior:'smooth'});
 }
 function toggleMatShowAll(espId, cat) {
