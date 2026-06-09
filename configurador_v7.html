@@ -1835,6 +1835,11 @@ function iniciarPaso3() {
         if (TRABAJOS[tipo]?.[k] && !cfg.trabajos.includes(k)) { cfg.trabajos.push(k); applied.push(k); }
       });
       cfg.presetTrabajos = applied;
+      // Default primeraPreg: demo takes priority when both are preset
+      if (!cfg.primeraPreg) {
+        if (cfg.trabajos.some(k => DEMO_TRABAJOS.has(k)))  cfg.primeraPreg = 'demo';
+        else if (cfg.trabajos.includes('pintar_paredes'))   cfg.primeraPreg = 'pintura';
+      }
     }
   });
   S.espacios      = lista;
@@ -1960,8 +1965,9 @@ function renderEspacioForm() {
   const hasTerrazaObra = cfg.trabajos.some(k => TERRAZA_OBRA_KEYS.has(k));
   const duchaSelBano   = tipo === 'bano' && cfg.trabajos.includes('instalar_ducha');
   const baneraSelBano  = tipo === 'bano' && cfg.trabajos.includes('instalar_banera');
-  // Demo Q takes priority whenever demo trabajo selected; furniture Q shown only when no demo.
-  const showDemoQ      = hasDemo && !S.obraHabitada;
+  // Demo Q shown when demo trabajo selected first (primeraPreg='demo' or undefined/null ≠ 'pintura')
+  // Furniture Q shown only when pintura was selected first (no demo Q)
+  const showDemoQ      = hasDemo && cfg.primeraPreg !== 'pintura';
   const showFurnitureQ = hasPintura && !showDemoQ;
   // Preset items tracking
   const presets = cfg.presetTrabajos || [];
@@ -2009,12 +2015,15 @@ function renderEspacioForm() {
   function demoSubHtml() {
     if (!cfg.demolicionEstados) cfg.demolicionEstados = [];
     const ests = cfg.demolicionEstados;
+    // Hide habitada option if another space already has it selected
+    const thisHabitada  = ests.includes('habitada');
+    const showHabitada  = !S.obraHabitada || thisHabitada;
     return '<div class="demo-sub" id="demo-sub-wrap">' +
       '<div class="demo-sub-lbl">¿Cómo está actualmente el espacio? <span style="font-size:10px;color:var(--muted)">(selección múltiple)</span></div>' +
       '<div class="demo-opts">' +
       '<div class="demo-btn' + (ests.includes('vacio')?' sel':'') + '" onclick="toggleDemoEstado(\'' + espId + '\',\'vacio\')">Vacío / sin muebles</div>' +
       '<div class="demo-btn' + (ests.includes('con_muebles')?' sel':'') + '" onclick="toggleDemoEstado(\'' + espId + '\',\'con_muebles\')">Con muebles</div>' +
-      '<div class="demo-btn' + (ests.includes('habitada')?' sel':'') + '" onclick="toggleDemoEstado(\'' + espId + '\',\'habitada\')">🏠 Vivienda habitada</div>' +
+      (showHabitada ? '<div class="demo-btn' + (thisHabitada?' sel':'') + '" onclick="toggleDemoEstado(\'' + espId + '\',\'habitada\')">🏠 Vivienda habitada</div>' : '') +
       '</div></div>';
   }
 
@@ -2289,6 +2298,22 @@ function toggleTrabajo(espId, tKey) {
   const idx = cfg.trabajos.indexOf(tKey);
   if (idx === -1) cfg.trabajos.push(tKey);
   else cfg.trabajos.splice(idx, 1);
+
+  const newHasDemo    = cfg.trabajos.some(k => DEMO_TRABAJOS.has(k));
+  const newHasPintura = cfg.trabajos.includes('pintar_paredes');
+  if (isAdding) {
+    // Set primeraPreg only on first relevant selection
+    if (!cfg.primeraPreg) {
+      if (DEMO_TRABAJOS.has(tKey))      cfg.primeraPreg = 'demo';
+      else if (tKey === 'pintar_paredes') cfg.primeraPreg = 'pintura';
+    }
+  } else {
+    // On deselection: switch primeraPreg when the "first" question source is gone
+    if (!newHasDemo && !newHasPintura)                             cfg.primeraPreg = null;
+    else if (!newHasDemo   && cfg.primeraPreg === 'demo')          cfg.primeraPreg = 'pintura';
+    else if (!newHasPintura && cfg.primeraPreg === 'pintura')      cfg.primeraPreg = 'demo';
+  }
+
   renderEspacioForm();
 }
 
@@ -2489,10 +2514,16 @@ function setObraCompleta(espId, val) {
       if (!cfg.qtys) cfg.qtys = {};
       cfg.qtys['renovar_fontaneria'] = TRABAJOS[tipo].renovar_fontaneria.defQty || 3;
     }
+    // Default primeraPreg: demo takes priority when both are preset
+    if (!cfg.primeraPreg) {
+      if (cfg.trabajos.some(k => DEMO_TRABAJOS.has(k)))  cfg.primeraPreg = 'demo';
+      else if (cfg.trabajos.includes('pintar_paredes'))   cfg.primeraPreg = 'pintura';
+    }
   } else if (val === null) {
-    cfg.trabajos      = [];
-    cfg.qtys          = {};
+    cfg.trabajos       = [];
+    cfg.qtys           = {};
     cfg.presetTrabajos = [];
+    cfg.primeraPreg    = null;
   }
   renderEspacioForm();
 }
@@ -2524,7 +2555,7 @@ function siguienteEspacio() {
   // Validate demo/furniture question answered
   const hasDemo    = cfg.trabajos.some(k => DEMO_TRABAJOS.has(k));
   const hasPintura = cfg.trabajos.includes('pintar_paredes');
-  const showDemoQ  = hasDemo    && !S.obraHabitada;
+  const showDemoQ  = hasDemo    && cfg.primeraPreg !== 'pintura';
   const showFurnQ  = hasPintura && !showDemoQ;
   if (showDemoQ && !(cfg.demolicionEstados?.length > 0)) {
     toast('Responde cómo está actualmente el espacio para continuar', 'warn');
