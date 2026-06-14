@@ -1232,7 +1232,7 @@ const TRABAJOS = {
     instalar_ducha:         {label:"Instalación de ducha/plato",         unidad:"ud",       mo:200, mat:350, dias:1.0, noQty:true},
     instalar_banera:        {label:"Instalación de bañera",              unidad:"ud",       mo:250, mat:450, dias:1.0, noQty:true},
     instalar_inodoro:       {label:"Instalar inodoro",                   unidad:"ud",       mo:120, mat:200, dias:0.5, noQty:true},
-    instalar_lavabo:        {label:"Instalar lavabo",                    unidad:"ud",       mo:150, mat:280, dias:0.5, noQty:true},
+    instalar_lavabo:        {label:"Instalar lavabo",                    unidad:"ud",       mo:150, mat:280, dias:0.5},
     instalar_mueble:        {label:"Montaje de mueble de baño",           unidad:"ud",       mo:100, mat:200, dias:0.5, udLabel:"muebles"},
     instalar_espejo:        {label:"Instalar espejo",                    unidad:"ud",       mo:40,  mat:90,  dias:0.2},
     radiador_toallero:      {label:"Radiador toallero",                  unidad:"ud",       mo:80,  mat:140, dias:0.3},
@@ -1313,7 +1313,7 @@ const TRABAJOS = {
     pulir_parquet:          {label:"Pulir y barnizar parquet",           unidad:"m2",       mo:12,  mat:4,   dias:0.2},
     falso_techo:            {label:"Techo / Falso techo",             unidad:"m2",       mo:25,  mat:18,  dias:0.3},
     // CARPINTERÍA
-    cambiar_ventana:        {label:"Cambiar ventana(s)",                 unidad:"ud",       mo:200, mat:430, dias:0.5},
+    cambiar_ventana:        {label:"Cambiar ventana",                    unidad:"ud",       mo:200, mat:430, dias:0.5},
     armario_empotrado:      {label:"Armario empotrado",                  unidad:"ml",       mo:200, mat:380, dias:1.0, noQty:true, nota:"Las medidas se detallarán durante la visita técnica."},
     cambiar_puerta:         {label:"Cambiar puerta",                     unidad:"ud",       mo:150, mat:290, dias:0.5},
     // INSTALACIONES
@@ -1337,7 +1337,7 @@ const TRABAJOS = {
     falso_techo:            {label:"Techo / Falso techo",             unidad:"m2",       mo:25,  mat:18,  dias:0.3},
     // CARPINTERÍA
     cambiar_puerta:         {label:"Cambiar puerta",                     unidad:"ud",       mo:150, mat:290, dias:0.5, udLabel:"puertas"},
-    cambiar_ventana:        {label:"Cambiar ventana(s)",                 unidad:"ud",       mo:200, mat:430, dias:0.5},
+    cambiar_ventana:        {label:"Cambiar ventana",                    unidad:"ud",       mo:200, mat:430, dias:0.5},
     // INSTALACIONES
     puntos_de_luz:          {label:"Añadir puntos de luz / enchufes",           unidad:"ud",       mo:80,  mat:30,  dias:0.3, defQty:4},
     ac_pared:               {label:"Aire acondicionado de pared",        unidad:"ud",       mo:250, mat:700,  dias:1.0, noQty:true},
@@ -1359,10 +1359,7 @@ const TRABAJOS = {
     cambiar_puerta:         {label:"Cambiar puerta",                     unidad:"ud",       mo:150, mat:290, dias:0.5, udLabel:"puertas"},
     // INSTALACIONES
     puntos_de_luz:          {label:"Añadir puntos de luz / enchufes",           unidad:"ud",       mo:80,  mat:30,  dias:0.3, defQty:4},
-    renovar_electricidad:   {label:"Renovación eléctrica completa",              unidad:"ud",       mo:300, mat:180, dias:1.0, defQty:4},
-    ac_pared:               {label:"Aire acondicionado de pared",        unidad:"ud",       mo:250, mat:700,  dias:1.0, noQty:true},
-    ac_split:               {label:"Split (cassette/conductos)",         unidad:"ud",       mo:350, mat:1200, dias:1.5, noQty:true},
-    ventilador_techo:       {label:"Ventilador de techo",                unidad:"ud",       mo:120, mat:250,  dias:0.5, noQty:true},
+    renovar_electricidad:   {label:"Renovación eléctrica completa",      unidad:"ud",       mo:300, mat:180, dias:1.0, defQty:4},
     suelo_radiante:         {label:"Suelo radiante",                     unidad:"m2",       mo:35,  mat:40,  dias:0.4},
     radiadores:             {label:"Instalar radiador",                  unidad:"ud",       mo:150, mat:280, dias:0.5},
   },
@@ -1451,7 +1448,7 @@ const CALEFACCION_ITEMS = {
   cocina:     ['suelo_radiante','instalar_caldera','radiadores'],
   habitacion: ['suelo_radiante','radiadores'],
   salon:      ['suelo_radiante','radiadores'],
-  pasillo:    ['suelo_radiante','radiadores'],
+  pasillo:    [],
   terraza:    ['radiadores'],
   toda_la_obra: [],
 };
@@ -1463,7 +1460,7 @@ const AC_ITEMS = {
   cocina:      ['ac_pared','ac_split','ventilador_techo'],
   habitacion:  ['ac_pared','ac_split','ventilador_techo'],
   salon:       ['ac_pared','ac_split','ventilador_techo'],
-  pasillo:     ['ac_pared','ac_split','ventilador_techo'],
+  pasillo:     [],
   terraza:     ['ac_pared','ac_split','ventilador_techo'],
   toda_la_obra:[],
 };
@@ -1595,6 +1592,7 @@ const S = {
   obraHabitada: false,
   tipoReforma: null,
   maxEspacioIdx: 0,
+  elegiMateriales: null,
 };
 
 // ═══════════════════════════════════════════════════════════════
@@ -1993,11 +1991,15 @@ function iniciarPaso3() {
         demolicionEstado: null, demolicionEstados: [], plantaEspacio: null,
         tabiquesConfig: [], pinturaConMuebles: null,
         ventanasConfig: [], notas: '',
-        obraCompleta: null, calefaccionExpandida: false, acExpandida: false, ventilacionExpandida: false, splitAutoAddedTecho: false,
+        obraCompleta: null, calefaccionExpandida: false, acExpandida: false, ventilacionExpandida: false, splitAutoAddedTecho: false, modoCopia: null, copiaDeEspId: null, mostrarTrabajosCopia: false,
       };
     } else {
       if (!('calefaccionExpandida' in S.cfgEspacios[espId])) S.cfgEspacios[espId].calefaccionExpandida = false;
       if (!('acExpandida'          in S.cfgEspacios[espId])) S.cfgEspacios[espId].acExpandida = false;
+      if (!('ventilacionExpandida' in S.cfgEspacios[espId])) S.cfgEspacios[espId].ventilacionExpandida = false;
+      if (!('modoCopia'             in S.cfgEspacios[espId])) S.cfgEspacios[espId].modoCopia = null;
+      if (!('copiaDeEspId'          in S.cfgEspacios[espId])) S.cfgEspacios[espId].copiaDeEspId = null;
+      if (!('mostrarTrabajosCopia'  in S.cfgEspacios[espId])) S.cfgEspacios[espId].mostrarTrabajosCopia = false;
     }
     if (S.tipoReforma === 'integral') {
       const cfg = S.cfgEspacios[espId];
@@ -2044,6 +2046,45 @@ const VENTANA_VIDRIOS = [
   {val:'seguridad',label:'De seguridad',           icon:'🛡️'},
   {val:'acustico', label:'Acústico',              icon:'🔇'},
 ];
+
+function getPrevSpaceSameTipo(espId) {
+  const tipo = getTipoBase(espId);
+  const idx  = S.espacios.indexOf(espId);
+  for (let i = idx - 1; i >= 0; i--) {
+    if (getTipoBase(S.espacios[i]) === tipo) return S.espacios[i];
+  }
+  return null;
+}
+
+function elegirModoCopia(espId, modo) {
+  const cfg = S.cfgEspacios[espId];
+  cfg.modoCopia = modo;
+  if (modo === 'mismos') {
+    const prev = getPrevSpaceSameTipo(espId);
+    if (prev) {
+      const src = S.cfgEspacios[prev];
+      cfg.copiaDeEspId   = prev;
+      cfg.trabajos       = [...(src.trabajos || [])];
+      cfg.cantUd         = {...(src.cantUd || {})};
+      cfg.mlOvr          = {...(src.mlOvr || {})};
+      cfg.primeraPreg    = src.primeraPreg;
+      cfg.obraCompleta   = src.obraCompleta || null;
+      cfg.tabiquesConfig = (src.tabiquesConfig || []).map(t => ({...t}));
+      cfg.ventanasConfig = (src.ventanasConfig || []).map(v => ({...v, open:false}));
+    }
+  }
+  renderEspacioForm();
+}
+
+function switchToModoPropio(espId) {
+  S.cfgEspacios[espId].modoCopia = 'propio';
+  renderEspacioForm();
+}
+
+function toggleMostrarTrabajosCopia(espId) {
+  S.cfgEspacios[espId].mostrarTrabajosCopia = !S.cfgEspacios[espId].mostrarTrabajosCopia;
+  renderEspacioForm();
+}
 
 function renderEspacioForm() {
   const espId = S.espacios[S.espacioIdx];
@@ -2274,6 +2315,73 @@ function renderEspacioForm() {
   }
 
   let html = '';
+
+  // ── COPIA MODE: choice screen (2nd+ space of same tipo) ──────
+  const prevSameTipo = getPrevSpaceSameTipo(espId);
+  if (prevSameTipo && cfg.modoCopia === null) {
+    const prevLbl  = getLabelConEmoji(prevSameTipo);
+    const tipoNom  = {bano:'este baño',aseo:'este aseo',cocina:'esta cocina',habitacion:'esta habitación',salon:'este salón',pasillo:'este pasillo',terraza:'esta terraza'}[tipo] || tipo;
+    html += '<div style="margin-bottom:20px"><div style="font-size:18px;font-weight:600;margin-bottom:8px">¿Cómo configuramos ' + tipoNom + '?</div>' +
+      '<div style="font-size:13px;color:var(--muted);margin-bottom:16px">Ya configuraste ' + prevLbl + '</div></div>';
+    html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:20px">' +
+      '<div onclick="elegirModoCopia(\'' + espId + '\',\'mismos\')" style="cursor:pointer;padding:20px;border:2px solid var(--border);border-radius:12px;text-align:center;background:var(--light);transition:all .18s" onmouseover="this.style.borderColor=\'var(--accent)\'" onmouseout="this.style.borderColor=\'var(--border)\'">' +
+        '<div style="font-size:28px;margin-bottom:8px">📋</div>' +
+        '<div style="font-weight:600;font-size:14px;margin-bottom:4px">Mismos trabajos</div>' +
+        '<div style="font-size:12px;color:var(--muted)">Copiar de ' + prevLbl + '</div></div>' +
+      '<div onclick="elegirModoCopia(\'' + espId + '\',\'propio\')" style="cursor:pointer;padding:20px;border:2px solid var(--border);border-radius:12px;text-align:center;background:var(--light);transition:all .18s" onmouseover="this.style.borderColor=\'var(--accent)\'" onmouseout="this.style.borderColor=\'var(--border)\'">' +
+        '<div style="font-size:28px;margin-bottom:8px">✏️</div>' +
+        '<div style="font-weight:600;font-size:14px;margin-bottom:4px">Elegir trabajos</div>' +
+        '<div style="font-size:12px;color:var(--muted)">Configurar ' + tipoNom + ' a mi gusto</div></div>' +
+      '</div>';
+    document.getElementById('trabajos-form').innerHTML = html;
+    document.getElementById('m2-display').value = cfg.m2;
+    updateM2Hint();
+    return;
+  }
+
+  // ── COPIA MODE: compact view (mismos trabajos) ────────────────
+  if (cfg.modoCopia === 'mismos') {
+    const srcId  = cfg.copiaDeEspId || prevSameTipo;
+    const srcLbl = getLabelConEmoji(srcId);
+    html += '<div class="obra-confirm-card" onclick="switchToModoPropio(\'' + espId + '\')" title="Clic para cambiar trabajos">' +
+      '<div class="obra-confirm-body">' +
+      '<div class="obra-confirm-lbl">📋 Mismos trabajos que ' + srcLbl + ' <span style="font-size:10px;color:var(--muted)">(clic para modificar)</span></div>' +
+      '<div class="obra-confirm-msg">Todos los trabajos del espacio anterior están incluidos</div>' +
+      '</div></div>';
+    const hasDemo2   = cfg.trabajos.some(k => DEMO_TRABAJOS.has(k));
+    const hasPintura2 = cfg.trabajos.includes('pintar_paredes');
+    const showDemoQC  = hasDemo2 && cfg.primeraPreg !== 'pintura';
+    const showFurnQC  = hasPintura2 && !showDemoQC;
+    if (showDemoQC) html += demoSubHtml();
+    else if (showFurnQC) {
+      const pm = cfg.pinturaConMuebles;
+      html += '<div class="pintura-sub" id="pintura-sub-wrap"><div class="pintura-sub-lbl">¿Hay mobiliario que gestionar?</div><div class="pintura-opts">' +
+        '<button class="pintura-btn' + (pm==='sin_muebles'?' sel':'') + '" onclick="setPinturaConMuebles(\'' + espId + '\',\'sin_muebles\')">Sin muebles</button>' +
+        '<button class="pintura-btn' + (pm==='tapar'?' sel':'') + '" onclick="setPinturaConMuebles(\'' + espId + '\',\'tapar\')">Tapar con plásticos</button>' +
+        '<button class="pintura-btn' + (pm==='desmontar'?' sel':'') + '" onclick="setPinturaConMuebles(\'' + espId + '\',\'desmontar\')">Desmontar muebles</button>' +
+        '</div></div>';
+    }
+    const tList = cfg.trabajos.map(k => {
+      const t = TRABAJOS[tipo]?.[k];
+      return t ? '<div style="padding:4px 0;font-size:13px;border-bottom:1px solid var(--border)">✓ ' + t.label + '</div>' : '';
+    }).filter(Boolean).join('');
+    html += '<div style="margin:16px 0;border:1px solid var(--border);border-radius:10px;overflow:hidden">' +
+      '<div onclick="toggleMostrarTrabajosCopia(\'' + espId + '\')" style="display:flex;justify-content:space-between;align-items:center;padding:12px 14px;cursor:pointer;background:var(--stone)">' +
+        '<span style="font-weight:500;font-size:13px">Ver trabajos incluidos (' + cfg.trabajos.length + ')</span>' +
+        '<span>' + (cfg.mostrarTrabajosCopia ? '▲' : '▼') + '</span></div>';
+    if (cfg.mostrarTrabajosCopia) {
+      html += '<div style="padding:8px 14px">' + (tList || '<div style="color:var(--muted);font-size:13px">Sin trabajos seleccionados</div>') + '</div>';
+    }
+    html += '<div style="padding:10px 14px;border-top:1px solid var(--border)">' +
+      '<button onclick="switchToModoPropio(\'' + espId + '\')" style="font-size:12px;color:var(--accent);background:none;border:none;cursor:pointer;text-decoration:underline">✏️ Modificar trabajos</button>' +
+      '</div></div>';
+    document.getElementById('trabajos-form').innerHTML = html;
+    document.getElementById('m2-display').value = cfg.m2;
+    updateM2Hint();
+    const notasEl = document.getElementById('notas-espacio');
+    if (notasEl) notasEl.value = cfg.notas || '';
+    return;
+  }
 
   // ── CONFIRMATORY CARD for bano/aseo ──────────────────────────
   if (isBanoAseo) {
@@ -2778,8 +2886,13 @@ function siguienteEspacio() {
   const espId = S.espacios[S.espacioIdx];
   const cfg   = S.cfgEspacios[espId];
   const tipo  = getTipoBase(espId);
-  if ((tipo === 'bano' || tipo === 'aseo') && !cfg.obraCompleta) {
+  if ((tipo === 'bano' || tipo === 'aseo') && !cfg.obraCompleta && cfg.modoCopia !== 'mismos') {
     toast('Elige entre obra completa u obra parcial para continuar', 'warn');
+    return;
+  }
+  // Block if still on copia choice screen
+  if (getPrevSpaceSameTipo(espId) && cfg.modoCopia === null) {
+    toast('Elige cómo configurar este espacio para continuar', 'warn');
     return;
   }
   if (cfg.trabajos.length === 0) {
@@ -2844,8 +2957,42 @@ function estimarCantMat(cat, m2, tipo) {
 }
 
 // C9: Materials — one space at a time with navigation dots
+function elegirMateriales(opcion) {
+  S.elegiMateriales = opcion;
+  renderMateriales();
+}
+
 function renderMateriales() {
   const catLabels = {suelo:'Suelos y pavimentos', azulejo:'Azulejos y revestimientos', pintura:'Pintura'};
+
+  // Show intro choice screen if not yet decided
+  if (S.elegiMateriales === null) {
+    document.getElementById('materiales-contenido').innerHTML =
+      '<div style="text-align:center;padding:4px 0 20px">' +
+        '<div style="font-family:\'Cormorant Garamond\',serif;font-size:26px;margin-bottom:6px">¿Cómo prefieres los materiales?</div>' +
+      '</div>' +
+      '<div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:18px">' +
+        '<div onclick="elegirMateriales(\'elegir_ahora\')" style="cursor:pointer;padding:22px 16px;border:2px solid var(--border);border-radius:12px;text-align:center;background:var(--light);transition:all .18s" onmouseover="this.style.borderColor=\'var(--accent)\';this.style.boxShadow=\'0 0 0 3px rgba(201,111,40,.1)\'" onmouseout="this.style.borderColor=\'var(--border)\';this.style.boxShadow=\'none\'">' +
+          '<div style="font-size:30px;margin-bottom:8px">🎨</div>' +
+          '<div style="font-weight:600;font-size:14px;margin-bottom:4px">Quiero ver y elegir</div>' +
+          '<div style="font-size:12px;color:var(--muted)">Ver catálogo orientativo por estancia</div></div>' +
+        '<div onclick="elegirMateriales(\'durante_obra\')" style="cursor:pointer;padding:22px 16px;border:2px solid var(--border);border-radius:12px;text-align:center;background:var(--light);transition:all .18s" onmouseover="this.style.borderColor=\'var(--accent)\';this.style.boxShadow=\'0 0 0 3px rgba(201,111,40,.1)\'" onmouseout="this.style.borderColor=\'var(--border)\';this.style.boxShadow=\'none\'">' +
+          '<div style="font-size:30px;margin-bottom:8px">🏗️</div>' +
+          '<div style="font-weight:600;font-size:14px;margin-bottom:4px">Lo elegiré durante la obra</div>' +
+          '<div style="font-size:12px;color:var(--muted)">Continuar con precio estándar estimado</div></div>' +
+      '</div>' +
+      '<div style="background:linear-gradient(135deg,#fff8f0,#fff3e4);border:1.5px solid var(--accent);border-radius:10px;padding:12px 16px;font-size:13px;line-height:1.6;color:var(--ink)">' +
+        '<strong>ℹ️ Nota:</strong> La elección de materiales es orientativa, se podrán elegir o cambiar con asistencia de nuestros profesionales durante la obra.' +
+      '</div>';
+    return;
+  }
+
+  if (S.elegiMateriales === 'durante_obra') {
+    document.getElementById('materiales-contenido').innerHTML =
+      '<div class="mat-skip" style="margin-bottom:16px">✓ Has elegido seleccionar los materiales durante la obra con nuestros profesionales. Tu presupuesto incluirá una estimación orientativa de los costes de materiales.</div>' +
+      '<div class="step-actions"><button class="btn-next" onclick="goStep(5)">Continuar →</button></div>';
+    return;
+  }
 
   // Build list of spaces that need material selection
   const espConMats = S.espacios.filter(espId =>
@@ -3161,9 +3308,10 @@ function calcularLocal() {
     }
   }
 
-  let totalMo = 0, totalMat = 0, diasAcum = 0;
+  let totalMo = 0, totalMat = 0, totalMatObra = 0, diasAcum = 0;
   const gruposMO  = {};
   const gruposMat = {};
+  const gruposMatObra = {};
 
   S.espacios.forEach(espId => {
     const tipo   = getTipoBase(espId);
@@ -3189,11 +3337,20 @@ function calcularLocal() {
       const tieneMatUsuario = catUser && getMatDict(espId)[catUser]?.prodId;
       if (!tieneMatUsuario && t.mat > 0) {
         const costoMat = r(t.mat * cant * calCoef);
-        totalMat += costoMat;
-        const mKey = 'est_' + tKey + '_' + espId;
-        if (!gruposMat[mKey]) gruposMat[mKey] = {nombre:'Material: ' + t.label + ' (' + espLbl + ')', unidad:t.unidad==='ud'?'ud':(t.unidad==='ml'?'ml':'m²'), precioBase:r(t.mat*calCoef), total:0, items:[]};
-        gruposMat[mKey].total = r(gruposMat[mKey].total + costoMat);
-        gruposMat[mKey].items.push({espLabel:espLbl, cant:r(cant), precio:r(t.mat*calCoef), sub:costoMat});
+        const esElegibleEnObra = S.elegiMateriales === 'durante_obra' && !!catUser;
+        if (esElegibleEnObra) {
+          totalMatObra += costoMat;
+          const obraKey = TRABAJO_GRUPOS[tKey] || 'Otros';
+          if (!gruposMatObra[obraKey]) gruposMatObra[obraKey] = {total:0, items:[]};
+          gruposMatObra[obraKey].total = r(gruposMatObra[obraKey].total + costoMat);
+          gruposMatObra[obraKey].items.push({espLabel:espLbl, concepto:t.label, cant:r(cant), sub:costoMat});
+        } else {
+          totalMat += costoMat;
+          const matGrupo = TRABAJO_GRUPOS[tKey] || 'Otros materiales';
+          if (!gruposMat[matGrupo]) gruposMat[matGrupo] = {total:0, items:[]};
+          gruposMat[matGrupo].total = r(gruposMat[matGrupo].total + costoMat);
+          gruposMat[matGrupo].items.push({espLabel:espLbl, concepto:t.label, cant:r(cant), unidad:t.unidad==='ud'?'ud':(t.unidad==='ml'?'ml':'m²'), precio:r(t.mat*calCoef), sub:costoMat});
+        }
       }
     });
 
@@ -3207,10 +3364,10 @@ function calcularLocal() {
       const cant     = sel.cantidad || estM2;
       const costoMat = r(prod.precio * cant * calCoef);
       totalMat += costoMat;
-      const mKey = 'usr_' + sel.prodId + '_' + espId;
-      if (!gruposMat[mKey]) gruposMat[mKey] = {nombre:prod.nombre + ' (' + espLbl + ')', unidad:prod.unidad, precioBase:r(prod.precio*calCoef), total:0, items:[]};
-      gruposMat[mKey].total = r(gruposMat[mKey].total + costoMat);
-      gruposMat[mKey].items.push({espLabel:espLbl, cant:r(cant), precio:r(prod.precio*calCoef), sub:costoMat});
+      const matGrupoUsr = cat;
+      if (!gruposMat[matGrupoUsr]) gruposMat[matGrupoUsr] = {total:0, items:[]};
+      gruposMat[matGrupoUsr].total = r(gruposMat[matGrupoUsr].total + costoMat);
+      gruposMat[matGrupoUsr].items.push({espLabel:espLbl, concepto:prod.nombre, cant:r(cant), unidad:prod.unidad, precio:r(prod.precio*calCoef), sub:costoMat});
     });
   });
 
@@ -3268,7 +3425,7 @@ function calcularLocal() {
   const diasBase  = S.espacios.reduce((s, id) => s + (TIEMPO_BASE[getTipoBase(id)] || 5), 0);
   const diasTotal = Math.max(diasBase, Math.round(diasAcum));
 
-  return {totalMo:r(totalMo), totalMat:r(totalMat), totalExtras, subtotal, margen, base, iva, total, aviso, dias:diasTotal, recargo, gruposMO, gruposMat, desgloseExtras};
+  return {totalMo:r(totalMo), totalMat:r(totalMat), totalMatObra:r(totalMatObra), totalExtras, subtotal, margen, base, iva, total, aviso, dias:diasTotal, recargo, gruposMO, gruposMat, gruposMatObra, desgloseExtras};
 }
 
 // ── Render resultado ────────────────────────────────────────────
@@ -3295,18 +3452,19 @@ function calcularYMostrar() {
 
   // C22: "Mano de obra" / "Materiales" labels (full text, no abbreviations)
   let htmlSecs = buildSeccion('sec-mo', '🔨 Mano de obra', fmt(res.totalMo), buildGruposMO(res.gruposMO));
-  let htmlMatItems = '';
-  Object.entries(res.gruposMat).forEach(([key, g]) => {
-    htmlMatItems += buildSubcat(key, g.nombre + (g.precioBase ? ' · ' + g.precioBase.toFixed(2) + '€/' + g.unidad : ''),
-      fmt(g.total),
-      g.items.map(it =>
-        '<div class="res-detail"><span class="res-detail-label">' + it.espLabel + '</span>' +
-        '<span class="res-detail-qty">' + it.cant + ' ' + g.unidad + (it.precio ? ' × ' + it.precio.toFixed(2) + '€' : '') + '</span>' +
-        '<span class="res-detail-val">' + fmt(it.sub) + '</span></div>'
-      ).join('')
-    );
-  });
-  htmlSecs += buildSeccion('sec-mat', '🧱 Materiales', fmt(res.totalMat), htmlMatItems || '<div style="padding:14px 16px;font-size:13px;color:var(--muted)">Estimados con precios estándar de catálogo.</div>');
+  htmlSecs += buildSeccion('sec-mat', '🧱 Materiales', fmt(res.totalMat), buildGruposMat(res.gruposMat));
+
+  if (S.elegiMateriales === 'durante_obra' && res.totalMatObra > 0) {
+    const fmt2 = v => v.toLocaleString('es-ES',{minimumFractionDigits:2}) + '€';
+    let obraItems = '';
+    Object.entries(res.gruposMatObra).forEach(([nombre, g]) => {
+      obraItems += buildSubcat('obra_' + nombre.replace(/\s/g,'_'), nombre,
+        fmt2(g.total),
+        g.items.map(it => '<div class="res-detail"><span class="res-detail-label">' + it.espLabel + ' — ' + it.concepto + '</span><span class="res-detail-qty">' + it.cant + '</span><span class="res-detail-val">' + fmt2(it.sub) + '</span></div>').join('')
+      );
+    });
+    htmlSecs += buildSeccion('sec-mat-obra', '🎨 Materiales a elegir durante la obra (orientativo)', fmt2(res.totalMatObra), obraItems + '<div style="padding:10px 16px;font-size:12px;color:var(--muted)">Este importe NO está incluido en el presupuesto. Se acordará durante la obra con nuestros profesionales.</div>');
+  }
 
   if (res.totalExtras > 0) {
     const extItems = res.desgloseExtras.map(e =>
@@ -3363,6 +3521,20 @@ function buildGruposMO(gruposMO) {
     );
   });
   return html || '<div style="padding:14px 16px;font-size:13px;color:var(--muted)">Sin trabajos seleccionados.</div>';
+}
+function buildGruposMat(gruposMat) {
+  let html = '';
+  Object.entries(gruposMat).forEach(([nombre, g]) => {
+    const key = 'mat_' + nombre.replace(/\s/g,'_');
+    html += buildSubcat(key, nombre, g.total.toLocaleString('es-ES',{minimumFractionDigits:2}) + '€',
+      g.items.map(it =>
+        '<div class="res-detail"><span class="res-detail-label">' + it.espLabel + ' — ' + it.concepto + '</span>' +
+        '<span class="res-detail-qty">' + (it.cant !== 1 ? it.cant + ' ' + it.unidad + ' × ' + it.precio.toFixed(2) + '€' : '') + '</span>' +
+        '<span class="res-detail-val">' + it.sub.toLocaleString('es-ES',{minimumFractionDigits:2}) + '€</span></div>'
+      ).join('')
+    );
+  });
+  return html || '<div style="padding:14px 16px;font-size:13px;color:var(--muted)">Estimados con precios estándar de catálogo.</div>';
 }
 function buildSubcat(key, nombre, val, detalles) {
   return '<div class="res-subcat"><div class="res-subcat-head" onclick="toggleSubcat(\'' + key + '\')">' +
@@ -3571,7 +3743,7 @@ function reiniciar() {
   S.materialesPorEspacio = {}; S.matCompartidos = {}; S.matShowN = {}; S.matEspacioIdx = 0;
   S.extras      = new Set();
   S.urgencia    = 'sin_prisa'; S.notas = ''; S.adjuntos = []; S.resultado = null;
-  S.maxPaso = 1; S.obraHabitada = false;
+  S.maxPaso = 1; S.obraHabitada = false; S.elegiMateriales = null;
   S.cliente     = {nombre:'',email:'',tel:'',canal:'email',horario:'cualquiera',rgpd:false};
 
   ['bano','aseo','habitacion'].forEach(tipo => {
