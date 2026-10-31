@@ -189,6 +189,107 @@ input,select,textarea{font-family:inherit}
 .embudo-estado{flex:1}
 .embudo-n{font-weight:600;min-width:30px;text-align:right}
 .embudo-bar-wrap{flex:2;max-width:200px}
+
+/* ── TABS ────────────────────────────────────────── */
+.tabs{display:flex;gap:4px;border-bottom:1.5px solid var(--border);margin-bottom:18px;flex-wrap:wrap}
+.tab{padding:9px 16px;background:none;border:none;border-bottom:2px solid transparent;font-size:13px;font-weight:500;color:var(--muted);margin-bottom:-1.5px}
+.tab:hover{color:var(--ink)}
+.tab.active{color:var(--accent);border-bottom-color:var(--accent);font-weight:600}
+.tab .tab-n{font-size:11px;background:var(--stone);color:var(--muted);border-radius:10px;padding:1px 7px;margin-left:5px}
+.tab.active .tab-n{background:rgba(201,111,40,.15);color:var(--accent)}
+
+/* ── CONTROLES BANDEJA ───────────────────────────── */
+.ctrl-row{display:flex;gap:8px;align-items:center;margin-bottom:14px;flex-wrap:wrap}
+.ctrl-row input[type=text],.ctrl-row select{padding:6px 10px;border:1.5px solid var(--border);border-radius:6px;font-size:13px;background:var(--light);color:var(--ink);outline:none}
+.ctrl-row input[type=text]:focus,.ctrl-row select:focus{border-color:var(--accent)}
+.ctrl-row .ctrl-lbl{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em}
+.ctrl-check{display:flex;align-items:center;gap:5px;font-size:13px;color:var(--muted);cursor:pointer}
+
+/* dos barras: calidad y espera */
+.bar2{display:flex;flex-direction:column;gap:3px;min-width:150px}
+.bar2-line{display:flex;align-items:center;gap:6px;font-size:10px;color:var(--muted)}
+.bar2-track{flex:1;height:4px;background:var(--stone);border-radius:2px;overflow:hidden}
+.bar2-fill{height:100%;border-radius:2px}
+.bar2-lbl{min-width:72px}
+
+/* Por qué */
+.porque{background:var(--light);border:1px solid var(--border);border-radius:8px;padding:14px;margin-top:8px;font-size:12px}
+.porque-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+@media(max-width:560px){.porque-grid{grid-template-columns:1fr}}
+.pq-factor{display:flex;align-items:center;gap:8px;margin-bottom:5px}
+.pq-factor .pq-lbl{flex:1}
+.pq-bar{width:70px;height:4px;background:var(--stone);border-radius:2px;overflow:hidden}
+.pq-bar>div{height:100%;background:var(--accent)}
+.pq-pts{min-width:42px;text-align:right;color:var(--muted)}
+.pq-total{border-top:1px solid var(--border);margin-top:6px;padding-top:6px;font-weight:600;display:flex;justify-content:space-between}
+
+/* ── KANBAN (Por estado) ─────────────────────────── */
+.kanban{display:flex;gap:12px;overflow-x:auto;padding-bottom:12px}
+.kan-col{min-width:200px;flex-shrink:0;background:var(--light);border:1px solid var(--border);border-radius:10px;padding:10px}
+.kan-col-hdr{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);margin-bottom:8px;display:flex;justify-content:space-between}
+.kan-card{background:#fff;border:1px solid var(--border);border-radius:8px;padding:10px;margin-bottom:8px;cursor:pointer;font-size:12px}
+.kan-card:hover{border-color:var(--accent)}
+.kan-card-nombre{font-weight:600;margin-bottom:2px}
+
+/* ── MENSAJE / TRIAJE MODAL ──────────────────────── */
+.msg-box{background:#fff;border:1px solid var(--border);border-radius:8px;padding:14px;font-size:13px;line-height:1.5;white-space:pre-wrap;margin:10px 0;max-height:220px;overflow-y:auto}
+.msg-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
+.franja-opt{display:flex;align-items:center;gap:8px;padding:8px 12px;border:1.5px solid var(--border);border-radius:8px;margin-bottom:6px;cursor:pointer;font-size:13px}
+.franja-opt.sel{border-color:var(--accent);background:rgba(201,111,40,.06)}
+.check-q{display:flex;align-items:center;gap:8px;padding:5px 0;font-size:13px}
+.modal-lg{max-width:860px}
+.modal-section{border-top:1px solid var(--border);margin-top:18px;padding-top:16px}
+.modal-section:first-of-type{border-top:none;margin-top:0;padding-top:0}
+
+/* ── FICHA: edición en línea ─────────────────────── */
+.ficha-tabs{display:flex;gap:2px;margin:14px 0;flex-wrap:wrap;position:sticky;top:0;background:var(--cream);z-index:2;padding-bottom:4px}
+.ficha-tab{padding:7px 12px;font-size:12px;border:none;background:var(--stone);border-radius:6px;color:var(--muted);font-weight:500}
+.ficha-tab.active{background:var(--accent);color:#fff}
+.inl-field{display:flex;align-items:center;gap:8px;padding:5px 0;font-size:13px;border-bottom:1px dashed var(--border)}
+.inl-field label{min-width:150px;color:var(--muted);font-size:12px}
+.inl-field input,.inl-field select{flex:1;padding:4px 8px;border:1px solid var(--border);border-radius:5px;font-size:13px;background:#fff;color:var(--ink)}
+.inl-field input:focus,.inl-field select:focus{border-color:var(--accent);outline:none}
+.kv{display:flex;gap:8px;font-size:13px;padding:3px 0}
+.kv .k{color:var(--muted);min-width:140px}
+
+/* líneas de presupuesto editables */
+.lineas-tbl{width:100%;border-collapse:collapse;font-size:12px;margin-top:8px}
+.lineas-tbl th{text-align:left;font-size:10px;text-transform:uppercase;color:var(--muted);padding:6px 6px;border-bottom:1px solid var(--border)}
+.lineas-tbl td{padding:4px 6px;border-bottom:1px solid var(--border);vertical-align:middle}
+.lineas-tbl input{width:100%;padding:3px 5px;border:1px solid transparent;border-radius:4px;font-size:12px;background:transparent;color:var(--ink)}
+.lineas-tbl input:hover{border-color:var(--border)}
+.lineas-tbl input:focus{border-color:var(--accent);background:#fff;outline:none}
+.lineas-tbl input.num{text-align:right}
+.lin-cand{cursor:pointer;font-size:14px;opacity:.5}
+.lin-cand.on{opacity:1;color:var(--accent)}
+.lin-origen{font-size:9px;padding:1px 5px;border-radius:8px;background:var(--stone);color:var(--muted)}
+.lin-grupo-td{background:var(--light);font-weight:600;font-size:11px;color:var(--terra);text-transform:uppercase;letter-spacing:.04em}
+.totbar{position:sticky;bottom:0;background:var(--deep);color:var(--cream);border-radius:8px;padding:10px 14px;margin-top:12px;display:flex;gap:16px;flex-wrap:wrap;align-items:center;font-size:13px}
+.totbar b{color:#fff}
+.totbar .tot-final{margin-left:auto;font-family:'Cormorant Garamond',serif;font-size:20px;color:var(--warm)}
+
+/* versiones / diff */
+.ver-chip{display:inline-flex;align-items:center;gap:5px;padding:4px 10px;border:1.5px solid var(--border);border-radius:20px;font-size:12px;margin:2px;cursor:pointer}
+.ver-chip.vigente{border-color:var(--accent);color:var(--accent);font-weight:600}
+.ver-chip.aceptada{border-color:var(--ok);color:var(--ok)}
+.diff-add{color:var(--ok)} .diff-del{color:var(--danger);text-decoration:line-through} .diff-chg{color:var(--amber)}
+.diff-row{font-size:12px;padding:3px 0;border-bottom:1px dashed var(--border)}
+
+/* timeline */
+.tl-item{display:flex;gap:10px;padding:6px 0;font-size:12px}
+.tl-dot{width:8px;height:8px;border-radius:50%;background:var(--warm);margin-top:5px;flex-shrink:0}
+.tl-dot.sistema{background:var(--muted)} .tl-dot.cliente{background:var(--accent)} .tl-dot.reformista{background:var(--terra)}
+.tl-fecha{color:var(--muted);min-width:70px}
+.tl-autor{font-size:10px;color:var(--muted)}
+
+/* vista cliente */
+.cliente-view{background:linear-gradient(160deg,#faf7f2,#f0e9dd);border-radius:12px;padding:20px}
+.cv-step{display:flex;align-items:center;gap:10px;padding:8px 0;font-size:13px}
+.cv-step-dot{width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;flex-shrink:0;background:var(--stone);color:var(--muted)}
+.cv-step-dot.done{background:var(--ok);color:#fff} .cv-step-dot.now{background:var(--accent);color:#fff}
+.cv-action{background:#fff;border:2px solid var(--accent);border-radius:10px;padding:16px;margin:14px 0}
+.cv-btn{display:block;width:100%;padding:11px;background:var(--accent);color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:600;margin-top:8px}
+.cv-btn.ghost{background:#fff;color:var(--ink);border:1.5px solid var(--border)}
 </style>
 </head>
 <body>
@@ -1270,6 +1371,102 @@ window.__tests = function(){
 };
 
 // ═══════════════════════════════════════════════════════
+// SECCIÓN 6.5: PLANTILLAS DE MENSAJE Y HELPERS DE ACCIÓN
+// ═══════════════════════════════════════════════════════
+const PLANTILLAS_MSG = {
+  proponer_visita:  'Hola {{cliente}}, soy {{reformista}}. He revisado tu solicitud ({{ref}}) y me gustaría visitar la vivienda. Estos son los huecos que tengo: {{franjas}}. Puedes elegir el que mejor te venga aquí: {{enlace}}',
+  pedir_info:       'Hola {{cliente}}, para afinar tu presupuesto ({{ref}}) necesito: {{concepto}}. Puedes enviarlo desde tu enlace: {{enlace}}. Gracias.',
+  recordatorio:     'Hola {{cliente}}, te recuerdo que tienes pendiente {{concepto}} en tu solicitud {{ref}}. Lo tienes aquí: {{enlace}}. Si ya no lo necesitas, dímelo y no te escribo más.',
+  confirmacion_visita:'Hola {{cliente}}, mañana {{fecha}} paso por la vivienda. ¿Me confirmas? Puedes confirmar o cambiar la hora aquí: {{enlace}}',
+  envio_version:    'Hola {{cliente}}, ya tienes tu presupuesto actualizado ({{ref}}): {{importe}}. Puedes verlo, ver qué ha cambiado y aceptarlo aquí: {{enlace}}',
+  aviso_cambio:     'Hola {{cliente}}, queda registrado el cambio que hemos hablado: {{concepto}} ({{importe}}). El total provisional de tu obra es {{total}}. Si algo no cuadra, avísame desde {{enlace}} o llámame.',
+  adenda_firmar:    'Hola {{cliente}}, he agrupado los cambios de la obra en una adenda por {{importe}}. Puedes revisarla y firmarla aquí: {{enlace}}',
+  cierre_remates:   'Hola {{cliente}}, la obra está terminada. Revisa y anota los remates que veas en {{enlace}}; los resuelvo y después cerramos con el acta de entrega.',
+  descarte:         'Hola {{cliente}}, gracias por contar con nosotros. En este caso no vamos a poder encargarnos de tu reforma ({{concepto}}). Te deseamos mucho éxito con el proyecto.',
+};
+function varsDe(caso, extra){
+  const cli = clienteDe(caso); const v = caso.versiones.find(x=>x.estado==='vigente') || caso.versiones[0];
+  const tv = totalVigente(caso);
+  return Object.assign({
+    cliente: (cli.nombre||'').split(' ')[0], reformista: DB.cfg.empresa.nombre, ref: caso.id,
+    franjas: (caso.visita?.franjasOfrecidas||[]).map(f => fmtFechaCorta(f.fecha)+' '+f.franja).join(', '),
+    enlace: 'anatoliyreformas.es/c/'+caso.enlace.token,
+    importe: v?.totales?.total ? fmtEur(v.totales.total) : '—',
+    total: tv.total ? fmtEur(tv.total) : '—', concepto: '', fecha: caso.visita?.elegida ? fmtFecha(caso.visita.elegida.fecha) : ''
+  }, extra||{});
+}
+function fillTpl(tpl, vars){ return tpl.replace(/\{\{(\w+)\}\}/g, (m,k) => vars[k] != null ? vars[k] : m); }
+function waLink(tel, msg){ return 'https://wa.me/34' + String(tel||'').replace(/\D/g,'') + '?text=' + encodeURIComponent(msg); }
+function copiarTexto(txt){ navigator.clipboard?.writeText(txt).then(()=>toast('Mensaje copiado'), ()=>toast('No se pudo copiar','err')); }
+function msgBloque(msg, tel){
+  return '<div class="msg-box" id="msg-preview">' + escH(msg) + '</div>' +
+    '<div class="msg-actions">' +
+      '<a class="abtn abtn-primary abtn-sm" href="' + waLink(tel, msg) + '" target="_blank" rel="noopener">Abrir WhatsApp</a>' +
+      '<button class="abtn abtn-ghost abtn-sm" onclick="copiarTexto(document.getElementById(\'msg-preview\').textContent)">Copiar mensaje</button>' +
+      '<button class="abtn abtn-ghost abtn-sm" onclick="toast(\'Correo simulado enviado\')">Simular correo</button>' +
+    '</div>';
+}
+
+// Versiones
+function siguienteVersionId(caso){ return 'V' + ((caso.versiones||[]).length + 1); }
+function clonarLineas(lineas){ return (lineas||[]).map(l => Object.assign({}, l, {id:uid('L')})); }
+function nuevaVersionDesde(caso, tipo){
+  const vigente = caso.versiones.find(x=>x.estado==='vigente') || caso.versiones[caso.versiones.length-1];
+  const lineas = clonarLineas(vigente?.lineas||[]);
+  const tot = calcularTotales(lineas, vigente?.ivaPct||DB.cfg.iva, DB.cfg.margen, DB.cfg.minimo);
+  const inc = calcularIncertidumbre(caso); const hq = calcularHorquilla(tot.total, inc.nivel);
+  tot.lo = hq.lo; tot.hi = hq.hi;
+  return { id:siguienteVersionId(caso), tipo:tipo||'revisada', creadaAt:hoy(), enviadaAt:null, ivaPct:vigente?.ivaPct||DB.cfg.iva, lineas, totales:tot, cambiosRespectoAnterior:null, estado:'borrador' };
+}
+function enviarVersion(caso, version, canal){
+  const previa = caso.versiones.find(x=>x.estado==='vigente');
+  if (previa){ version.cambiosRespectoAnterior = diffVersiones(previa, version); previa.estado = 'sustituida'; }
+  version.estado = 'vigente'; version.enviadaAt = hoy();
+  if (!caso.versiones.includes(version)) caso.versiones.push(version);
+  (caso.eventos = caso.eventos||[]).push({ fecha:hoy(), tipo:'version', texto:'Enviada versión ' + version.id + ' por ' + (canal||'WhatsApp') + ' (' + fmtEur(version.totales.total) + ')', autor:'reformista' });
+}
+
+// Acciones del cliente (simulador)
+function aplicarAccionCliente(caso, accionId, datos){
+  datos = datos||{};
+  const ev = (texto) => (caso.eventos = caso.eventos||[]).push({ fecha:hoy(), tipo:'cliente', texto, autor:'cliente' });
+  switch(accionId){
+    case 'responder':
+      (caso.solicitud.fotosCliente = caso.solicitud.fotosCliente||[]).push('foto_cliente_'+Date.now()+'.jpg');
+      if (caso.estado === 'esperando_info' && puedeTransitar(caso,'en_triaje')) transitar(caso,'en_triaje',{autor:'cliente',texto:'El cliente respondió con la información pedida'});
+      ev('El cliente ha respondido y subido fotos'); break;
+    case 'elegir_franja':
+      caso.visita.elegida = datos.franja || caso.visita.franjasOfrecidas[0];
+      caso.visita.estado = 'confirmada';
+      if (puedeTransitar(caso,'visita_confirmada')) transitar(caso,'visita_confirmada',{autor:'cliente',texto:'El cliente eligió franja de visita'});
+      ev('El cliente confirmó la visita: ' + fmtFecha(caso.visita.elegida.fecha) + ' ' + caso.visita.elegida.franja); break;
+    case 'aceptar':
+      if (caso.estado === 'propuesta_enviada'){
+        const v = caso.versiones.find(x=>x.estado==='vigente');
+        let importe = v?.totales?.total || 0;
+        if (caso.visita?.cobro?.estado === 'cobrado' && DB.cfg.visita.descontable){ importe = r(importe - (caso.visita.cobro.importe||0)); }
+        caso.aceptacion = { versionId:v?.id, fecha:hoy(), metodo:'enlace', importe: v?.totales?.total||0, descontadoVisita: caso.visita?.cobro?.estado==='cobrado'?(caso.visita.cobro.importe||0):0 };
+        if (v) v.estado = 'aceptada';
+        transitar(caso,'aceptada',{autor:'cliente',texto:'El cliente aceptó la propuesta ' + (v?.id||'')});
+        ev('¡Propuesta aceptada! Importe ' + fmtEur(v?.totales?.total||0));
+      } break;
+    case 'pedir_cambios':
+      (caso.obra.solicitudesCambio = caso.obra.solicitudesCambio||[]).push({ id:uid('S'), fecha:hoy(), texto:datos.texto||'El cliente pide cambios en la propuesta', estado:'abierta' });
+      ev('El cliente pide cambios: ' + (datos.texto||'(sin detalle)')); break;
+    case 'rechazar':
+      if (puedeTransitar(caso,'rechazada')){ const v=caso.versiones.find(x=>x.estado==='vigente'); if(v)v.estado='rechazada'; transitar(caso,'rechazada',{autor:'cliente',texto:'Rechazada: '+(datos.motivo||'sin motivo')}); }
+      ev('El cliente rechazó la propuesta' + (datos.motivo?': '+datos.motivo:'')); break;
+    case 'reactivar':
+      if (caso.estado==='en_pausa' && caso.estadoPrevio && puedeTransitar(caso, caso.estadoPrevio)) transitar(caso, caso.estadoPrevio, {autor:'cliente',texto:'Reactivado desde pausa'});
+      ev('El cliente reactivó el caso'); break;
+    case 'renovar':
+      if (caso.estado==='caducada' && puedeTransitar(caso,'propuesta_enviada')){ const nv=nuevaVersionDesde(caso,'renovada'); enviarVersion(caso,nv,'WhatsApp'); transitar(caso,'propuesta_enviada',{autor:'cliente',texto:'Propuesta renovada'}); }
+      ev('El cliente pidió renovar la propuesta'); break;
+  }
+  return caso;
+}
+
+// ═══════════════════════════════════════════════════════
 // SECCIÓN 7: COMPONENTES DE INTERFAZ
 // ═══════════════════════════════════════════════════════
 function toast(msg, tipo){
@@ -1279,11 +1476,12 @@ function toast(msg, tipo){
   el.textContent = msg; w.appendChild(el);
   setTimeout(() => { el.style.opacity = '0'; el.style.transition = 'opacity .3s'; setTimeout(() => el.remove(), 300); }, 2800);
 }
-function openModal(bodyHtml){
+function openModal(bodyHtml, big){
   document.getElementById('main-modal-body').innerHTML = bodyHtml;
+  document.getElementById('main-modal').classList.toggle('modal-lg', !!big);
   document.getElementById('modal-bg').classList.add('open');
 }
-function closeAllModals(){ document.getElementById('modal-bg').classList.remove('open'); }
+function closeAllModals(){ document.getElementById('modal-bg').classList.remove('open'); document.getElementById('main-modal').classList.remove('modal-lg'); }
 function clienteDe(caso){ return DB.clientes.find(c => c.id === caso.clienteId) || {nombre:'(sin cliente)', email:'', tel:''}; }
 function badgeEstado(estado){ return '<span class="badge b-' + estado + '">' + (ESTADO_LABEL[estado]||estado) + '</span>'; }
 function prioChip(nivel){
@@ -1388,70 +1586,600 @@ function casoCardHtml(caso, prio){
 }
 
 // ═══════════════════════════════════════════════════════
-// SECCIÓN 9: PRESUPUESTOS (bandeja)
+// SECCIÓN 9: PRESUPUESTOS (bandeja · seguimiento · por estado · archivo)
 // ═══════════════════════════════════════════════════════
-let bandejaFiltro = 'activos';
-RENDERERS.presupuestos = function(){
-  const casos = DB.casos.map(c => ({ caso:c, prio:scorePrioridad(c, DB.cfg, hoy()) }))
-    .sort((a,b) => b.prio.total - a.prio.total);
-  const filtros = {
-    activos:  c => !['cerrada','archivada','descartada','caducada','rechazada'].includes(c.estado),
-    nuevos:   c => ['recibida','en_triaje'].includes(c.estado),
-    espera:   c => ['esperando_info','visita_propuesta','visita_confirmada'].includes(c.estado),
-    propuestas: c => ['propuesta_enviada'].includes(c.estado),
-    cerrados: c => ['cerrada','descartada','caducada','rechazada','archivada'].includes(c.estado),
-    todos:    () => true,
-  };
-  const lista = casos.filter(x => (filtros[bandejaFiltro]||filtros.todos)(x.caso));
-  const btn = (k, label) => '<button class="bandeja-filter" style="' + (bandejaFiltro===k?'border-color:var(--accent);color:var(--accent);font-weight:600':'') + '" onclick="bandejaFiltro=\'' + k + '\';RENDERERS.presupuestos()">' + label + '</button>';
+let presuTab = 'bandeja';
+let bandejaSort = 'prioridad';
+let bandejaF = { estado:'', zona:'', tipo:'', soloFotos:false, q:'' };
+const porqueAbierto = {};
 
+function esperaConRespuesta(caso){
+  if (caso.estado !== 'esperando_info') return false;
+  const ultTrans = [...(caso.eventos||[])].reverse().find(e=>e.tipo==='transicion' && /esperando/i.test(e.texto||''));
+  const desde = ultTrans?.fecha || caso.creadoAt;
+  return (caso.eventos||[]).some(e => e.autor==='cliente' && new Date(e.fecha) >= new Date(desde));
+}
+function enBandeja(caso){ return ['recibida','en_triaje'].includes(caso.estado) || esperaConRespuesta(caso); }
+function enSeguimiento(caso){ return ['esperando_info','visita_propuesta','visita_confirmada','propuesta_enviada'].includes(caso.estado) && !esperaConRespuesta(caso); }
+function enArchivo(caso){ return ['descartada','rechazada','caducada','en_pausa','archivada'].includes(caso.estado); }
+
+RENDERERS.presupuestos = function(){
+  const nBandeja = DB.casos.filter(enBandeja).length;
+  const nSeg = DB.casos.filter(enSeguimiento).length;
+  const nArch = DB.casos.filter(enArchivo).length;
+  const tab = (k,l,n) => '<button class="tab ' + (presuTab===k?'active':'') + '" onclick="presuTab=\'' + k + '\';RENDERERS.presupuestos()">' + l + (n!=null?'<span class="tab-n">' + n + '</span>':'') + '</button>';
+  let cuerpo = '';
+  if (presuTab==='bandeja') cuerpo = cuerpoBandeja();
+  else if (presuTab==='seguimiento') cuerpo = cuerpoSeguimiento();
+  else if (presuTab==='estado') cuerpo = cuerpoPorEstado();
+  else if (presuTab==='archivo') cuerpo = cuerpoArchivo();
   document.getElementById('pg-presupuestos').innerHTML =
-    '<div class="page-hdr"><div><div class="page-title">Presupuestos</div><div class="page-sub">Bandeja de pedidos ordenada por prioridad</div></div></div>' +
-    '<div class="bandeja-tools">' +
-      btn('activos','Activos') + btn('nuevos','Nuevos') + btn('espera','En espera') + btn('propuestas','Propuestas') + btn('cerrados','Cerrados') + btn('todos','Todos') +
-      '<span class="bandeja-count">' + lista.length + ' caso' + (lista.length!==1?'s':'') + '</span>' +
-    '</div>' +
-    (lista.length ? lista.map(x => casoCardHtml(x.caso, x.prio)).join('') : '<div class="section-card" style="text-align:center;color:var(--muted)">Sin casos con este filtro.</div>');
+    '<div class="page-hdr"><div><div class="page-title">Presupuestos</div><div class="page-sub">Gestión de pedidos y propuestas</div></div></div>' +
+    '<div class="tabs">' + tab('bandeja','Bandeja',nBandeja) + tab('seguimiento','Seguimiento',nSeg) + tab('estado','Por estado') + tab('archivo','Archivo',nArch) + '</div>' +
+    cuerpo;
 };
 
-// Ficha del caso (modal) — vista básica Fase A
-function abrirCaso(id){
-  const caso = DB.casos.find(c => c.id === id); if (!caso) return;
-  const cli = clienteDe(caso);
-  const sc = scoreCalidad(caso, DB.cfg);
-  const prio = scorePrioridad(caso, DB.cfg, hoy());
-  const inc = calcularIncertidumbre(caso);
+function cuerpoBandeja(){
+  let items = DB.casos.filter(enBandeja).map(c => ({ caso:c, prio:scorePrioridad(c,DB.cfg,hoy()), cal:scoreCalidad(c,DB.cfg) }));
+  // filtros
+  if (bandejaF.estado) items = items.filter(x=>x.caso.estado===bandejaF.estado);
+  if (bandejaF.zona) items = items.filter(x=>(x.caso.vivienda.zona||zonaDeCp(x.caso.vivienda.cp,DB.cfg))===bandejaF.zona);
+  if (bandejaF.tipo) items = items.filter(x=>x.caso.solicitud.tipoObra===bandejaF.tipo);
+  if (bandejaF.soloFotos) items = items.filter(x=>(x.caso.solicitud.fotosCliente||[]).length>0);
+  if (bandejaF.q){ const q=bandejaF.q.toLowerCase(); items = items.filter(x=>{ const cl=clienteDe(x.caso); return (cl.nombre+' '+cl.zona+' '+x.caso.id+' '+(x.caso.vivienda.direccion||'')).toLowerCase().includes(q); }); }
+  // orden
+  const sorters = { prioridad:(a,b)=>b.prio.total-a.prio.total, calidad:(a,b)=>b.cal.total-a.cal.total, espera:(a,b)=>b.prio.horasEspera-a.prio.horasEspera, importe:(a,b)=>(b.caso.versiones[0]?.totales?.total||0)-(a.caso.versiones[0]?.totales?.total||0) };
+  items.sort(sorters[bandejaSort]||sorters.prioridad);
+  const porRevisar = DB.casos.filter(c=>['recibida'].includes(c.estado)).length;
+
+  const selSort = '<select onchange="bandejaSort=this.value;RENDERERS.presupuestos()">' + [['prioridad','Prioridad'],['calidad','Calidad'],['espera','Espera'],['importe','Importe']].map(o=>'<option value="'+o[0]+'"'+(bandejaSort===o[0]?' selected':'')+'>'+o[1]+'</option>').join('') + '</select>';
+  const selEstado = '<select onchange="bandejaF.estado=this.value;RENDERERS.presupuestos()"><option value="">Todos los estados</option>' + ['recibida','en_triaje','esperando_info'].map(e=>'<option value="'+e+'"'+(bandejaF.estado===e?' selected':'')+'>'+ESTADO_LABEL[e]+'</option>').join('') + '</select>';
+  const selZona = '<select onchange="bandejaF.zona=this.value;RENDERERS.presupuestos()"><option value="">Toda zona</option>' + ['dentro','limite','fuera'].map(z=>'<option value="'+z+'"'+(bandejaF.zona===z?' selected':'')+'>'+z+'</option>').join('') + '</select>';
+  const selTipo = '<select onchange="bandejaF.tipo=this.value;RENDERERS.presupuestos()"><option value="">Todo tipo</option>' + ['reforma_integral','reforma_bano','reforma_cocina','reforma_parcial'].map(t=>'<option value="'+t+'"'+(bandejaF.tipo===t?' selected':'')+'>'+nombreTipoObra(t)+'</option>').join('') + '</select>';
+
+  return '<div class="ctrl-row">' +
+      '<span class="ctrl-lbl">Ordenar</span>' + selSort + selEstado + selZona + selTipo +
+      '<label class="ctrl-check"><input type="checkbox"' + (bandejaF.soloFotos?' checked':'') + ' onchange="bandejaF.soloFotos=this.checked;RENDERERS.presupuestos()"> Solo con fotos</label>' +
+      '<input type="text" placeholder="Buscar…" value="' + escH(bandejaF.q) + '" oninput="bandejaF.q=this.value;clearTimeout(window._bq);window._bq=setTimeout(RENDERERS.presupuestos,250)">' +
+      '<span class="bandeja-count">' + items.length + ' por revisar · ' + porRevisar + ' nuevos</span>' +
+    '</div>' +
+    (items.length ? items.map(x=>filaBandeja(x.caso, x.prio, x.cal)).join('') : '<div class="section-card" style="text-align:center;color:var(--muted)">Sin casos que coincidan.</div>');
+}
+
+function barra2(cal, prio){
+  const plazo = DB.cfg.plazoRespuestaHoras;
+  const esperaPct = clamp(prio.horasEspera/plazo*100, 0, 100);
+  const colEsp = prio.horasEspera>=plazo?'var(--danger)':prio.horasEspera>=plazo*0.6?'var(--amber)':'var(--warm)';
+  const colCal = cal.total>=66?'var(--ok)':cal.total>=40?'var(--accent)':'var(--muted)';
+  return '<div class="bar2">' +
+    '<div class="bar2-line"><span class="bar2-lbl">Calidad ' + cal.total + '</span><div class="bar2-track"><div class="bar2-fill" style="width:' + cal.total + '%;background:' + colCal + '"></div></div></div>' +
+    '<div class="bar2-line"><span class="bar2-lbl">Espera ' + prio.horasEspera + 'h/' + plazo + 'h</span><div class="bar2-track"><div class="bar2-fill" style="width:' + esperaPct + '%;background:' + colEsp + '"></div></div></div>' +
+  '</div>';
+}
+function porqueHtml(caso, cal, prio){
+  const facs = cal.factores.map(f=>'<div class="pq-factor"><span class="pq-lbl">' + f.label + '</span><div class="pq-bar"><div style="width:' + (f.puntos/f.max*100) + '%"></div></div><span class="pq-pts">' + f.puntos + '/' + f.max + '</span></div>').join('');
+  const comps = [['Espera',prio.espera,50],['Calidad (×0,3)',prio.calidad,30],['Actividad',prio.actividad,20]].map(c=>'<div class="pq-factor"><span class="pq-lbl">' + c[0] + '</span><div class="pq-bar"><div style="width:' + (c[1]/c[2]*100) + '%"></div></div><span class="pq-pts">' + c[1] + '/' + c[2] + '</span></div>').join('');
+  return '<div class="porque"><div class="porque-grid">' +
+    '<div><b style="font-size:11px;text-transform:uppercase;color:var(--muted)">Calidad · 7 factores</b>' + facs + '<div class="pq-total"><span>Total calidad</span><span>' + cal.total + '/100</span></div></div>' +
+    '<div><b style="font-size:11px;text-transform:uppercase;color:var(--muted)">Prioridad · 3 componentes</b>' + comps + '<div class="pq-total"><span>Total prioridad</span><span>' + prio.total + '/100</span></div></div>' +
+  '</div></div>';
+}
+function botonesTriaje(caso){
   const ac = accionSugerida(caso, DB.cfg);
-  const tv = totalVigente(caso);
-  const eco = estadoEconomico(caso, DB.cobros);
-  const v = caso.versiones[0];
-  let html = '<div class="modal-title">' + escH(cli.nombre) + ' <span style="font-size:13px;color:var(--muted)">· ' + caso.id + '</span></div>';
-  html += '<div style="margin-bottom:14px">' + badgeEstado(caso.estado) + ' ' + prioChip(prio.nivel) + '</div>';
-  html += '<div style="font-size:13px;color:var(--muted);margin-bottom:4px">' + nombreTipoObra(caso.solicitud.tipoObra) + ' · ' + escH(caso.vivienda.tipo) + ' ' + caso.vivienda.m2 + 'm² · ' + escH(cli.zona||'') + ' (' + escH(caso.vivienda.cp) + ')</div>';
-  html += '<div style="font-size:13px;margin-bottom:16px">' + escH(cli.email) + ' · ' + escH(cli.tel) + '</div>';
-  if (caso.solicitud.notasCliente) html += '<div class="section-card" style="font-style:italic;font-size:13px">“' + escH(caso.solicitud.notasCliente) + '”</div>';
-  html += '<div class="section-card"><div class="section-card-title">Estimación</div>' +
-    '<div style="font-family:\'Cormorant Garamond\',serif;font-size:26px;color:var(--deep)">' + (v?.totales?.lo ? fmtEur0(v.totales.lo) + ' – ' + fmtEur0(v.totales.hi) : fmtEur(v?.totales?.total||0)) + '</div>' +
-    '<div style="font-size:12px;color:var(--muted);margin-top:4px">Incertidumbre ' + inc.nivel + ' · ' + (v?.lineas?.length||0) + ' líneas</div></div>';
-  html += '<div class="section-card"><div class="section-card-title">Calidad del caso · ' + sc.total + '/100</div>' +
-    sc.factores.map(f => '<div style="display:flex;align-items:center;gap:8px;font-size:12px;margin-bottom:4px"><span style="flex:1">' + f.label + '</span>' +
-      '<div class="prog-bar" style="max-width:120px"><div class="prog-fill" style="width:' + (f.puntos/f.max*100) + '%"></div></div><span style="min-width:40px;text-align:right;color:var(--muted)">' + f.puntos + '/' + f.max + '</span></div>').join('') +
-    '<div style="margin-top:8px">' + etiqChips(sc.etiquetas) + '</div></div>';
-  if (['aceptada','en_obra','en_remates','terminada','cerrada'].includes(caso.estado)){
-    html += '<div class="section-card"><div class="section-card-title">Económico</div>' +
-      '<div style="font-size:13px">Total vigente: <b>' + fmtEur(tv.total) + '</b>' + (tv.desviacionPct ? ' <span style="color:var(--amber)">(+' + tv.desviacionPct + '% vs aceptado)</span>' : '') + '</div>' +
-      '<div style="font-size:13px">Cobrado: ' + fmtEur(eco.cobrado) + ' · Saldo: <b style="color:' + (eco.saldo>0?'var(--danger)':'var(--ok)') + '">' + fmtEur(eco.saldo) + '</b></div></div>';
+  const mapa = { hacer_visita:'proponer', pedir_info_fotos:'pedir', enviar_presupuesto:'presupuesto', revisar_descarte:'descartar' };
+  const sug = mapa[ac.id] || 'proponer';
+  const exits = [['proponer','Proponer visita','exitProponerVisita'],['pedir','Pedir info/fotos','exitPedirInfo'],['presupuesto','Presupuesto sin visita','exitPresupuestoSinVisita'],['descartar','Descartar','exitDescartar']];
+  return '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px" onclick="event.stopPropagation()">' +
+    exits.map(e=>'<button class="abtn abtn-sm ' + (e[0]===sug?'abtn-primary':'abtn-ghost') + '" title="' + (e[0]===sug?escH(ac.motivo):'') + '" onclick="' + e[2] + '(\'' + caso.id + '\')">' + (e[0]===sug?'★ ':'') + e[1] + '</button>').join('') +
+  '</div>';
+}
+function filaBandeja(caso, prio, cal){
+  prio = prio||scorePrioridad(caso,DB.cfg,hoy()); cal = cal||scoreCalidad(caso,DB.cfg);
+  const cli = clienteDe(caso); const v = caso.versiones[0];
+  const resumen = nombreTipoObra(caso.solicitud.tipoObra) + ' · ' + (caso.solicitud.espacios||[]).reduce((s,e)=>s+(e.m2||0),0) + ' m²';
+  const abierto = porqueAbierto[caso.id];
+  return '<div class="caso-card">' +
+    '<div class="caso-card-top" onclick="abrirCaso(\'' + caso.id + '\')" style="cursor:pointer">' +
+      '<span class="caso-ref">' + caso.id + '</span>' + badgeEstado(caso.estado) +
+      '<span class="caso-nombre">' + escH(cli.nombre) + '</span>' + prioChip(prio.nivel) +
+      '<span class="caso-importe" style="margin-left:auto">' + (v?.totales?.lo?fmtEur0(v.totales.lo)+'–'+fmtEur0(v.totales.hi):'—') + '</span>' +
+    '</div>' +
+    '<div class="caso-card-mid">' +
+      '<span class="caso-tipo">' + resumen + ' · ' + escH(cli.zona||'') + '</span>' +
+      barra2(cal, prio) +
+      '<button class="abtn abtn-ghost abtn-sm" onclick="porqueAbierto[\'' + caso.id + '\']=!porqueAbierto[\'' + caso.id + '\'];RENDERERS.presupuestos()">' + (abierto?'Ocultar':'Por qué') + '</button>' +
+    '</div>' +
+    (cal.etiquetas.length?'<div style="margin-top:6px">' + etiqChips(cal.etiquetas.slice(0,5)) + '</div>':'') +
+    (abierto?porqueHtml(caso,cal,prio):'') +
+    botonesTriaje(caso) +
+  '</div>';
+}
+
+function cuerpoSeguimiento(){
+  const items = DB.casos.filter(enSeguimiento).map(c=>({caso:c, relojes:evaluarRelojes(c,DB.cfg,hoy())}));
+  if (!items.length) return '<div class="section-card" style="text-align:center;color:var(--muted)">Nada esperando al cliente.</div>';
+  const rows = items.map(x=>{
+    const c=x.caso, cli=clienteDe(c); const prio=scorePrioridad(c,DB.cfg,hoy());
+    const debido = x.relojes.find(r=>['recordatorio','caducidad','pausa','aviso_caducidad','recordatorio_visita','visita_hoy'].includes(r.tipo));
+    const accBtn = debido ? '<button class="abtn abtn-primary abtn-sm" onclick="event.stopPropagation();exitRecordatorio(\'' + c.id + '\')">Preparar recordatorio</button>' : '<span style="color:var(--muted);font-size:12px">—</span>';
+    return '<tr onclick="abrirCaso(\'' + c.id + '\')" style="cursor:pointer"><td><b>' + escH(cli.nombre) + '</b><br><span style="font-size:11px;color:var(--muted)">' + c.id + '</span></td>' +
+      '<td>' + badgeEstado(c.estado) + '</td>' +
+      '<td>' + prio.horasEspera + ' h</td>' +
+      '<td>' + (debido?'<span class="badge b-warn">' + debido.tipo.replace(/_/g,' ') + '</span>':'<span class="badge b-mute">al día</span>') + '</td>' +
+      '<td onclick="event.stopPropagation()">' + accBtn + '</td></tr>';
+  }).join('');
+  return '<div class="table-wrap"><table><thead><tr><th>Cliente</th><th>Estado</th><th>En espera</th><th>Reloj</th><th>Acción</th></tr></thead><tbody>' + rows + '</tbody></table></div>';
+}
+
+function cuerpoPorEstado(){
+  const orden = ['recibida','en_triaje','esperando_info','visita_propuesta','visita_confirmada','en_visita','propuesta_enviada','aceptada'];
+  const cols = orden.map(est=>{
+    const cs = DB.casos.filter(c=>c.estado===est);
+    const cards = cs.map(c=>{ const cli=clienteDe(c); return '<div class="kan-card" onclick="abrirCaso(\'' + c.id + '\')"><div class="kan-card-nombre">' + escH(cli.nombre) + '</div><div style="color:var(--muted)">' + nombreTipoObra(c.solicitud.tipoObra) + '</div><div style="color:var(--muted);font-size:11px">' + c.id + '</div></div>'; }).join('') || '<div style="font-size:11px;color:var(--muted)">—</div>';
+    return '<div class="kan-col"><div class="kan-col-hdr">' + ESTADO_LABEL[est] + '<span>' + cs.length + '</span></div>' + cards + '</div>';
+  }).join('');
+  return '<div class="kanban">' + cols + '</div><div style="font-size:12px;color:var(--muted);margin-top:8px">El cambio de estado se hace con las acciones del caso, no arrastrando tarjetas.</div>';
+}
+
+function cuerpoArchivo(){
+  const cs = DB.casos.filter(enArchivo);
+  if (!cs.length) return '<div class="section-card" style="text-align:center;color:var(--muted)">Archivo vacío.</div>';
+  const rows = cs.map(c=>{
+    const cli=clienteDe(c);
+    const motivo = c.interno?.motivoDescarte || (c.estado==='caducada'?'Propuesta vencida':c.estado==='en_pausa'?'En pausa a petición del cliente':c.estado==='rechazada'?'Rechazada por el cliente':'—');
+    let acciones='';
+    if (c.estado==='caducada') acciones='<button class="abtn abtn-ghost abtn-sm" onclick="event.stopPropagation();accionArchivo(\'' + c.id + '\',\'renovar\')">Renovar</button>';
+    else if (c.estado==='descartada') acciones='<button class="abtn abtn-ghost abtn-sm" onclick="event.stopPropagation();accionArchivo(\'' + c.id + '\',\'reabrir\')">Reabrir</button>';
+    else if (c.estado==='en_pausa') acciones='<button class="abtn abtn-ghost abtn-sm" onclick="event.stopPropagation();accionArchivo(\'' + c.id + '\',\'reactivar\')">Reactivar</button>';
+    else if (c.estado==='rechazada') acciones='<button class="abtn abtn-ghost abtn-sm" onclick="event.stopPropagation();accionArchivo(\'' + c.id + '\',\'renegociar\')">Renegociar</button>';
+    return '<tr onclick="abrirCaso(\'' + c.id + '\')" style="cursor:pointer"><td><b>' + escH(cli.nombre) + '</b><br><span style="font-size:11px;color:var(--muted)">' + c.id + '</span></td><td>' + badgeEstado(c.estado) + '</td><td style="font-size:12px">' + escH(motivo) + '</td><td onclick="event.stopPropagation()">' + (acciones||'—') + '</td></tr>';
+  }).join('');
+  return '<div class="table-wrap"><table><thead><tr><th>Cliente</th><th>Estado</th><th>Motivo</th><th>Acciones</th></tr></thead><tbody>' + rows + '</tbody></table></div>';
+}
+
+function accionArchivo(id, accion){
+  const c = DB.casos.find(x=>x.id===id); if(!c) return;
+  try{
+    if (accion==='renovar'){ aplicarAccionCliente(c,'renovar'); toast('Propuesta renovada'); }
+    else if (accion==='reactivar'){ aplicarAccionCliente(c,'reactivar'); toast('Caso reactivado'); }
+    else if (accion==='reabrir'){ if(puedeTransitar(c,'en_triaje')){transitar(c,'en_triaje',{autor:'reformista',texto:'Reabierto desde descarte'}); toast('Caso reabierto');} }
+    else if (accion==='renegociar'){ if(puedeTransitar(c,'propuesta_enviada')){ const nv=nuevaVersionDesde(c,'renegociada'); enviarVersion(c,nv,'WhatsApp'); transitar(c,'propuesta_enviada',{autor:'reformista',texto:'Renegociación: nueva versión'}); toast('Nueva versión para renegociar');} }
+  }catch(e){ toast(e.message,'err'); }
+  RENDERERS.presupuestos();
+}
+
+// ── Las cuatro salidas del triaje ──────────────────────
+let _triaje = { franjas:[], sel:[] };
+function franjasLibresSimples(n){
+  const out=[]; const horas=['10:00-11:00','12:00-13:00','17:00-18:00']; let d=1;
+  while(out.length<n){ const f=new Date(_hoyDate()); f.setDate(f.getDate()+d); const dow=f.getDay();
+    if (DB.cfg.agenda.dias.includes(dow)){ horas.forEach(h=>{ if(out.length<n) out.push({fecha:f.toISOString().split('T')[0], franja:h}); }); }
+    d++; if(d>21) break; }
+  return out;
+}
+function exitProponerVisita(id){
+  const c = DB.casos.find(x=>x.id===id); if(!c) return;
+  _triaje = { franjas: franjasLibresSimples(6), sel: [], casoId:id };
+  renderExitProponer(c);
+}
+function renderExitProponer(c){
+  const cli = clienteDe(c);
+  const opts = _triaje.franjas.map((f,i)=>'<div class="franja-opt ' + (_triaje.sel.includes(i)?'sel':'') + '" onclick="toggleFranja(' + i + ')"><input type="checkbox" ' + (_triaje.sel.includes(i)?'checked':'') + ' ' + (!_triaje.sel.includes(i)&&_triaje.sel.length>=3?'disabled':'') + '> ' + fmtFecha(f.fecha) + ' · ' + f.franja + '</div>').join('');
+  c.visita.franjasOfrecidas = _triaje.sel.map(i=>_triaje.franjas[i]);
+  const msg = fillTpl(PLANTILLAS_MSG.proponer_visita, varsDe(c));
+  openModal('<div class="modal-title">Proponer visita · ' + escH(cli.nombre) + '</div>' +
+    '<p style="font-size:13px;color:var(--muted);margin-bottom:10px">Elige hasta 3 huecos de tu agenda. Se generará la versión V' + ((c.versiones.length)+1) + ' (revisable) y el caso pasará a «Visita propuesta».</p>' +
+    opts +
+    '<div class="modal-section"><b style="font-size:12px;text-transform:uppercase;color:var(--muted)">Vista previa del mensaje</b>' + (_triaje.sel.length?msgBloque(msg, cli.tel):'<p style="font-size:13px;color:var(--muted);margin-top:8px">Selecciona al menos una franja.</p>') + '</div>' +
+    '<div style="margin-top:16px;display:flex;gap:8px;justify-content:flex-end"><button class="abtn abtn-ghost" onclick="closeAllModals()">Cancelar</button>' +
+    '<button class="abtn abtn-primary" ' + (_triaje.sel.length?'':'disabled style="opacity:.5"') + ' onclick="confirmarProponer(\'' + c.id + '\')">Proponer visita</button></div>');
+}
+function toggleFranja(i){ const p=_triaje.sel.indexOf(i); if(p>=0)_triaje.sel.splice(p,1); else if(_triaje.sel.length<3)_triaje.sel.push(i); renderExitProponer(DB.casos.find(x=>x.id===_triaje.casoId)); }
+function confirmarProponer(id){
+  const c = DB.casos.find(x=>x.id===id); if(!c) return;
+  c.visita.franjasOfrecidas = _triaje.sel.map(i=>_triaje.franjas[i]);
+  c.visita.estado = 'propuesta'; c.visita.cobro = { importe:importeVisita(c,DB.cfg), politica:'reprogramable', estado:'pendiente' };
+  const nv = nuevaVersionDesde(c,'revisada'); c.versiones.push(nv); // V2 borrador editable
+  try{ if(c.estado!=='visita_propuesta' && puedeTransitar(c,'visita_propuesta')) transitar(c,'visita_propuesta',{autor:'reformista',texto:'Propuesta ' + c.visita.franjasOfrecidas.length + ' franjas de visita'}); }catch(e){ if(puedeTransitar(c,'visita_propuesta')===false && c.estado==='en_triaje'){} }
+  (c.eventos).push({fecha:hoy(),tipo:'version',texto:'Generada ' + nv.id + ' (revisable antes de enviar)',autor:'reformista'});
+  closeAllModals(); toast('Visita propuesta · ' + nv.id + ' creada'); RENDERERS.presupuestos();
+}
+
+function exitPedirInfo(id){
+  const c = DB.casos.find(x=>x.id===id); if(!c) return; const cli=clienteDe(c);
+  const chk = generarChecklist(c, CHECKLIST_PLANTILLAS).slice(0,6);
+  _pedir = { items: chk.map(q=>({q:q.pregunta, on:false})), fotos:true };
+  renderPedir(c);
+}
+let _pedir = {items:[],fotos:true};
+function renderPedir(c){
+  const cli=clienteDe(c);
+  const lista = _pedir.items.map((it,i)=>'<label class="check-q"><input type="checkbox" ' + (it.on?'checked':'') + ' onchange="_pedir.items[' + i + '].on=this.checked;renderPedir(DB.casos.find(x=>x.id===\'' + c.id + '\'))"> ' + escH(it.q) + '</label>').join('');
+  const pedidos = _pedir.items.filter(x=>x.on).map(x=>x.q);
+  if (_pedir.fotos) pedidos.push('fotos del estado actual');
+  const concepto = pedidos.length?pedidos.join(', '):'más información';
+  const msg = fillTpl(PLANTILLAS_MSG.pedir_info, varsDe(c,{concepto}));
+  openModal('<div class="modal-title">Pedir info o fotos · ' + escH(cli.nombre) + '</div>' +
+    '<p style="font-size:13px;color:var(--muted);margin-bottom:10px">Marca qué necesitas. El caso pasará a «Esperando info».</p>' +
+    lista + '<label class="check-q"><input type="checkbox" ' + (_pedir.fotos?'checked':'') + ' onchange="_pedir.fotos=this.checked;renderPedir(DB.casos.find(x=>x.id===\'' + c.id + '\'))"> Fotos del estado actual</label>' +
+    '<div class="modal-section"><b style="font-size:12px;text-transform:uppercase;color:var(--muted)">Mensaje</b>' + msgBloque(msg, cli.tel) + '</div>' +
+    '<div style="margin-top:16px;display:flex;gap:8px;justify-content:flex-end"><button class="abtn abtn-ghost" onclick="closeAllModals()">Cancelar</button>' +
+    '<button class="abtn abtn-primary" onclick="confirmarPedir(\'' + c.id + '\',\'' + escH(concepto).replace(/'/g,"\\'") + '\')">Pedir y marcar en espera</button></div>');
+}
+function confirmarPedir(id, concepto){
+  const c = DB.casos.find(x=>x.id===id); if(!c) return;
+  (c.eventos).push({fecha:hoy(),tipo:'mensaje',texto:'Pedida info: ' + concepto,autor:'reformista'});
+  try{ if(c.estado!=='esperando_info' && puedeTransitar(c,'esperando_info')) transitar(c,'esperando_info',{autor:'reformista',texto:'A la espera de info del cliente'}); }catch(e){}
+  closeAllModals(); toast('Info solicitada · esperando al cliente'); RENDERERS.presupuestos();
+}
+
+function exitPresupuestoSinVisita(id){
+  const c = DB.casos.find(x=>x.id===id); if(!c) return; const cli=clienteDe(c);
+  const v = c.versiones.find(x=>x.estado==='vigente') || c.versiones[0];
+  const msg = fillTpl(PLANTILLAS_MSG.envio_version, varsDe(c));
+  openModal('<div class="modal-title">Presupuesto sin visita · ' + escH(cli.nombre) + '</div>' +
+    '<div class="section-card"><div class="section-card-title">Versión a enviar · ' + (v?.id||'V1') + '</div>' +
+      '<div style="font-family:\'Cormorant Garamond\',serif;font-size:24px">' + fmtEur(v?.totales?.total||0) + '</div>' +
+      '<div style="font-size:12px;color:var(--amber);margin-top:6px">⚠ Incluye cláusula de ajuste: «Presupuesto orientativo sin visita técnica. El importe puede ajustarse tras comprobar medidas y estado real.»</div></div>' +
+    '<div class="modal-section"><b style="font-size:12px;text-transform:uppercase;color:var(--muted)">Mensaje</b>' + msgBloque(msg, cli.tel) + '</div>' +
+    '<div style="margin-top:16px;display:flex;gap:8px;justify-content:flex-end"><button class="abtn abtn-ghost" onclick="closeAllModals()">Cancelar</button>' +
+    '<button class="abtn abtn-primary" onclick="confirmarPresupuestoSinVisita(\'' + c.id + '\')">Enviar presupuesto</button></div>');
+}
+function confirmarPresupuestoSinVisita(id){
+  const c = DB.casos.find(x=>x.id===id); if(!c) return;
+  let v = c.versiones.find(x=>x.estado==='vigente');
+  if (!v){ v = c.versiones[0]; v.estado='vigente'; }
+  v.clausulaAjuste = true; enviarVersion(c, v, 'WhatsApp');
+  try{ if(c.estado!=='propuesta_enviada' && puedeTransitar(c,'propuesta_enviada')) transitar(c,'propuesta_enviada',{autor:'reformista',texto:'Presupuesto enviado sin visita'}); }catch(e){}
+  closeAllModals(); toast('Presupuesto enviado'); RENDERERS.presupuestos();
+}
+
+function exitDescartar(id){
+  const c = DB.casos.find(x=>x.id===id); if(!c) return; const cli=clienteDe(c);
+  const motivos = ['Fuera de la zona de servicio','Importe demasiado bajo','Tipo de obra que no hacemos','Sin respuesta del cliente','Agenda completa','Otro'];
+  _descarte = { motivo: motivos[0] };
+  const sel = '<select id="desc-motivo" onchange="_descarte.motivo=this.value">' + motivos.map(m=>'<option>' + m + '</option>').join('') + '</select>';
+  const msg = fillTpl(PLANTILLAS_MSG.descarte, varsDe(c,{concepto:nombreTipoObra(c.solicitud.tipoObra).toLowerCase()}));
+  openModal('<div class="modal-title">Descartar · ' + escH(cli.nombre) + '</div>' +
+    '<div class="inl-field"><label>Motivo del descarte</label>' + sel + '</div>' +
+    '<div class="modal-section"><b style="font-size:12px;text-transform:uppercase;color:var(--muted)">Mensaje amable (editable)</b>' +
+      '<textarea id="desc-msg" style="width:100%;min-height:90px;margin-top:8px;padding:10px;border:1px solid var(--border);border-radius:8px;font-family:inherit;font-size:13px">' + escH(msg) + '</textarea>' +
+      '<div class="msg-actions"><a class="abtn abtn-primary abtn-sm" href="' + waLink(cli.tel,msg) + '" target="_blank" rel="noopener">Abrir WhatsApp</a><button class="abtn abtn-ghost abtn-sm" onclick="copiarTexto(document.getElementById(\'desc-msg\').value)">Copiar</button></div></div>' +
+    '<div style="margin-top:16px;display:flex;gap:8px;justify-content:flex-end"><button class="abtn abtn-ghost" onclick="closeAllModals()">Cancelar</button>' +
+    '<button class="abtn abtn-primary" onclick="confirmarDescartar(\'' + c.id + '\')">Descartar caso</button></div>');
+}
+let _descarte={motivo:''};
+function confirmarDescartar(id){
+  const c = DB.casos.find(x=>x.id===id); if(!c) return;
+  c.interno.motivoDescarte = document.getElementById('desc-motivo')?.value || _descarte.motivo;
+  try{ if(puedeTransitar(c,'descartada')) transitar(c,'descartada',{autor:'reformista',texto:'Descartado: ' + c.interno.motivoDescarte}); }catch(e){}
+  closeAllModals(); toast('Caso descartado'); RENDERERS.presupuestos();
+}
+
+function exitRecordatorio(id){
+  const c = DB.casos.find(x=>x.id===id); if(!c) return; const cli=clienteDe(c);
+  const relojes = evaluarRelojes(c,DB.cfg,hoy());
+  const concepto = c.estado==='esperando_info'?'enviarnos la información pendiente':c.estado==='visita_propuesta'?'elegir una franja para la visita':'revisar tu presupuesto';
+  const esVisita = c.estado==='visita_confirmada';
+  const msg = esVisita ? fillTpl(PLANTILLAS_MSG.confirmacion_visita, varsDe(c)) : fillTpl(PLANTILLAS_MSG.recordatorio, varsDe(c,{concepto}));
+  openModal('<div class="modal-title">Recordatorio · ' + escH(cli.nombre) + '</div>' +
+    (relojes.length?'<div style="margin-bottom:10px">' + relojes.map(r=>'<span class="etiq-chip etiq-warn">' + r.tipo.replace(/_/g,' ') + '</span>').join('') + '</div>':'') +
+    msgBloque(msg, cli.tel) +
+    '<div style="margin-top:16px;display:flex;gap:8px;justify-content:flex-end"><button class="abtn abtn-ghost" onclick="closeAllModals()">Cerrar</button>' +
+    '<button class="abtn abtn-primary" onclick="confirmarRecordatorio(\'' + c.id + '\')">Marcar enviado</button></div>');
+}
+function confirmarRecordatorio(id){
+  const c = DB.casos.find(x=>x.id===id); if(!c) return;
+  (c.recordatorios=c.recordatorios||[]).push({id:uid('rec'),tipo:'manual',fechaDebida:hoy(),enviadoAt:hoy()});
+  (c.eventos).push({fecha:hoy(),tipo:'mensaje',texto:'Recordatorio enviado al cliente',autor:'reformista'});
+  closeAllModals(); toast('Recordatorio marcado como enviado'); RENDERERS.presupuestos();
+}
+
+// ── Ficha del caso ──────────────────────────────────────
+let _fichaId = null, _fichaTab = 'resumen', _fichaDiff = null;
+function abrirCaso(id){ _fichaId = id; _fichaTab = 'resumen'; _fichaDiff = null; renderFicha(); }
+function renderFicha(){
+  const c = DB.casos.find(x=>x.id===_fichaId); if(!c) return;
+  const cli = clienteDe(c); const prio = scorePrioridad(c,DB.cfg,hoy()); const eco = estadoEconomico(c,DB.cobros);
+  const ac = accionSugerida(c,DB.cfg);
+  const ecoBadge = ['aceptada','en_obra','en_remates','terminada','cerrada'].includes(c.estado) ? ' · <span style="color:' + (eco.saldo>0?'var(--danger)':'var(--ok)') + '">Saldo ' + fmtEur(eco.saldo) + '</span>' : '';
+  const tabs = ['resumen','presupuesto','visita','obra','cobros','historial'];
+  const tabLbl = {resumen:'Resumen',presupuesto:'Presupuesto',visita:'Visita',obra:'Obra',cobros:'Cobros',historial:'Historial'};
+  let cuerpo='';
+  if (_fichaTab==='resumen') cuerpo=fichaResumen(c,prio);
+  else if (_fichaTab==='presupuesto') cuerpo=fichaPresupuesto(c);
+  else if (_fichaTab==='visita') cuerpo=fichaVisita(c);
+  else if (_fichaTab==='obra') cuerpo=fichaObra(c);
+  else if (_fichaTab==='cobros') cuerpo=fichaCobros(c);
+  else if (_fichaTab==='historial') cuerpo=fichaHistorial(c);
+  const html =
+    '<div class="modal-title">' + escH(cli.nombre) + ' <span style="font-size:13px;color:var(--muted)">· ' + c.id + '</span></div>' +
+    '<div style="margin-bottom:6px">' + badgeEstado(c.estado) + ' ' + prioChip(prio.nivel) + ecoBadge + '</div>' +
+    '<div style="font-size:12px;color:var(--accent);margin-bottom:10px">→ ' + escH(ac.label) + ' · <span style="color:var(--muted)">' + escH(ac.motivo) + '</span></div>' +
+    '<div class="msg-actions" style="margin-bottom:4px">' +
+      '<button class="abtn abtn-primary abtn-sm" onclick="vistaCliente(\'' + c.id + '\')">Vista del cliente</button>' +
+      '<a class="abtn abtn-ghost abtn-sm" href="' + waLink(cli.tel, fillTpl(PLANTILLAS_MSG.recordatorio, varsDe(c,{concepto:'tu reforma'}))) + '" target="_blank" rel="noopener">WhatsApp</a>' +
+      '<a class="abtn abtn-ghost abtn-sm" href="tel:' + String(cli.tel||'').replace(/\s/g,'') + '">Llamar</a>' +
+    '</div>' +
+    '<div class="ficha-tabs">' + tabs.map(t=>'<button class="ficha-tab ' + (_fichaTab===t?'active':'') + '" onclick="_fichaTab=\'' + t + '\';renderFicha()">' + tabLbl[t] + '</button>').join('') + '</div>' +
+    cuerpo;
+  openModal(html, true);
+}
+
+function fichaResumen(c, prio){
+  const cli = clienteDe(c); const sc = scoreCalidad(c,DB.cfg); const inc = calcularIncertidumbre(c);
+  const relojes = evaluarRelojes(c,DB.cfg,hoy());
+  const selV = (campo,val,opts) => '<select onchange="editCampo(\'' + campo + '\',this.value)">' + opts.map(o=>'<option value="' + o[0] + '"' + (String(val)===String(o[0])?' selected':'') + '>' + o[1] + '</option>').join('') + '</select>';
+  const inp = (campo,val,tipo) => '<input type="' + (tipo||'text') + '" value="' + escH(val==null?'':val) + '" onchange="editCampo(\'' + campo + '\',this.value)">';
+  let h = '';
+  // Cliente
+  h += '<div class="section-card"><div class="section-card-title">Cliente</div>' +
+    '<div class="kv"><span class="k">Nombre</span>' + escH(cli.nombre) + '</div>' +
+    '<div class="kv"><span class="k">Contacto</span>' + escH(cli.email) + ' · ' + escH(cli.tel) + '</div>' +
+    '<div class="kv"><span class="k">Canal / consentimiento</span>' + escH(cli.canal) + ' · <span class="badge b-ok">RGPD aceptado</span></div></div>';
+  // Vivienda (editable)
+  h += '<div class="section-card"><div class="section-card-title">Vivienda (editable)</div>' +
+    '<div class="inl-field"><label>Dirección</label>' + inp('vivienda.direccion', c.vivienda.direccion||(cli.zona+' · '+cli.cp)) + '</div>' +
+    '<div class="inl-field"><label>Código postal</label>' + inp('vivienda.cp', c.vivienda.cp) + '</div>' +
+    '<div class="inl-field"><label>Zona (derivada)</label><span style="flex:1">' + (c.vivienda.zona||zonaDeCp(c.vivienda.cp,DB.cfg)) + '</span></div>' +
+    '<div class="inl-field"><label>Tipo / m²</label>' + inp('vivienda.tipo', c.vivienda.tipo) + inp('vivienda.m2', c.vivienda.m2, 'number') + '</div>' +
+    '<div class="inl-field"><label>Antigüedad</label>' + selV('vivienda.antiguedad', c.vivienda.antiguedad, [['<1980','<1980'],['1980-2000','1980-2000'],['>2000','>2000'],['desconocida','desconocida']]) + '</div>' +
+    '<div class="inl-field"><label>Propietario</label>' + selV('vivienda.propietario', c.vivienda.propietario, [[true,'Sí'],[false,'No']]) + '</div>' +
+    '<div class="inl-field"><label>Comunidad</label>' + selV('vivienda.comunidad', c.vivienda.comunidad, [['no_aplica','No aplica'],['resuelta','Resuelta'],['pendiente','Pendiente'],['no','No']]) + '</div>' +
+    '<div class="inl-field"><label>Humedades</label>' + selV('vivienda.humedades', c.vivienda.humedades, [[true,'Sí'],[false,'No']]) + '</div>' +
+    '<div class="inl-field"><label>Tope presupuesto</label>' + inp('vivienda.topePresupuesto', c.vivienda.topePresupuesto, 'number') + '</div>' +
+    '<div class="inl-field"><label>Inicio deseado</label>' + inp('vivienda.fechaInicioDeseada', c.vivienda.fechaInicioDeseada, 'date') + '</div></div>';
+  // Solicitud
+  h += '<div class="section-card"><div class="section-card-title">Solicitud (editable)</div>' +
+    '<div class="inl-field"><label>Tipo de obra</label>' + selV('solicitud.tipoObra', c.solicitud.tipoObra, [['reforma_integral','Reforma integral'],['reforma_bano','Reforma de baño'],['reforma_cocina','Reforma de cocina'],['reforma_parcial','Reforma parcial']]) + '</div>' +
+    '<div class="inl-field"><label>Calidad</label>' + selV('solicitud.calidad', c.solicitud.calidad, [['basica','Básica'],['media','Media'],['premium','Premium']]) + '</div>' +
+    '<div class="kv"><span class="k">Espacios</span>' + (c.solicitud.espacios||[]).map(e=>escH((e.nombre||e.tipo)+' '+e.m2+'m²')).join(' · ') + '</div>' +
+    '<div class="kv"><span class="k">Fotos</span>' + ((c.solicitud.fotosCliente||[]).length||'sin') + ' fotos</div>' +
+    (c.solicitud.notasCliente?'<div class="kv"><span class="k">Nota cliente</span><i>“' + escH(c.solicitud.notasCliente) + '”</i></div>':'') + '</div>';
+  // Prioridad y calidad
+  h += '<div class="section-card"><div class="section-card-title">Prioridad ' + prio.total + ' · Calidad ' + sc.total + ' · Incertidumbre ' + inc.nivel + '</div>' +
+    porqueHtml(c, sc, prio) + '</div>';
+  // Relojes / recordatorios
+  h += '<div class="section-card"><div class="section-card-title">Relojes y recordatorios</div>' +
+    (relojes.length?relojes.map(r=>'<div style="font-size:12px;padding:3px 0"><span class="etiq-chip etiq-warn">' + r.tipo.replace(/_/g,' ') + '</span> ' + escH(r.texto) + '</div>').join(''):'<div style="font-size:12px;color:var(--muted)">Sin avisos.</div>') +
+    ((c.recordatorios||[]).length?'<div style="font-size:11px;color:var(--muted);margin-top:6px">' + c.recordatorios.length + ' recordatorio(s) enviados</div>':'') + '</div>';
+  // Interno
+  h += '<div class="section-card"><div class="section-card-title">Gestión interna (editable)</div>' +
+    '<div class="inl-field"><label>Nota interna</label>' + inp('interno.nota', c.interno.nota) + '</div>' +
+    '<div class="inl-field"><label>Próxima acción</label>' + inp('interno.proximaAccion', typeof c.interno.proximaAccion==='object'?c.interno.proximaAccion?.texto:c.interno.proximaAccion) + '</div>' +
+    '<div class="kv"><span class="k">Etiquetas</span>' + (c.interno.etiquetas||[]).map(e=>'<span class="etiq-chip etiq-info">' + escH(e) + '</span>').join('') + '</div></div>';
+  return h;
+}
+function editCampo(ruta, val){
+  const c = DB.casos.find(x=>x.id===_fichaId); if(!c) return;
+  const parts = ruta.split('.'); let o = c;
+  for (let i=0;i<parts.length-1;i++) o = o[parts[i]] = o[parts[i]]||{};
+  const key = parts[parts.length-1];
+  if (val==='true') val=true; else if (val==='false') val=false;
+  else if (val!=='' && !isNaN(val) && ['m2','topePresupuesto'].includes(key)) val=Number(val);
+  o[key] = val===''?null:val;
+  if (ruta==='vivienda.cp') c.vivienda.zona = zonaDeCp(val, DB.cfg);
+  renderFicha();
+}
+
+function fichaHistorial(c){
+  const evs = [...(c.eventos||[])].reverse();
+  return '<div class="section-card"><div class="section-card-title">Línea de tiempo</div>' +
+    (evs.length?evs.map(e=>'<div class="tl-item"><div class="tl-dot ' + (e.autor||'') + '"></div><div style="flex:1"><div>' + escH(e.texto) + '</div><div class="tl-autor">' + fmtFecha(e.fecha) + ' · ' + (e.autor||'') + '</div></div></div>').join(''):'<div style="color:var(--muted);font-size:12px">Sin eventos.</div>') + '</div>';
+}
+
+// ── Ficha: Presupuesto ──────────────────────────────────
+function versionVigente(c){ return c.versiones.find(v=>v.estado==='vigente') || c.versiones.find(v=>v.estado==='aceptada') || c.versiones[c.versiones.length-1]; }
+function asegurarBorrador(c){ if(!c.borrador){ const v=versionVigente(c); c.borrador={ lineas:clonarLineas(v.lineas||[]), ivaPct:v.ivaPct||DB.cfg.iva, basadoEn:v.id }; } return c.borrador; }
+function totalesBorrador(c){ const b=c.borrador; return calcularTotales(b.lineas, b.ivaPct, DB.cfg.margen, DB.cfg.minimo); }
+
+function fichaPresupuesto(c){
+  const vig = versionVigente(c);
+  let h = '';
+  // Versiones + comparador
+  h += '<div class="section-card"><div class="section-card-title">Versiones</div>';
+  h += c.versiones.map(v=>{
+    const cls = v.estado==='vigente'?'vigente':v.estado==='aceptada'?'aceptada':'';
+    return '<span class="ver-chip ' + cls + '" onclick="_fichaDiff=\'' + v.id + '\';renderFicha()">' + v.id + ' · ' + (v.tipo||'') + ' · ' + fmtEur0(v.totales.total) + (v.estado==='vigente'?' ✓':'') + '</span>';
+  }).join('');
+  if (_fichaDiff){
+    const vIdx = c.versiones.findIndex(v=>v.id===_fichaDiff);
+    const vA = c.versiones[vIdx-1], vB = c.versiones[vIdx];
+    if (vB){
+      if (vA){ const d = diffVersiones(vA,vB);
+        h += '<div class="porque" style="margin-top:10px"><b style="font-size:11px;text-transform:uppercase;color:var(--muted)">' + vB.id + ' vs ' + vA.id + '</b>' +
+          d.anyadidas.map(l=>'<div class="diff-row diff-add">+ ' + escH(l.concepto) + ' (' + fmtEur(l.subtotal) + ')</div>').join('') +
+          d.quitadas.map(l=>'<div class="diff-row diff-del">− ' + escH(l.concepto) + '</div>').join('') +
+          d.cambiadas.map(x=>'<div class="diff-row diff-chg">~ ' + escH(x.a.concepto) + ': ' + fmtEur(x.de.subtotal) + ' → ' + fmtEur(x.a.subtotal) + '</div>').join('') +
+          (d.anyadidas.length+d.quitadas.length+d.cambiadas.length===0?'<div class="diff-row" style="color:var(--muted)">Sin diferencias de líneas.</div>':'') + '</div>';
+      } else h += '<div class="porque" style="margin-top:10px">' + vB.id + ' es la primera versión.</div>';
+    }
   }
-  if (caso.estado === 'en_obra' || caso.estado === 'en_remates'){
-    const prog = calcularProgreso(caso); const salud = saludObra(caso, DB.cfg, hoy());
-    html += '<div class="section-card"><div class="section-card-title">Obra · ' + Math.round(prog*100) + '% · ' + salud.replace(/_/g,' ') + '</div>' +
-      '<div class="prog-bar" style="margin-bottom:8px"><div class="prog-fill" style="width:' + (prog*100) + '%"></div></div>' +
-      (caso.obra.hitos||[]).map(h => '<span class="etiq-chip etiq-' + (h.estado==='hecho'?'ok':h.estado==='en_curso'?'info':'warn') + '">' + escH(h.nombre) + '</span>').join('') + '</div>';
+  h += '</div>';
+
+  if (c.borrador){
+    const b = c.borrador; const tot = totalesBorrador(c);
+    h += '<div class="section-card" style="border-color:var(--accent)"><div class="section-card-title" style="color:var(--accent)">Borrador sin enviar (basado en ' + b.basadoEn + ')</div>';
+    h += tablaLineas(c, b.lineas, true);
+    h += '<div style="margin-top:10px;display:flex;align-items:center;gap:10px;flex-wrap:wrap">' +
+      '<label style="font-size:12px;color:var(--muted)">IVA <select onchange="c_setIva(this.value)">' + [21,10,0].map(i=>'<option value="' + i + '"' + (b.ivaPct===i?' selected':'') + '>' + i + '%</option>').join('') + '</select></label>' +
+      '<span style="font-size:11px;color:var(--amber)">Confirmar el criterio de IVA con el gestor</span>' +
+      '<button class="abtn abtn-ghost abtn-sm" onclick="c_addLinea()">+ Añadir línea</button>' +
+      '<button class="abtn abtn-ghost abtn-sm" onclick="c_recalcular()">Recalcular</button>' +
+    '</div>';
+    h += '<div class="totbar"><span>Subtotal <b>' + fmtEur(tot.subtotal) + '</b></span><span>Margen <b>' + fmtEur(tot.margen) + '</b></span><span>IVA <b>' + fmtEur(tot.iva) + '</b></span><span class="tot-final">' + fmtEur(tot.total) + '</span></div>';
+    h += '<div style="margin-top:10px;display:flex;gap:8px;justify-content:flex-end"><button class="abtn abtn-ghost abtn-sm" onclick="c_descartarBorrador()">Descartar borrador</button><button class="abtn abtn-primary abtn-sm" onclick="c_enviarVersion()">Enviar versión</button></div>';
+    h += '</div>';
+  } else {
+    h += '<div class="section-card"><div class="section-card-title">Versión vigente · ' + (vig?.id||'—') + ' · IVA ' + (vig?.ivaPct||21) + '%</div>';
+    h += tablaLineas(c, vig?.lineas||[], false);
+    const tot = vig?.totales||{};
+    h += '<div class="totbar"><span>Subtotal <b>' + fmtEur(tot.subtotal||0) + '</b></span><span>Margen <b>' + fmtEur(tot.margen||0) + '</b></span><span>IVA <b>' + fmtEur(tot.iva||0) + '</b></span><span class="tot-final">' + fmtEur(tot.total||0) + '</span></div>';
+    h += '<div style="margin-top:10px;display:flex;gap:8px;justify-content:flex-end"><button class="abtn abtn-ghost abtn-sm" onclick="c_editar()">Editar (crear borrador)</button>';
+    if (c.estado==='propuesta_enviada') h += '<button class="abtn abtn-ghost abtn-sm" onclick="accionArchivo(\'' + c.id + '\',\'renovar\')">Renovar</button>';
+    h += '</div></div>';
   }
-  html += '<div class="section-card" style="background:rgba(201,111,40,.06);border-color:var(--accent)"><div class="section-card-title" style="color:var(--accent)">Acción sugerida</div>' +
-    '<b>' + escH(ac.label) + '</b><div style="font-size:12px;color:var(--muted);margin-top:2px">' + escH(ac.motivo) + '</div></div>';
-  html += '<div style="font-size:12px;color:var(--muted);margin-top:8px">La ficha completa con edición y acciones llega en la Fase B.</div>';
-  openModal(html);
+  if (c.estado==='propuesta_enviada'){
+    h += '<div class="section-card"><div class="section-card-title">Resultado del cliente</div><div style="display:flex;gap:8px;flex-wrap:wrap">' +
+      '<button class="abtn abtn-primary abtn-sm" onclick="accCliente(\'' + c.id + '\',\'aceptar\')">Simular: acepta</button>' +
+      '<button class="abtn abtn-ghost abtn-sm" onclick="accCliente(\'' + c.id + '\',\'pedir_cambios\')">Simular: pide cambios</button>' +
+      '<button class="abtn abtn-ghost abtn-sm" onclick="accCliente(\'' + c.id + '\',\'rechazar\')">Simular: rechaza</button></div></div>';
+  }
+  return h;
+}
+function tablaLineas(c, lineas, editable){
+  if (!lineas.length) return '<div style="font-size:12px;color:var(--muted)">Sin líneas.</div>';
+  const espNombre = eid => { const e=(c.solicitud.espacios||[]).find(x=>x.id===eid); return e?(e.nombre||e.tipo):'General'; };
+  const grupos = {};
+  lineas.forEach(l=>{ const g=espNombre(l.espacioId); (grupos[g]=grupos[g]||[]).push(l); });
+  let rows = '';
+  Object.entries(grupos).forEach(([g,ls])=>{
+    rows += '<tr><td colspan="6" class="lin-grupo-td">' + escH(g) + '</td></tr>';
+    rows += ls.map(l=>{
+      if (editable) return '<tr>' +
+        '<td><input value="' + escH(l.concepto) + '" onchange="c_editLinea(\'' + l.id + '\',\'concepto\',this.value)"></td>' +
+        '<td style="width:70px"><input class="num" type="number" step="0.01" value="' + l.cantidad + '" onchange="c_editLinea(\'' + l.id + '\',\'cantidad\',this.value)"></td>' +
+        '<td style="width:70px"><input class="num" type="number" step="0.01" value="' + l.precio + '" onchange="c_editLinea(\'' + l.id + '\',\'precio\',this.value)"></td>' +
+        '<td style="width:70px;text-align:right">' + fmtEur0(l.subtotal) + '</td>' +
+        '<td style="width:60px"><span class="lin-origen">' + (l.origen||'calc') + '</span></td>' +
+        '<td style="width:44px;text-align:right"><span class="lin-cand ' + (l.bloqueada?'on':'') + '" title="Bloquear" onclick="c_candado(\'' + l.id + '\')">' + (l.bloqueada?'🔒':'🔓') + '</span> <span style="cursor:pointer;color:var(--danger)" onclick="c_delLinea(\'' + l.id + '\')">✕</span></td>' +
+      '</tr>';
+      return '<tr><td>' + escH(l.concepto) + '</td><td class="num">' + l.cantidad + '</td><td class="num">' + fmtEur0(l.precio) + '</td><td style="text-align:right">' + fmtEur0(l.subtotal) + '</td><td><span class="lin-origen">' + (l.origen||'calc') + '</span></td><td>' + (l.bloqueada?'🔒':'') + '</td></tr>';
+    }).join('');
+  });
+  return '<table class="lineas-tbl"><thead><tr><th>Concepto</th><th>Cant.</th><th>Precio</th><th>Subtotal</th><th>Origen</th><th></th></tr></thead><tbody>' + rows + '</tbody></table>';
+}
+function _fc(){ return DB.casos.find(x=>x.id===_fichaId); }
+function c_editar(){ const c=_fc(); asegurarBorrador(c); renderFicha(); }
+function c_editLinea(lid, campo, val){ const c=_fc(); const b=asegurarBorrador(c); const l=b.lineas.find(x=>x.id===lid); if(!l)return;
+  if(campo==='cantidad'||campo==='precio'){ l[campo]=r(Number(val)||0); l.subtotal=r(l.cantidad*l.precio); } else l[campo]=val;
+  l.bloqueada=true; l.origen='manual'; renderFicha(); }
+function c_candado(lid){ const c=_fc(); const b=asegurarBorrador(c); const l=b.lineas.find(x=>x.id===lid); if(l){l.bloqueada=!l.bloqueada; renderFicha();} }
+function c_delLinea(lid){ const c=_fc(); const b=asegurarBorrador(c); b.lineas=b.lineas.filter(x=>x.id!==lid); renderFicha(); }
+function c_addLinea(){ const c=_fc(); const b=asegurarBorrador(c); const esp=(c.solicitud.espacios||[])[0];
+  b.lineas.push({id:uid('L'),key:'manual',concepto:'Nueva partida',espacioId:esp?.id||null,unidad:'ud',base:'fijo',cantidad:1,precio:0,subtotal:0,tipo:'extra',origen:'manual',bloqueada:true}); renderFicha(); }
+function c_setIva(val){ const c=_fc(); const b=asegurarBorrador(c); b.ivaPct=Number(val); renderFicha(); }
+function c_recalcular(){ const c=_fc(); const b=asegurarBorrador(c); const medidas=c.visita?.medidas||{};
+  b.lineas.forEach(l=>{ if(l.bloqueada||l.origen==='manual')return; const m=medidas[l.espacioId]; if(!m)return; const med=calcularMedidas(m); l.cantidad=cantidadEstimada(l.base,l.cantidad,med); l.subtotal=r(l.cantidad*l.precio); });
+  toast('Recalculado (líneas bloqueadas intactas)'); renderFicha(); }
+function c_descartarBorrador(){ const c=_fc(); c.borrador=null; renderFicha(); }
+function c_enviarVersion(){ const c=_fc(); const b=c.borrador; if(!b)return;
+  const tot=totalesBorrador(c); const inc=calcularIncertidumbre(c); const hq=calcularHorquilla(tot.total,inc.nivel); tot.lo=hq.lo; tot.hi=hq.hi;
+  const nv={ id:siguienteVersionId(c), tipo:'revisada', creadaAt:hoy(), enviadaAt:null, ivaPct:b.ivaPct, lineas:b.lineas, totales:tot, cambiosRespectoAnterior:null, estado:'borrador' };
+  enviarVersion(c, nv, 'WhatsApp'); c.borrador=null; _fichaDiff=nv.id;
+  if (c.estado==='en_triaje' && puedeTransitar(c,'propuesta_enviada')){ try{transitar(c,'propuesta_enviada',{autor:'reformista',texto:'Presupuesto enviado'});}catch(e){} }
+  toast('Versión ' + nv.id + ' enviada'); renderFicha(); }
+
+// ── Ficha: Visita ───────────────────────────────────────
+function fichaVisita(c){
+  const vis = c.visita||{};
+  if (vis.estado==='pendiente' && !vis.franjasOfrecidas?.length) return '<div class="section-card" style="color:var(--muted)">Aún no se ha propuesto visita. Usa «Proponer visita» desde la bandeja.</div>';
+  let h='<div class="section-card"><div class="section-card-title">Estado de la visita</div>' +
+    '<div class="kv"><span class="k">Estado</span>' + escH(vis.estado) + '</div>';
+  if (vis.franjasOfrecidas?.length) h+='<div class="kv"><span class="k">Franjas ofrecidas</span>' + vis.franjasOfrecidas.map(f=>fmtFechaCorta(f.fecha)+' '+f.franja).join(' · ') + '</div>';
+  if (vis.elegida) h+='<div class="kv"><span class="k">Elegida</span>' + fmtFecha(vis.elegida.fecha) + ' · ' + vis.elegida.franja + '</div>';
+  if (vis.cobro) h+='<div class="kv"><span class="k">Cobro de visita</span>' + fmtEur(vis.cobro.importe||0) + ' · ' + (vis.cobro.estado||'') + (DB.cfg.visita.descontable?' (descontable al aceptar)':'') + '</div>';
+  h+='</div>';
+  const chk = generarChecklist(c, CHECKLIST_PLANTILLAS);
+  h+='<div class="section-card"><div class="section-card-title">Checklist de visita (' + chk.length + ')</div>' +
+    chk.slice(0,8).map(q=>'<div class="check-q">☐ ' + escH(q.pregunta) + '</div>').join('') +
+    '<div style="font-size:12px;color:var(--muted);margin-top:8px">La toma de medidas y fotos en vivo (Modo visita) llega en la Fase C.</div></div>';
+  return h;
+}
+
+// ── Ficha: Obra ─────────────────────────────────────────
+function fichaObra(c){
+  if (!['en_obra','en_remates','terminada','cerrada'].includes(c.estado)) return '<div class="section-card" style="color:var(--muted)">La obra aún no ha comenzado.</div>';
+  const prog=calcularProgreso(c); const salud=saludObra(c,DB.cfg,hoy()); const tv=totalVigente(c);
+  let h='<div class="section-card"><div class="section-card-title">Progreso ' + Math.round(prog*100) + '% · salud: ' + salud.replace(/_/g,' ') + '</div>' +
+    '<div class="prog-bar" style="margin-bottom:10px"><div class="prog-fill" style="width:' + (prog*100) + '%"></div></div>' +
+    (c.obra.hitos||[]).map(hh=>'<div style="display:flex;align-items:center;gap:8px;font-size:12px;padding:2px 0"><span class="etiq-chip etiq-' + (hh.estado==='hecho'?'ok':hh.estado==='en_curso'?'info':'warn') + '">' + hh.estado.replace(/_/g,' ') + '</span><span style="flex:1">' + escH(hh.nombre) + '</span><span style="color:var(--muted)">' + hh.diasEstimados + ' d</span></div>').join('') + '</div>';
+  const cambios=c.obra.cambios||[];
+  if (cambios.length) h+='<div class="section-card"><div class="section-card-title">Cambios</div>' + cambios.map(ch=>'<div style="font-size:12px;padding:3px 0;border-bottom:1px dashed var(--border)"><b>' + fmtEur(ch.importe) + '</b> · ' + escH(ch.concepto) + ' <span class="badge ' + (ch.estado==='registrado'?'b-warn':'b-ok') + '">' + ch.estado + '</span>' + (ch.bloqueaObra?' <span class="badge b-err">bloquea</span>':'') + '</div>').join('') + '</div>';
+  const adendas=c.obra.adendas||[];
+  if (adendas.length) h+='<div class="section-card"><div class="section-card-title">Adendas</div>' + adendas.map(a=>'<div style="font-size:12px;padding:3px 0">' + a.id + ' · ' + escH(a.concepto||'') + ' · <b>' + fmtEur(a.delta) + '</b> <span class="badge ' + (a.estado==='firmada'?'b-ok':'b-warn') + '">' + a.estado + '</span></div>').join('') + '</div>';
+  const remates=c.obra.remates||[];
+  if (remates.length) h+='<div class="section-card"><div class="section-card-title">Remates</div>' + remates.map(rr=>'<div class="check-q">' + (rr.estado==='resuelto'?'☑':'☐') + ' ' + escH(rr.texto) + '</div>').join('') + '</div>';
+  h+='<div class="section-card"><div class="section-card-title">Total vigente</div><div style="font-size:13px">Firmado ' + fmtEur(tv.firmado) + ' · Provisional ' + fmtEur(tv.provisional) + ' · <b>Total ' + fmtEur(tv.total) + '</b>' + (tv.desviacionPct?' <span style="color:var(--amber)">(+' + tv.desviacionPct + '%)</span>':'') + '</div><div style="font-size:12px;color:var(--muted);margin-top:4px">La gestión de hitos, cambios y adendas llega en la Fase D.</div></div>';
+  return h;
+}
+
+// ── Ficha: Cobros ───────────────────────────────────────
+function fichaCobros(c){
+  const eco=estadoEconomico(c,DB.cobros); const movs=cobrosDeCaso(c,DB.cobros);
+  let h='<div class="section-card"><div class="section-card-title">Estado económico</div>' +
+    '<div style="font-size:13px">Total vigente <b>' + fmtEur(eco.total) + '</b> · Cobrado ' + fmtEur(eco.cobrado) + ' · Saldo <b style="color:' + (eco.saldo>0?'var(--danger)':'var(--ok)') + '">' + fmtEur(eco.saldo) + '</b> · <span class="badge ' + (eco.estado==='cobrado'?'b-ok':eco.estado==='parcial'?'b-warn':'b-err') + '">' + eco.estado + '</span></div></div>';
+  if (movs.length) h+='<div class="section-card"><div class="section-card-title">Movimientos</div>' + movs.map(m=>'<div style="display:flex;justify-content:space-between;font-size:12px;padding:3px 0;border-bottom:1px dashed var(--border)"><span>' + fmtFecha(m.fecha) + ' · ' + escH(m.concepto) + '</span><b>' + fmtEur(m.importe) + '</b></div>').join('') + '</div>';
+  else h+='<div class="section-card" style="color:var(--muted);font-size:12px">Sin cobros registrados. El plan de cobros detallado llega en la Fase E.</div>';
+  return h;
+}
+
+// ── Vista del cliente (simulada) ────────────────────────
+const PASOS_CLIENTE = [
+  {k:'recibida', l:'Solicitud recibida', estados:['recibida','en_triaje','esperando_info']},
+  {k:'visita', l:'Visita técnica', estados:['visita_propuesta','visita_confirmada','en_visita']},
+  {k:'propuesta', l:'Presupuesto', estados:['propuesta_enviada']},
+  {k:'aceptada', l:'Aceptación', estados:['aceptada']},
+  {k:'obra', l:'Obra', estados:['en_obra','en_remates']},
+  {k:'cierre', l:'Entrega', estados:['terminada','cerrada']},
+];
+const ORDEN_FLUJO = ['recibida','en_triaje','esperando_info','visita_propuesta','visita_confirmada','en_visita','propuesta_enviada','aceptada','en_obra','terminada','en_remates','cerrada'];
+function vistaCliente(id){
+  const c = DB.casos.find(x=>x.id===id); if(!c) return;
+  const cli = clienteDe(c); const v = versionVigente(c); const tv = totalVigente(c);
+  const idxActual = ORDEN_FLUJO.indexOf(c.estado);
+  let pasos = PASOS_CLIENTE.map(p=>{
+    const minIdx = Math.min(...p.estados.map(e=>ORDEN_FLUJO.indexOf(e)).filter(i=>i>=0));
+    const esAhora = p.estados.includes(c.estado);
+    const hecho = minIdx>=0 && idxActual>minIdx && !esAhora;
+    return '<div class="cv-step"><div class="cv-step-dot ' + (esAhora?'now':hecho?'done':'') + '">' + (hecho?'✓':esAhora?'●':'○') + '</div>' + p.l + '</div>';
+  }).join('');
+
+  // Acción pedida al cliente
+  let accionHtml = '';
+  if (c.estado==='esperando_info') accionHtml = '<div class="cv-action"><b>Necesitamos algo más</b><p style="font-size:13px;color:var(--muted);margin:6px 0">Sube las fotos o datos que te hemos pedido.</p><button class="cv-btn" onclick="accCliente(\'' + id + '\',\'responder\')">Enviar información y fotos</button></div>';
+  else if (c.estado==='visita_propuesta') accionHtml = '<div class="cv-action"><b>Elige el día de la visita</b>' + (c.visita.franjasOfrecidas||[]).map((f,i)=>'<button class="cv-btn ' + (i>0?'ghost':'') + '" onclick="accCliente(\'' + id + '\',\'elegir_franja\',' + i + ')">' + fmtFecha(f.fecha) + ' · ' + f.franja + '</button>').join('') + '</div>';
+  else if (c.estado==='propuesta_enviada') accionHtml = '<div class="cv-action"><b>Tu presupuesto: ' + fmtEur(v?.totales?.total||0) + '</b>' +
+      (v?.clausulaAjuste?'<p style="font-size:11px;color:var(--amber);margin:6px 0">Orientativo sin visita; puede ajustarse.</p>':'') +
+      '<button class="cv-btn" onclick="accCliente(\'' + id + '\',\'aceptar\')">Aceptar presupuesto</button>' +
+      '<button class="cv-btn ghost" onclick="accCliente(\'' + id + '\',\'pedir_cambios\')">Pedir cambios</button>' +
+      '<button class="cv-btn ghost" onclick="accCliente(\'' + id + '\',\'rechazar\')">No me interesa</button></div>';
+  else if (c.estado==='en_pausa') accionHtml = '<div class="cv-action"><b>Caso en pausa</b><button class="cv-btn" onclick="accCliente(\'' + id + '\',\'reactivar\')">Reactivar mi solicitud</button></div>';
+  else if (c.estado==='caducada') accionHtml = '<div class="cv-action"><b>Tu presupuesto ha caducado</b><button class="cv-btn" onclick="accCliente(\'' + id + '\',\'renovar\')">Pedir presupuesto actualizado</button></div>';
+  else if (c.estado==='en_obra') {
+    const pend = (c.obra.cambios||[]).filter(x=>x.estado==='registrado');
+    accionHtml = '<div class="cv-action"><b>Tu obra en marcha</b>' +
+      pend.map(ch=>'<div style="font-size:12px;padding:4px 0">Cambio: ' + escH(ch.concepto) + ' (' + fmtEur(ch.importe) + ') <button class="abtn abtn-ghost abtn-sm" onclick="accClienteCambio(\'' + id + '\',\'' + ch.id + '\')">No estoy de acuerdo</button></div>').join('') +
+      '<button class="cv-btn ghost" onclick="accCliente(\'' + id + '\',\'pedir_cambios\')">Pedir un cambio</button></div>';
+  }
+  else if (c.estado==='en_remates') accionHtml = '<div class="cv-action"><b>Obra terminada</b><p style="font-size:13px;color:var(--muted);margin:6px 0">Revisa los remates y danos tu conformidad.</p><button class="cv-btn" onclick="toast(\'Conformidad simulada — Fase D\')">Dar conformidad</button></div>';
+
+  const desglose = '<div class="section-card" style="background:#fff"><div class="section-card-title">Tu presupuesto</div>' +
+    (v?'<div class="kv"><span class="k">Versión vigente</span>' + v.id + ' · ' + fmtFecha(v.enviadaAt||v.creadaAt) + '</div>':'') +
+    (['aceptada','en_obra','en_remates','terminada','cerrada'].includes(c.estado)?
+      '<div class="kv"><span class="k">Firmado</span>' + fmtEur(tv.firmado) + '</div>' + (tv.provisional?'<div class="kv"><span class="k">Provisional</span>' + fmtEur(tv.provisional) + '</div>':'') + '<div class="kv"><span class="k">Total vigente</span><b>' + fmtEur(tv.total) + '</b></div>'
+      :'<div class="kv"><span class="k">Total</span><b>' + fmtEur(v?.totales?.total||0) + '</b></div>') + '</div>';
+
+  openModal('<div class="modal-title">Tu reforma con ' + escH(DB.cfg.empresa.nombre) + '</div>' +
+    '<p style="font-size:12px;color:var(--muted);margin-bottom:10px">Esto es lo que vería ' + escH(cli.nombre.split(' ')[0]) + ' en su enlace privado.</p>' +
+    '<div class="cliente-view">' + pasos + accionHtml + desglose + '</div>' +
+    '<div style="margin-top:14px;text-align:right"><button class="abtn abtn-ghost abtn-sm" onclick="abrirCaso(\'' + id + '\')">← Volver a la ficha</button></div>', true);
+}
+function accCliente(id, accion, franjaIdx){
+  const c = DB.casos.find(x=>x.id===id); if(!c) return;
+  const datos = {};
+  if (accion==='elegir_franja' && franjaIdx!=null) datos.franja = c.visita.franjasOfrecidas[franjaIdx];
+  if (accion==='pedir_cambios') datos.texto = 'Me gustaría revisar algún acabado';
+  if (accion==='rechazar') datos.motivo = 'Encontré otra oferta';
+  try{ aplicarAccionCliente(c, accion, datos); }catch(e){ toast(e.message,'err'); return; }
+  toast('Acción del cliente aplicada');
+  renderPaginaActual();
+  vistaCliente(id);
+}
+function accClienteCambio(id, cambioId){
+  const c = DB.casos.find(x=>x.id===id); if(!c) return;
+  const ch = (c.obra.cambios||[]).find(x=>x.id===cambioId); if(ch){ ch.estado='en_desacuerdo'; (c.eventos).push({fecha:hoy(),tipo:'cliente',texto:'El cliente NO está de acuerdo con el cambio: ' + ch.concepto,autor:'cliente'}); }
+  toast('Desacuerdo registrado · avisado el reformista'); renderPaginaActual(); vistaCliente(id);
 }
 
 // ═══════════════════════════════════════════════════════
