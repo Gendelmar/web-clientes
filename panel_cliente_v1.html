@@ -1,0 +1,720 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#18100a">
+<title>Mi reforma — Panel del cliente v1</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=Cormorant+Garamond:wght@500;600&display=swap" rel="stylesheet">
+<style>
+:root{--cream:#f4efe6;--stone:#e5ddd0;--warm:#c4b49a;--terra:#8a5c38;--deep:#18100a;--ink:#1c140d;--accent:#c96f28;--accent-d:#a9561a;--light:#faf7f2;--muted:#6f6150;--ok:#2f6b45;--danger:#a03030;--amber:#8a5a00;--border:#ddd5c5;--r:16px;--nav:68px}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+body{font-family:'DM Sans',system-ui,sans-serif;background:var(--cream);color:var(--ink);font-size:16px;line-height:1.4;min-height:100vh}
+button,input,select,textarea{font:inherit;color:inherit}button{cursor:pointer;border:none;background:none}
+:focus-visible{outline:3px solid var(--accent-d);outline-offset:2px}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+h1,h2,h3{font-family:'Cormorant Garamond',serif;font-weight:600;color:var(--terra)}
+h2{font-size:26px;margin-bottom:8px}h3{font-size:21px;margin-bottom:6px}
+.muted{color:var(--muted);font-size:14px}.sp{flex:1;min-width:0}
+.row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.card{background:#fff;border:1px solid var(--border);border-radius:var(--r);padding:16px;margin-bottom:14px}
+.lbl{font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);font-weight:600;margin-bottom:6px}
+.btn{min-height:48px;padding:0 20px;border-radius:12px;font-weight:600;display:inline-flex;align-items:center;justify-content:center;gap:8px;border:2px solid var(--border);background:#fff;text-decoration:none;color:var(--ink)}
+.btn.pri{background:var(--accent-d);border-color:var(--accent-d);color:#fff}.btn.ok{background:var(--ok);border-color:var(--ok);color:#fff}.btn.dng{color:var(--danger);border-color:#e3b4b4}.btn.blk{width:100%}.btn.sm{min-height:44px;padding:0 14px;font-size:14px}.btn[disabled]{opacity:.45}
+.pill{display:inline-block;padding:3px 10px;border-radius:20px;font-size:12px;font-weight:600;background:var(--stone);color:var(--muted)}
+.pill.ok{background:#dff1e5;color:var(--ok)}.pill.wip{background:#fff1d6;color:var(--amber)}.pill.bad{background:#f8e0e0;color:var(--danger)}.pill.new{background:#e6edf8;color:#1d4b8a}
+.field{display:block;margin-bottom:12px}.field>span{display:block;font-size:13px;color:var(--muted);margin-bottom:4px}
+input:where(:not([type=checkbox]):not([type=radio]):not([type=file])),select,textarea{width:100%;min-height:48px;padding:10px 12px;border:1.5px solid var(--border);border-radius:12px;background:#fff}
+textarea{min-height:90px;resize:vertical}input:focus,select:focus,textarea:focus{border-color:var(--accent);outline:none}
+.chk{display:flex;gap:12px;align-items:flex-start;min-height:48px;padding:6px 0;font-size:15px}.chk input{width:26px;height:26px;margin-top:2px;flex-shrink:0;accent-color:var(--ok)}
+.progress{height:10px;background:var(--stone);border-radius:8px;overflow:hidden}.progress>i{display:block;height:100%;background:var(--ok);transition:width .3s}
+.kv{display:flex;justify-content:space-between;gap:10px;padding:8px 0;border-bottom:1px dashed var(--border)}
+.big{font-family:'Cormorant Garamond',serif;font-size:38px;font-weight:600;line-height:1.05;color:var(--ink)}
+.info{background:#e9f0fa;border:1.5px solid #b8cdea;color:#1d3f70;border-radius:12px;padding:10px 12px;margin-bottom:12px;font-size:14px}
+.warn{background:#fff6e0;border:1.5px solid #e6c16b;color:#6a4a00;border-radius:12px;padding:10px 12px;margin-bottom:12px;font-size:14px}
+.good{background:#e6f4ea;border:1.5px solid #9fd0b0;color:#1f5a38;border-radius:12px;padding:10px 12px;margin-bottom:12px;font-size:14px}
+
+/* Estructura */
+.top{position:sticky;top:0;z-index:30;background:var(--deep);color:#fff;display:flex;align-items:center;gap:10px;padding:10px 14px;padding-top:max(10px,env(safe-area-inset-top))}
+.top .logo{font-family:'Cormorant Garamond',serif;font-size:22px;font-weight:600;color:var(--accent)}
+.top small{display:block;font-size:12px;color:var(--warm)}
+.shell{max-width:1120px;margin:0 auto;display:block}
+main{padding:14px 14px calc(var(--nav) + 90px);min-width:0}
+.side{display:none}
+.tabbar{position:fixed;left:0;right:0;bottom:0;z-index:30;background:var(--deep);display:flex;justify-content:space-around;padding:6px 4px;padding-bottom:max(6px,env(safe-area-inset-bottom))}
+.tab{position:relative;flex:1;min-height:56px;color:rgba(255,255,255,.65);font-size:11px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;border-radius:10px}
+.tab i{font-style:normal;font-size:21px}.tab.on{color:#fff;background:rgba(201,111,40,.28)}
+.badge{position:absolute;top:2px;right:calc(50% - 26px);background:var(--accent);color:#fff;border-radius:10px;min-width:20px;height:20px;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;padding:0 5px}
+@media(min-width:900px){
+  .shell{display:grid;grid-template-columns:230px 1fr;gap:20px;padding:0 14px}
+  .side{display:block;position:sticky;top:70px;align-self:start;padding-top:16px}
+  .side .tab{flex-direction:row;justify-content:flex-start;gap:10px;color:var(--ink);font-size:15px;padding:0 12px;width:100%;margin-bottom:4px;min-height:48px}
+  .side .tab.on{background:#fff;border:1px solid var(--border);color:var(--terra)}.side .badge{position:static;margin-left:auto}
+  .tabbar{display:none}main{padding-bottom:110px}
+}
+
+/* Fases */
+.stepper{display:flex;gap:0;overflow-x:auto;padding:4px 2px 10px;margin:0 -2px;scrollbar-width:none}
+.stepper::-webkit-scrollbar{display:none}
+.step{flex:1 0 82px;text-align:center;font-size:12px;color:var(--muted);position:relative;padding:0 4px}
+.step b{display:flex;margin:0 auto 6px;width:34px;height:34px;border-radius:50%;background:var(--stone);align-items:center;justify-content:center;font-size:15px;position:relative;z-index:1}
+.step::before{content:'';position:absolute;top:16px;left:-50%;width:100%;height:3px;background:var(--stone)}
+.step:first-child::before{display:none}
+.step.done b{background:var(--ok);color:#fff}.step.done::before,.step.now::before{background:var(--ok)}
+.step.now b{background:var(--accent-d);color:#fff;box-shadow:0 0 0 4px rgba(201,111,40,.25)}.step.now{color:var(--ink);font-weight:600}
+.hero{background:linear-gradient(150deg,#2a1c10,#18100a);color:#fff;border-radius:var(--r);padding:18px;margin-bottom:14px}
+.hero h1{color:#fff;font-size:28px;line-height:1.1;margin-bottom:6px}.hero p{color:#e6d8c3;font-size:15px}
+.todo{display:flex;gap:12px;align-items:center;width:100%;text-align:left;min-height:64px;background:#fff;border:2px solid var(--accent);border-radius:var(--r);padding:12px 14px;margin-bottom:10px}
+.todo .ic{font-size:26px}.todo b{display:block}.todo span{font-size:13px;color:var(--muted)}.todo .go{color:var(--accent-d);font-size:26px}
+.room-acc{border:1.5px solid var(--border);border-radius:14px;margin-bottom:10px;background:#fff;overflow:hidden}
+.room-acc summary{list-style:none;min-height:56px;padding:10px 14px;display:flex;align-items:center;gap:10px;cursor:pointer}
+.room-acc summary::-webkit-details-marker{display:none}
+.room-acc summary::after{content:'▾';color:var(--muted)}.room-acc[open] summary::after{content:'▴'}
+.room-acc .ln{display:flex;gap:10px;padding:9px 14px;border-top:1px dashed var(--border);font-size:14px}
+.tag{display:inline-block;font-size:11px;font-weight:600;border-radius:8px;padding:2px 7px;margin-left:4px}
+.tag.add{background:#dfeaf8;color:#1d4b8a}.tag.del{background:#f8e0e0;color:var(--danger)}.tag.mod{background:#fff1d6;color:var(--amber)}
+.tl{position:relative;padding-left:26px}
+.tl::before{content:'';position:absolute;left:8px;top:6px;bottom:6px;width:3px;background:var(--stone)}
+.tl .it{position:relative;margin-bottom:14px}
+.tl .it::before{content:'';position:absolute;left:-24px;top:3px;width:15px;height:15px;border-radius:50%;background:var(--warm);border:3px solid var(--cream)}
+.tl .it.done::before{background:var(--ok)}.tl .it.now::before{background:var(--accent-d);box-shadow:0 0 0 4px rgba(201,111,40,.25)}
+.thumbs{display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:8px;margin-top:8px}
+.thumb{position:relative;aspect-ratio:1;border-radius:12px;overflow:hidden;border:1px solid var(--border);padding:0;background:var(--stone)}
+.thumb img{width:100%;height:100%;object-fit:cover;display:block}.thumb em{position:absolute;left:0;right:0;bottom:0;background:rgba(0,0,0,.55);color:#fff;font-size:11px;font-style:normal;padding:3px 6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.chips{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}
+.chip{min-height:44px;padding:0 16px;border:1.5px solid var(--border);border-radius:22px;background:#fff;font-size:14px;font-weight:500}.chip.on{border-color:var(--accent);background:#fff1e3;font-weight:600}
+.slot{display:flex;align-items:center;gap:12px;width:100%;min-height:60px;text-align:left;border:2px solid var(--border);border-radius:14px;background:#fff;padding:10px 14px;margin-bottom:10px}
+.slot.on{border-color:var(--accent);background:#fff1e3}
+.sig{width:100%;height:170px;border:2px dashed var(--warm);border-radius:14px;background:#fff;touch-action:none;display:block}
+.stars button{font-size:36px;min-width:52px;min-height:52px;color:var(--warm)}.stars button.on{color:#e6a100}
+.bubble{max-width:86%;padding:10px 14px;border-radius:16px;margin-bottom:8px;font-size:15px;white-space:pre-wrap}
+.bubble.yo{margin-left:auto;background:var(--accent-d);color:#fff;border-bottom-right-radius:4px}.bubble.el{background:#fff;border:1px solid var(--border);border-bottom-left-radius:4px}
+.bubble small{display:block;font-size:11px;opacity:.7;margin-top:2px}
+
+/* Correo y WhatsApp simulados */
+.mail{background:#fff;border:1px solid #cfc6b6;border-radius:12px;overflow:hidden;box-shadow:0 4px 18px rgba(0,0,0,.08);margin-bottom:14px}
+.mail .mh{background:#f1ede5;padding:10px 14px;font-size:13px;color:#555;border-bottom:1px solid #ddd}.mail .mh b{color:#111}
+.mail .mb{padding:16px;font-size:15px}.mail .mb p{margin-bottom:10px}
+.mail .brand{font-family:'Cormorant Garamond',serif;font-size:22px;color:var(--terra);font-weight:600;margin-bottom:8px}
+.mail table{width:100%;border-collapse:collapse;font-size:14px;margin:8px 0}.mail td{padding:5px 0;border-bottom:1px dashed #ddd}.mail td:last-child{text-align:right;font-weight:600}
+.wa{background:#e5ddd5;border-radius:14px;padding:14px;margin-bottom:14px}
+.wa .b{background:#dcf8c6;border-radius:12px 12px 12px 2px;padding:10px 12px;font-size:14px;white-space:pre-wrap;max-width:92%;box-shadow:0 1px 1px rgba(0,0,0,.15)}
+.wa small{display:block;text-align:right;color:#667;font-size:11px}
+.cta{display:flex;min-height:52px;align-items:center;justify-content:center;background:var(--accent-d);color:#fff;border-radius:12px;font-weight:600;text-decoration:none;padding:0 18px;margin:12px 0;text-align:center}
+
+/* Hojas, avisos, simulador */
+.ov{position:fixed;inset:0;z-index:50;background:rgba(10,6,2,.55);display:none}.ov.on{display:block}
+.sheet{position:absolute;left:0;right:0;bottom:0;max-height:92vh;overflow:auto;background:var(--cream);border-radius:20px 20px 0 0;padding:16px 14px calc(18px + env(safe-area-inset-bottom));max-width:680px;margin:0 auto}
+@media(min-width:760px){.sheet{bottom:auto;top:50%;transform:translateY(-50%);border-radius:20px;max-height:88vh}}
+.grab{width:44px;height:5px;background:var(--warm);border-radius:4px;margin:0 auto 12px}
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(var(--nav) + 18px);z-index:70;background:var(--deep);color:#fff;padding:12px 16px;border-radius:14px;box-shadow:0 6px 24px rgba(0,0,0,.35);display:none;max-width:92vw}.toast.on{display:block}
+.viewer{position:fixed;inset:0;z-index:60;background:#000;display:none;flex-direction:column}.viewer.on{display:flex}.viewer img{flex:1;min-height:0;width:100%;object-fit:contain}.viewer .vb{padding:12px;background:#111;display:flex;gap:10px;align-items:center;color:#fff}
+.simbtn{position:fixed;left:10px;bottom:calc(var(--nav) + 12px);z-index:40;background:#2d6a4f;color:#fff;border-radius:24px;min-height:48px;padding:0 16px;font-weight:600;box-shadow:0 4px 14px rgba(0,0,0,.3)}
+@media(min-width:900px){.simbtn{bottom:14px}.toast{bottom:20px}}
+.simbox button.btn{margin:0 6px 8px 0}
+.demo-home{max-width:760px;margin:0 auto;padding:20px 14px 60px}
+#print-area{display:none}
+@media print{body>*:not(#print-area){display:none!important}#print-area{display:block!important;padding:16mm;color:#000;background:#fff}}
+@media(prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<a href="#main" class="sr">Saltar al contenido</a>
+<div id="app"></div>
+<div class="ov" id="ov" role="dialog" aria-modal="true" aria-label="Ventana"><div class="sheet" id="sheet"></div></div>
+<div class="viewer" id="viewer" role="dialog" aria-modal="true" aria-label="Foto"></div>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+<div id="print-area"></div>
+<script>
+'use strict';
+// ═══════════════════════════════════════════════════════
+// 1. UTILIDADES
+// ═══════════════════════════════════════════════════════
+const LS = 'panelClienteV1';
+const $ = s => document.querySelector(s);
+const r2 = v => Math.round((Number(v) || 0) * 100) / 100;
+const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]));
+const uid = p => (p || 'id') + Math.random().toString(36).slice(2, 8) + Date.now().toString(36).slice(-3);
+const NF2 = new Intl.NumberFormat('de-DE', { minimumFractionDigits:2, maximumFractionDigits:2 });
+const NF0 = new Intl.NumberFormat('de-DE', { maximumFractionDigits:0 });
+const eur = v => NF2.format(r2(v)) + ' €';
+const eur0 = v => NF0.format(Math.round(v)) + ' €';
+const fnum = v => String(Math.round(v * 100) / 100).replace('.', ',');
+const num = v => { const n = Number(String(v).replace(',', '.')); return isFinite(n) ? n : 0; };
+const D_MS = 86400000;
+const fdia = t => new Date(t).toLocaleDateString('es-ES', { day:'numeric', month:'short' });
+const ffecha = t => new Date(t).toLocaleDateString('es-ES', { day:'numeric', month:'long', year:'numeric' });
+const fhora = t => new Date(t).toLocaleTimeString('es-ES', { hour:'2-digit', minute:'2-digit' });
+const fsemana = t => new Date(t).toLocaleDateString('es-ES', { weekday:'long', day:'numeric', month:'long' });
+const MARGEN = 22, IVA = 21, K = (1 + MARGEN / 100) * (1 + IVA / 100);
+const fin = sub => r2(sub * K);
+const conIva = v => r2(v * (1 + IVA / 100));
+
+// ═══════════════════════════════════════════════════════
+// 2. CATÁLOGO RESUMIDO Y CASO DE EJEMPLO (reforma integral estándar)
+// ═══════════════════════════════════════════════════════
+const C = {
+  demolicion:['Demolición y retirada de escombros','m²','m2',28], solado:['Suelo cerámico / porcelánico','m²','m2',52], tarima:['Tarima flotante','m²','m2',38],
+  alicatado:['Alicatado de paredes','m²','pared',46], gotele:['Quitar gotelé y alisar paredes','m²','pared',14], pint_pared:['Pintura de paredes','m²','pared',8.7], pint_techo:['Pintura de techo','m²','m2',9.2],
+  rodapie:['Rodapié','ml','ml',10.5], falso_techo:['Falso techo de pladur','m²','m2',30],
+  electricidad:['Instalación eléctrica de la estancia','ud','fijo',{ salon:720, cocina:980, bano:560, habitacion:420, pasillo:320 }],
+  font_bano:['Fontanería de baño','ud','fijo',1420], font_cocina:['Fontanería de cocina','ud','fijo',480], sanitarios:['Inodoro, lavabo y grifería','ud','fijo',500], ducha:['Plato de ducha y mampara','ud','fijo',650],
+  mueble_bano:['Mueble de baño con espejo','ud','fijo',480], muebles_coc:['Muebles y encimera de cocina','ml','mlm',480], puerta:['Puerta interior','ud','ud',330], radiador:['Radiador','ud','ud',190],
+  humedades:['Tratamiento de humedades','ud','fijo',380], tuberias:['Sustitución de tuberías y bajantes','ud','fijo',650], punto_luz:['Punto de luz adicional','ud','fijo',120],
+};
+function qtyBase(b, m2) { if (b === 'm2') return r2(m2); if (b === 'pared') return r2(Math.sqrt(m2) * 4 * 2.4); if (b === 'ml') return r2(Math.sqrt(m2) * 4 * 0.9); if (b === 'mlm') return Math.max(3, Math.round(m2 * 0.5)); return 1; }
+function linea(k, tipo, m2, cant, nota) { const c = C[k]; return { k, l:c[0], u:c[1], cant:cant != null ? cant : qtyBase(c[2], m2), precio:typeof c[3] === 'object' ? (c[3][tipo] != null ? c[3][tipo] : 400) : c[3], nota:nota || '' }; }
+const PEDIDO = {
+  pasillo:['tarima', 'pint_pared', 'pint_techo', 'rodapie', 'puerta'],
+  salon:['tarima', 'gotele', 'pint_pared', 'pint_techo', 'rodapie', 'electricidad', 'radiador', 'falso_techo'],
+  cocina:['demolicion', 'solado', 'alicatado', 'muebles_coc', 'font_cocina', 'electricidad', 'pint_techo'],
+  bano:['demolicion', 'solado', 'alicatado', 'font_bano', 'sanitarios', 'ducha', 'mueble_bano', 'electricidad', 'pint_techo'],
+  habitacion:['tarima', 'pint_pared', 'pint_techo', 'rodapie', 'electricidad', 'puerta', 'radiador'],
+};
+const ESTANCIAS = [['pasillo', 'Pasillo y entrada', 9], ['salon', 'Salón-comedor', 26], ['cocina', 'Cocina', 11], ['bano', 'Baño principal', 6.5], ['bano', 'Baño secundario', 4.5], ['habitacion', 'Dormitorio principal', 14], ['habitacion', 'Dormitorio 2', 10.5], ['habitacion', 'Dormitorio 3', 8]];
+const HITOS = [['Demolición y preparación', 3], ['Instalaciones (fontanería y electricidad)', 4], ['Albañilería y tabiquería', 6], ['Alicatado', 4], ['Suelos', 4], ['Carpintería y puertas', 3], ['Pintura', 3], ['Limpieza y remates', 2]];
+const FASES = [['recibida', 'Solicitud'], ['visita', 'Visita'], ['propuesta', 'Presupuesto'], ['aceptada', 'Aceptación'], ['obra', 'Obra'], ['remates', 'Entrega'], ['cerrada', 'Cerrada']];
+function stepIdx(f) { return { recibida:0, visita_propuesta:1, visita_confirmada:1, propuesta:2, aceptada:3, obra:4, remates:5, cerrada:6 }[f]; }
+
+function nuevoCaso() {
+  const est = ESTANCIAS.map(([t, n, m]) => ({ id:uid('e'), tipo:t, nombre:n, m2:m, lineas:PEDIDO[t].map(k => linea(k, t, m)) }));
+  const tok = Math.random().toString(36).slice(2, 8) + Math.random().toString(36).slice(2, 8);
+  const t0 = Date.now();
+  return {
+    ver:1, token:tok, ref:'REF-' + (3000 + Math.floor(Math.random() * 900)), creado:t0, dias:0,
+    cliente:{ nombre:'Laura Martín', email:'laura.martin@ejemplo.es', tel:'612 345 678', direccion:'C/ Alcalá 245, 4.º B · 28027 Madrid' },
+    reformista:{ empresa:'Anatoliy Reformas', contacto:'Anatoliy', tel:'600 000 000', email:'hola@anatoliyreformas.es', iban:'ES00 0000 0000 0000 0000 0000' },
+    fase:'recibida',
+    datos:[
+      { id:'nif', label:'NIF / NIE (para el contrato)', tipo:'text', valor:'', ph:'12345678Z' },
+      { id:'inicio', label:'¿Cuándo te gustaría empezar la obra?', tipo:'date', valor:'' },
+      { id:'acceso', label:'Acceso al edificio', tipo:'select', opts:['Ascensor', 'Solo escaleras', 'Planta baja'], valor:'' },
+      { id:'habitada', label:'¿Vivirás en la casa durante la obra?', tipo:'select', opts:['Sí', 'No'], valor:'' },
+      { id:'fotos', label:'Fotos del estado actual de la vivienda', tipo:'fotos', valor:[] },
+    ],
+    versiones:[{ id:'V1', tipo:'estimacion', fecha:t0, estado:'vigente', est }],
+    visita:{ estado:'no', franjas:[], elegida:null, importe:60 },
+    aceptacion:null,
+    obra:{ inicio:null, hitos:[], fotos:[], cambios:[], adendas:[], solicitudes:[], remates:[], cierre:null },
+    plan:[{ label:'Señal al aceptar', pct:30, cuando:'aceptacion' }, { label:'Al completar instalaciones', pct:30, cuando:'hito2' }, { label:'A la entrega', pct:40, cuando:'entrega' }],
+    cobros:[], eventos:[], avisos:[], chat:[], valoracion:null,
+  };
+}
+
+// ═══════════════════════════════════════════════════════
+// 3. LÓGICA (funciones puras)
+// ═══════════════════════════════════════════════════════
+const subL = l => r2(l.cant * l.precio);
+const subEst = e => r2(e.lineas.reduce((s, l) => s + subL(l), 0));
+const totalV = v => fin(v.est.reduce((s, e) => s + subEst(e), 0));
+const totalEstF = e => fin(subEst(e));
+const ahora = S => Date.now() + (S.dias || 0) * D_MS;
+const vigente = S => S.versiones.find(v => v.estado === 'vigente') || S.versiones[S.versiones.length - 1];
+const vAcept = S => S.aceptacion ? S.versiones.find(v => v.id === S.aceptacion.versionId) : null;
+function diffVersiones(a, b) {
+  const o = { anadidos:[], quitados:[], modificados:[] };
+  b.est.forEach(eb => { const ea = a.est.find(x => x.id === eb.id);
+    eb.lineas.forEach(lb => { const la = ea && ea.lineas.find(x => x.k === lb.k); if (!la) o.anadidos.push({ e:eb, l:lb }); else if (la.cant !== lb.cant || la.precio !== lb.precio) o.modificados.push({ e:eb, l:lb, antes:la }); });
+    if (ea) ea.lineas.forEach(la => { if (!eb.lineas.find(x => x.k === la.k)) o.quitados.push({ e:eb, l:la, motivo:(eb.quitados || {})[la.k] || '' }); }); });
+  return o;
+}
+function totalVigente(S) {
+  const aceptada = S.aceptacion ? S.aceptacion.total : 0;
+  const ad = r2(S.obra.adendas.filter(a => a.estado === 'firmada').reduce((s, a) => s + a.delta, 0));
+  const prov = r2(S.obra.cambios.filter(c => c.estado === 'pendiente_cliente' || c.estado === 'aceptado').reduce((s, c) => s + c.importe, 0));
+  const firmado = r2(aceptada + conIva(ad));
+  return { aceptada, firmado, provisional:conIva(prov), total:r2(firmado + conIva(prov)) };
+}
+function cobrado(S) { return r2(S.cobros.reduce((s, c) => s + c.importe, 0)); }
+function planPagos(S) {
+  const base = S.aceptacion ? S.aceptacion.total : 0; const pag = cobrado(S); let acum = 0;
+  const alc = { aceptacion:!!S.aceptacion, hito2:(S.obra.hitos[1] || {}).estado === 'hecho', entrega:['remates', 'cerrada'].includes(S.fase) };
+  return S.plan.map(t => { const imp = r2(base * t.pct / 100); acum = r2(acum + imp); const cub = pag + 0.005 >= acum;
+    return { ...t, importe:imp, estado:cub ? 'pagado' : (alc[t.cuando] ? 'debido' : 'previsto'), falta:cub ? 0 : r2(Math.min(imp, acum - pag)) }; });
+}
+function progresoObra(S) {
+  const h = S.obra.hitos; if (!h.length) return 0; const tot = h.reduce((s, x) => s + x.dias, 0);
+  return Math.round(h.reduce((s, x) => s + x.dias * (x.estado === 'hecho' ? 1 : x.estado === 'en_curso' ? 0.5 : 0), 0) / tot * 100);
+}
+function checklistFinal(S) {
+  const est = (vAcept(S) || vigente(S)).est;
+  return [...est.map(e => ({ id:'e_' + e.id, label:'«' + e.nombre + '»: he revisado los trabajos y estoy conforme', estado:'pendiente', nota:'' })),
+    { id:'g_inst', label:'Las instalaciones funcionan (luz, agua, calefacción)', estado:'pendiente', nota:'' },
+    { id:'g_limp', label:'La vivienda está limpia y sin escombros', estado:'pendiente', nota:'' },
+    { id:'g_doc', label:'He recibido llaves, manuales y documentación de garantías', estado:'pendiente', nota:'' }];
+}
+function pendientes(S) {
+  const p = []; const f = S.fase;
+  const faltan = S.datos.filter(d => !(d.tipo === 'fotos' ? d.valor.length : d.valor)).length;
+  if (faltan && f !== 'cerrada') p.push({ sec:'inicio', ic:'📝', t:'Completa tus datos', s:faltan + ' dato' + (faltan > 1 ? 's' : '') + ' por rellenar para afinar el presupuesto', fn:'abrirDatos()' });
+  if (f === 'visita_propuesta') p.push({ sec:'visita', ic:'📅', t:'Elige el día de la visita técnica', s:'Hay ' + S.visita.franjas.length + ' huecos disponibles', fn:"ir('visita')" });
+  if (f === 'propuesta') p.push({ sec:'presupuesto', ic:'📄', t:'Revisa y acepta tu presupuesto ' + vigente(S).id, s:'Total ' + eur0(totalV(vigente(S))) + ' · IVA incluido', fn:"ir('presupuesto')" });
+  const ch = S.obra.cambios.filter(c => c.estado === 'pendiente_cliente').length; if (ch) p.push({ sec:'cambios', ic:'🔁', t:ch + ' cambio' + (ch > 1 ? 's' : '') + ' por responder', s:'Acéptalos o cuéntanos tus dudas', fn:"ir('cambios')" });
+  const ad = S.obra.adendas.filter(a => a.estado === 'por_firmar').length; if (ad) p.push({ sec:'cambios', ic:'✍️', t:ad + ' adenda' + (ad > 1 ? 's' : '') + ' por firmar', s:'Agrupa los cambios que ya has aceptado', fn:"ir('cambios')" });
+  if (f === 'remates') p.push({ sec:'entrega', ic:'✅', t:'Revisión final de tu obra', s:'Completa el checklist y firma tu conformidad', fn:"ir('entrega')" });
+  if (f === 'aceptada' || f === 'obra' || f === 'remates') { const d = planPagos(S).find(t => t.estado === 'debido'); if (d) p.push({ sec:'pagos', ic:'💶', t:'Pago pendiente: ' + d.label, s:eur(d.falta), fn:"ir('pagos')" }); }
+  return p;
+}
+const linkPanel = (S, sec) => location.href.split('#')[0] + '#/c/' + S.token + (sec ? '/' + sec : '');
+function fotoSvg(texto, hue) {
+  const svg = "<svg xmlns='http://www.w3.org/2000/svg' width='640' height='480'><defs><linearGradient id='g' x1='0' y1='0' x2='1' y2='1'><stop offset='0' stop-color='hsl(" + hue + ",32%,62%)'/><stop offset='1' stop-color='hsl(" + (hue + 28) + ",38%,36%)'/></linearGradient></defs><rect width='640' height='480' fill='url(#g)'/><rect x='40' y='40' width='560' height='400' fill='none' stroke='white' stroke-opacity='.45' stroke-width='3'/><text x='320' y='250' font-family='sans-serif' font-size='34' fill='white' text-anchor='middle'>" + String(texto).replace(/[<>&']/g, '') + "</text></svg>";
+  return 'data:image/svg+xml;utf8,' + encodeURIComponent(svg);
+}
+
+// ═══════════════════════════════════════════════════════
+// 4. ESTADO, AVISOS AUTOMÁTICOS Y RUTAS
+// ═══════════════════════════════════════════════════════
+function cargar() { try { const o = JSON.parse(localStorage.getItem(LS)); return o && o.ver === 1 && o.token ? o : null; } catch (e) { return null; } }
+let S = cargar(); let saveErr = false; let sec = 'inicio'; let toastT = null;
+const UI = { ver:null, slot:null, estrellas:0, previa:{}, canal:'email', avisoSel:null };
+function guardar() { try { localStorage.setItem(LS, JSON.stringify(S)); saveErr = false; } catch (e) { saveErr = true; toast('⚠ No hay espacio para guardar más fotos en este dispositivo.'); } }
+function ev(texto, autor, tipo) { S.eventos.push({ id:uid('v'), f:ahora(S), texto, autor:autor || 'sistema', tipo:tipo || '' }); }
+function avisar(tipo, asunto, parrafos, wa, extra) {
+  S.avisos.push(Object.assign({ id:uid('a'), f:ahora(S), tipo, asunto, parrafos, wa:wa || parrafos[0], leido:false, cta:'Abrir mi panel' }, extra || {}));
+}
+function avisoPrimero() {
+  const v = S.versiones[0]; const t = totalV(v); const lo = Math.round(t * 0.88 / 100) * 100, hi = Math.round(t * 1.12 / 100) * 100;
+  const falta = S.datos.map(d => d.label);
+  avisar('primero', 'Hemos recibido tu solicitud · presupuesto estimado ' + S.ref,
+    ['Hola ' + S.cliente.nombre.split(' ')[0] + ', ¡gracias por confiar en ' + S.reformista.empresa + '! Hemos recibido tu solicitud de reforma integral y ya la tiene tu reformista.',
+     'Con los datos que nos has dado, tu presupuesto estimado es de ' + eur0(lo) + ' a ' + eur0(hi) + ' (IVA incluido). Es una estimación: la afinaremos tras la visita técnica.',
+     'Para ajustarlo mejor, nos vendría bien que nos indicaras: ' + falta.join('; ') + '.',
+     'Desde tu panel privado podrás ver tu presupuesto, elegir el día de la visita, aceptar los cambios, seguir los hitos de la obra y, al final, dar tu conformidad. Este enlace es personal y funcionará durante toda la reforma.'],
+    'Hola ' + S.cliente.nombre.split(' ')[0] + ', soy ' + S.reformista.contacto + ' de ' + S.reformista.empresa + '. He recibido tu solicitud (' + S.ref + '). Presupuesto estimado: ' + eur0(lo) + ' – ' + eur0(hi) + ' (IVA incl.). Para afinarlo te pido algunos datos y fotos. Aquí tienes tu panel privado, válido durante toda la reforma:',
+    { tabla:v.est.map(e => [e.nombre, eur0(totalEstF(e))]), total:'Estimación total: ' + eur0(lo) + ' – ' + eur0(hi) });
+}
+
+function parseHash() { const h = (location.hash || '').replace(/^#\/?/, '').split('/'); return { r:h[0] || '', tok:h[1] || '', s:h[2] || '' }; }
+let renderedHash = null;
+function ir(s) { const h = '#/c/' + S.token + '/' + s; if (location.hash !== h) location.hash = h; render(); }
+function render() {
+  renderedHash = location.hash; const h = parseHash(); const app = $('#app');
+  if (h.r === 'c') {
+    if (!S || h.tok !== S.token) { app.innerHTML = vInvalido(); return; }
+    sec = h.s || 'inicio'; if (!NAV.find(n => n[0] === sec)) sec = 'inicio';
+    app.innerHTML = vPanel(); S.avisos.length && 0; window.scrollTo(0, 0); return;
+  }
+  if (h.r === 'correo' && S) { app.innerHTML = vCorreo(); return; }
+  app.innerHTML = vDemo();
+}
+window.addEventListener('hashchange', () => { if (location.hash !== renderedHash) render(); });
+
+// ═══════════════════════════════════════════════════════
+// 5. PANTALLAS DE ENTRADA (demostración y mensaje automático)
+// ═══════════════════════════════════════════════════════
+function vDemo() {
+  return '<div class="demo-home"><div class="lbl" style="margin-top:14px">Panel del cliente · v1 · simulación</div><h1 style="font-size:40px;line-height:1.05;margin-bottom:8px">Así vive el cliente su reforma</h1>' +
+    '<p class="muted" style="margin-bottom:16px;font-size:16px">Prototipo sin conexión: pruébalo de principio a fin. Todo se guarda en este dispositivo.</p>' +
+    '<div class="card"><h3>El recorrido</h3><ol style="padding-left:20px;line-height:1.7"><li>El cliente envía su <b>primer presupuesto</b> desde la web (configurador).</li><li>Entra <b>automáticamente</b> en el panel del reformista.</li><li>El cliente recibe un <b>correo y un WhatsApp</b> con su presupuesto estimado, los datos que faltan y su <b>enlace privado</b>.</li><li>Con ese enlace entra a su panel durante <b>toda la reforma</b>: presupuesto, visita, cambios, hitos, pagos y, al final, su <b>conformidad firmada</b>.</li></ol></div>' +
+    (S ? '<div class="card"><div class="row"><div class="sp"><div class="lbl">Caso de ejemplo en curso</div><b>' + esc(S.cliente.nombre) + ' · ' + S.ref + '</b><div class="muted">' + esc(FASE_TXT[S.fase][0]) + '</div></div></div><div style="display:grid;gap:10px;margin-top:12px"><a class="btn pri blk" href="#/c/' + S.token + '">Abrir el panel del cliente</a><a class="btn blk" href="#/correo">Ver el correo / WhatsApp automático</a><button class="btn dng blk" onclick="reiniciar()">Empezar la demo desde cero</button></div></div>'
+    : '<div class="card"><h3>Paso 1 · El cliente envía su solicitud</h3><div class="kv"><span>Cliente</span><b>Laura Martín</b></div><div class="kv"><span>Vivienda</span><b>85 m² · Madrid</b></div><div class="kv"><span>Obra</span><b>Reforma integral · 8 estancias</b></div><button class="btn pri blk" style="margin-top:14px" onclick="enviarSolicitud()">Enviar mi solicitud de presupuesto</button></div>') +
+    '<div class="info">Al enviar, se creará el caso, se simulará su entrada en el panel del reformista y verás el mensaje automático que recibe el cliente.</div></div>';
+}
+function vInvalido() { return '<div class="demo-home"><div class="card" style="text-align:center"><div style="font-size:44px">🔒</div><h2>Enlace no válido</h2><p class="muted">Este enlace no corresponde a ningún panel activo o ha cambiado. Pide a tu reformista que te lo reenvíe.</p><a class="btn pri" href="#/" style="margin-top:12px">Ir a la demostración</a></div></div>'; }
+
+function vAviso(a) {
+  const nombre = S.cliente.nombre.split(' ')[0]; const link = linkPanel(S, a.sec || '');
+  const email = '<div class="mail"><div class="mh"><div><b>De:</b> ' + esc(S.reformista.empresa) + ' &lt;' + esc(S.reformista.email) + '&gt;</div><div><b>Para:</b> ' + esc(S.cliente.email) + '</div><div><b>Asunto:</b> ' + esc(a.asunto) + '</div></div><div class="mb"><div class="brand">' + esc(S.reformista.empresa) + '</div>' +
+    a.parrafos.map(p => '<p>' + esc(p) + '</p>').join('') + (a.tabla ? '<table>' + a.tabla.map(r => '<tr><td>' + esc(r[0]) + '</td><td>' + esc(r[1]) + '</td></tr>').join('') + '</table><p><b>' + esc(a.total) + '</b></p>' : '') +
+    '<a class="cta" href="' + esc(link) + '">' + esc(a.cta) + '</a><p class="muted" style="font-size:12px">Este enlace es personal; no lo compartas. Funcionará durante toda tu reforma.</p></div></div>';
+  const wa = '<div class="wa"><div class="b">' + esc(a.wa) + '\n\n🔗 ' + esc(link) + '<small>' + fhora(a.f) + ' ✓✓</small></div></div>';
+  return UI.canal === 'email' ? email : wa;
+}
+function vCorreo() {
+  const a = S.avisos.find(x => x.id === UI.avisoSel) || S.avisos[0];
+  return '<div class="demo-home"><a href="#/" class="btn sm" style="margin-bottom:12px">‹ Demostración</a><h2>Mensaje automático al cliente</h2><div class="info">Simulación: así llegaría al cliente, al enviar su solicitud, por correo y por WhatsApp. El enlace abre su panel privado.</div>' +
+    '<div class="chips"><button class="chip ' + (UI.canal === 'email' ? 'on' : '') + '" onclick="UI.canal=\'email\';render()">✉️ Correo</button><button class="chip ' + (UI.canal === 'wa' ? 'on' : '') + '" onclick="UI.canal=\'wa\';render()">💬 WhatsApp</button></div>' + vAviso(a) +
+    '<a class="btn pri blk" href="#/c/' + S.token + '">Abrir mi panel de cliente →</a></div>';
+}
+
+// ═══════════════════════════════════════════════════════
+// 6. PANEL DEL CLIENTE
+// ═══════════════════════════════════════════════════════
+const NAV = [['inicio', '🏠', 'Inicio'], ['presupuesto', '📄', 'Presupuesto'], ['visita', '📅', 'Visita'], ['obra', '🏗️', 'Obra'], ['cambios', '🔁', 'Cambios'], ['pagos', '💶', 'Pagos'], ['entrega', '✅', 'Entrega'], ['docs', '📁', 'Documentos'], ['mensajes', '💬', 'Mensajes']];
+const FASE_TXT = {
+  recibida:['Hemos recibido tu solicitud', 'Tu reformista ya la tiene. Completa los datos que faltan para afinar tu presupuesto.'],
+  visita_propuesta:['Elige el día de la visita técnica', 'Tu reformista irá a ver la vivienda para confirmar medidas y ajustar el presupuesto.'],
+  visita_confirmada:['Visita técnica confirmada', 'Tras la visita recibirás aquí tu presupuesto actualizado.'],
+  propuesta:['Tu presupuesto está listo para revisar', 'Revísalo con calma. Puedes aceptarlo, pedir cambios o escribir a tu reformista.'],
+  aceptada:['¡Presupuesto aceptado!', 'Estamos preparando el inicio de tu obra. Aquí verás cada paso.'],
+  obra:['Tu obra está en marcha', 'Sigue los hitos, responde a los cambios y consulta tus pagos.'],
+  remates:['Tu obra está terminada', 'Revisa el resultado, indica los remates y da tu conformidad.'],
+  cerrada:['Obra cerrada · ¡gracias!', 'Tienes tu acta y la información de la garantía.'],
+};
+function badgeSec(s) {
+  let n = pendientes(S).filter(p => p.sec === s).length; if (s === 'mensajes') n = S.avisos.filter(a => !a.leido).length;
+  return n ? '<span class="badge" aria-label="' + n + ' pendientes">' + n + '</span>' : '';
+}
+function vPanel() {
+  const main = { inicio:vInicio, presupuesto:vPresupuesto, visita:vVisita, obra:vObra, cambios:vCambios, pagos:vPagos, entrega:vEntrega, docs:vDocs, mensajes:vMensajes }[sec]();
+  const tabs = NAV.map(n => '<button class="tab ' + (sec === n[0] ? 'on' : '') + '" onclick="ir(\'' + n[0] + '\')" ' + (sec === n[0] ? 'aria-current="page"' : '') + '><i>' + n[1] + '</i>' + n[2] + badgeSec(n[0]) + '</button>').join('');
+  const mob = ['inicio', 'presupuesto', 'obra', 'cambios'].map(id => NAV.find(n => n[0] === id)).map(n => '<button class="tab ' + (sec === n[0] ? 'on' : '') + '" onclick="ir(\'' + n[0] + '\')"><i>' + n[1] + '</i>' + n[2] + badgeSec(n[0]) + '</button>').join('') +
+    '<button class="tab ' + (['visita', 'pagos', 'entrega', 'docs', 'mensajes'].includes(sec) ? 'on' : '') + '" onclick="abrirMas()"><i>☰</i>Más' + (['visita', 'pagos', 'entrega', 'mensajes'].some(s => badgeSec(s)) ? '<span class="badge">!</span>' : '') + '</button>';
+  return '<header class="top"><div class="sp"><span class="logo">' + esc(S.reformista.empresa) + '</span><small>Mi reforma · ' + S.ref + '</small></div><button class="btn sm" style="background:rgba(255,255,255,.12);color:#fff;border:none" onclick="abrirEnlace()">🔗 Mi enlace</button></header>' +
+    '<div class="shell"><nav class="side" aria-label="Secciones">' + tabs + '</nav><main id="main">' + main + '</main></div><nav class="tabbar" aria-label="Secciones">' + mob + '</nav>' +
+    '<button class="simbtn" onclick="abrirSim()" aria-label="Abrir simulador del reformista">🧪 Simulador</button>';
+}
+function stepper() {
+  const i = stepIdx(S.fase);
+  return '<div class="stepper" role="list" aria-label="Fases de la reforma">' + FASES.map((f, k) => '<div class="step ' + (k < i ? 'done' : k === i ? 'now' : '') + '" role="listitem"><b>' + (k < i || S.fase === 'cerrada' ? '✓' : k + 1) + '</b>' + f[1] + '</div>').join('') + '</div>';
+}
+function vInicio() {
+  const p = pendientes(S); const tv = totalVigente(S); const v = vigente(S); const pr = progresoObra(S); const nombre = S.cliente.nombre.split(' ')[0];
+  const t = FASE_TXT[S.fase]; const pl = planPagos(S);
+  const eco = S.aceptacion ? '<div class="card"><div class="lbl">Resumen económico</div><div class="big">' + eur0(tv.total) + '</div><div class="muted" style="margin-bottom:8px">Total vigente (IVA incl.)' + (tv.provisional ? ' · incluye ' + eur0(tv.provisional) + ' de cambios por confirmar' : '') + '</div><div class="progress"><i style="width:' + Math.min(100, Math.round(cobrado(S) / tv.total * 100)) + '%"></i></div><div class="row" style="margin-top:6px"><span class="muted sp">Pagado ' + eur0(cobrado(S)) + '</span><span class="muted">Pendiente ' + eur0(Math.max(0, tv.total - cobrado(S))) + '</span></div></div>'
+    : '<div class="card"><div class="lbl">' + (v.tipo === 'estimacion' ? 'Presupuesto estimado' : 'Presupuesto ' + v.id) + '</div><div class="big">' + (v.tipo === 'estimacion' ? eur0(totalV(v) * 0.88) + ' – ' + eur0(totalV(v) * 1.12) : eur0(totalV(v))) + '</div><div class="muted">IVA incluido' + (v.tipo === 'estimacion' ? ' · orientativo hasta la visita' : '') + '</div><button class="btn sm" style="margin-top:10px" onclick="ir(\'presupuesto\')">Ver el detalle</button></div>';
+  const prox = S.fase === 'visita_confirmada' ? '<div class="card"><div class="lbl">Próxima cita</div><b>Visita técnica</b><div>' + fsemana(S.visita.elegida.t) + ' · ' + esc(S.visita.elegida.h) + '</div></div>' : (S.obra.hitos.length && S.fase === 'obra' ? (() => { const h = S.obra.hitos.find(x => x.estado !== 'hecho'); return h ? '<div class="card"><div class="lbl">Ahora en tu obra</div><b>' + esc(h.nombre) + '</b><div class="muted">Previsto hasta el ' + fdia(h.previsto) + '</div><div class="progress" style="margin-top:8px"><i style="width:' + pr + '%"></i></div><div class="muted" style="margin-top:4px">' + pr + ' % completado</div></div>' : ''; })() : '');
+  const ult = S.eventos.slice(-4).reverse();
+  return '<div class="hero"><div class="lbl" style="color:#e6c9a3">Hola, ' + esc(nombre) + '</div><h1>' + esc(t[0]) + '</h1><p>' + esc(t[1]) + '</p></div>' + stepper() +
+    (p.length ? '<h3 style="margin-top:6px">Lo que necesitamos de ti</h3>' + p.map(x => '<button class="todo" onclick="' + x.fn + '"><span class="ic">' + x.ic + '</span><span class="sp"><b>' + esc(x.t) + '</b><span>' + esc(x.s) + '</span></span><span class="go">›</span></button>').join('') : '<div class="good">✓ Todo al día: ahora mismo no necesitamos nada de ti.</div>') +
+    eco + prox +
+    '<div class="card"><h3>Últimas novedades</h3>' + (ult.length ? '<div class="tl">' + ult.map(e => '<div class="it done"><b>' + esc(e.texto) + '</b><div class="muted">' + ffecha(e.f) + ' · ' + (e.autor === 'cliente' ? 'Tú' : e.autor === 'reformista' ? esc(S.reformista.contacto) : 'Sistema') + '</div></div>').join('') + '</div>' : '<div class="muted">Aún no hay novedades.</div>') + '</div>' +
+    '<div class="card"><h3>Tu reformista</h3><div class="muted" style="margin-bottom:8px">' + esc(S.reformista.contacto) + ' · ' + esc(S.reformista.empresa) + '</div><div class="row"><a class="btn sm" href="tel:' + S.reformista.tel.replace(/\s/g, '') + '">📞 Llamar</a><a class="btn sm" target="_blank" rel="noopener" href="https://wa.me/34' + S.reformista.tel.replace(/\D/g, '') + '">💬 WhatsApp</a><button class="btn sm" onclick="ir(\'mensajes\')">✉ Escribir aquí</button></div></div>';
+}
+
+function lineasHtml(e, dif) {
+  return e.lineas.map(l => { const d = dif && dif.anadidos.find(x => x.e.id === e.id && x.l.k === l.k) ? 'add' : (dif && dif.modificados.find(x => x.e.id === e.id && x.l.k === l.k) ? 'mod' : ''); return '<div class="ln"><span class="sp">' + esc(l.l) + (d === 'add' ? '<span class="tag add">Nuevo</span>' : d === 'mod' ? '<span class="tag mod">Modificado</span>' : '') + '<div class="muted">' + fnum(l.cant) + ' ' + esc(l.u) + (l.nota ? ' · ' + esc(l.nota) : '') + '</div></div><b>' + eur0(fin(subL(l))) + '</b></div>'; }).join('');
+}
+function vPresupuesto() {
+  const sel = S.versiones.find(v => v.id === UI.ver) || vigente(S); const est = sel.tipo === 'estimacion'; const t = totalV(sel);
+  const idx = S.versiones.indexOf(sel); const dif = idx > 0 ? diffVersiones(S.versiones[idx - 1], sel) : null;
+  const ac = S.aceptacion && S.aceptacion.versionId === sel.id;
+  const acciones = S.rechazo && S.fase === 'propuesta' ? '<div class="warn">Indicaste que este presupuesto no te interesa (' + esc(S.rechazo.motivo) + '). Si cambias de idea, puedes retomarlo.<div style="margin-top:8px"><button class="btn sm" onclick="S.rechazo=null;guardar();render()">Reconsiderarlo</button></div></div>' : S.fase === 'propuesta' && sel.estado === 'vigente' ? '<div class="card" style="border:2px solid var(--accent)"><h3>¿Qué te parece?</h3><div style="display:grid;gap:10px"><button class="btn ok blk" onclick="abrirAceptar()">✓ Aceptar este presupuesto</button><button class="btn blk" onclick="abrirPedirCambios()">✎ Pedir cambios</button><button class="btn dng blk" onclick="abrirRechazo()">No me interesa</button></div></div>' : '';
+  return '<h2>Presupuesto</h2><div class="chips">' + S.versiones.map(v => '<button class="chip ' + (v.id === sel.id ? 'on' : '') + '" onclick="UI.ver=\'' + v.id + '\';render()">' + v.id + ' · ' + (v.tipo === 'estimacion' ? 'Estimación' : 'Propuesta') + (v.estado === 'vigente' ? ' ✓' : '') + '</button>').join('') + '</div>' +
+    '<div class="card"><div class="row"><div class="sp"><div class="lbl">' + sel.id + ' · ' + ffecha(sel.fecha) + '</div><div class="big">' + (est ? eur0(t * 0.88) + ' – ' + eur0(t * 1.12) : eur0(t)) + '</div><div class="muted">IVA incluido' + (est ? ' · estimación orientativa' : '') + '</div></div><span class="pill ' + (ac ? 'ok' : sel.estado === 'vigente' ? 'wip' : '') + '">' + (ac ? 'Aceptado' : sel.estado === 'vigente' ? 'Vigente' : 'Sustituido') + '</span></div>' +
+    (est ? '<div class="info" style="margin:12px 0 0">Es una primera estimación con lo que nos contaste. Tras la visita técnica tu reformista la ajustará con medidas reales.</div>' : '') + '<div class="row" style="margin-top:10px"><button class="btn sm" onclick="imprimirPres(\'' + sel.id + '\')">🖨 Imprimir / guardar PDF</button></div></div>' + acciones +
+    (ac ? '<div class="good">✓ Aceptaste este presupuesto el ' + ffecha(S.aceptacion.f) + ' (' + esc(S.aceptacion.nombre) + ').</div>' : '') +
+    (dif && (dif.anadidos.length + dif.quitados.length + dif.modificados.length) ? '<div class="card"><h3>Qué ha cambiado respecto a ' + S.versiones[idx - 1].id + '</h3>' + dif.anadidos.map(x => '<div class="ln" style="padding:6px 0"><span class="tag add">Nuevo</span><span class="sp"><b>' + esc(x.e.nombre) + '</b> · ' + esc(x.l.l) + '<div class="muted">' + esc(x.l.nota || '') + '</div></span><b>' + eur0(fin(subL(x.l))) + '</b></div>').join('') + dif.quitados.map(x => '<div class="ln" style="padding:6px 0"><span class="tag del">Quitado</span><span class="sp"><b>' + esc(x.e.nombre) + '</b> · ' + esc(x.l.l) + '<div class="muted">' + esc(x.motivo) + '</div></span><b>−' + eur0(fin(subL(x.l))) + '</b></div>').join('') + dif.modificados.map(x => '<div class="ln" style="padding:6px 0"><span class="tag mod">Modificado</span><span class="sp"><b>' + esc(x.e.nombre) + '</b> · ' + esc(x.l.l) + '<div class="muted">' + fnum(x.antes.cant) + ' → ' + fnum(x.l.cant) + ' ' + esc(x.l.u) + (x.l.nota ? ' · ' + esc(x.l.nota) : '') + '</div></span></div>').join('') + '</div>' : '') +
+    '<h3>Por estancias</h3>' + sel.est.map(e => '<details class="room-acc"><summary><b class="sp">' + esc(e.nombre) + ' <span class="muted">· ' + fnum(e.m2) + ' m²</span></b><b>' + eur0(totalEstF(e)) + '</b></summary>' + lineasHtml(e, dif) + '</details>').join('') +
+    '<div class="muted" style="margin-top:10px">Importes con IVA incluido. Cualquier trabajo adicional que surja durante la obra se te consultará antes y quedará recogido en una adenda que tú firmas.</div>';
+}
+
+function vVisita() {
+  const f = S.fase; const el = S.visita.elegida;
+  if (f === 'recibida') return '<h2>Visita técnica</h2><div class="card"><div style="font-size:40px">📅</div><b>Aún no hay visita propuesta</b><p class="muted">Cuando tu reformista revise tu solicitud te propondrá varios días. Te avisaremos por correo y WhatsApp.</p></div>';
+  if (f === 'visita_propuesta') return '<h2>Elige el día de la visita</h2><p class="muted" style="margin-bottom:12px">Dura aproximadamente una hora. Tu reformista medirá, hará fotos y revisará contigo estancia por estancia lo que quieres hacer.</p>' + S.visita.franjas.map((s, i) => '<button class="slot ' + (UI.slot === i ? 'on' : '') + '" onclick="UI.slot=' + i + ';render()" aria-pressed="' + (UI.slot === i) + '"><span style="font-size:24px">🗓️</span><span class="sp"><b style="text-transform:capitalize">' + fsemana(s.t) + '</b><div class="muted">' + esc(s.h) + '</div></span>' + (UI.slot === i ? '✓' : '') + '</button>').join('') +
+    '<div class="info">La visita técnica cuesta ' + eur0(S.visita.importe) + ' y <b>se descuenta íntegramente</b> del presupuesto si lo aceptas. Puedes cambiarla sin coste hasta 24 h antes.</div><button class="btn pri blk" ' + (UI.slot == null ? 'disabled' : '') + ' onclick="confirmarVisita()">Confirmar este día</button><button class="btn blk" style="margin-top:10px" onclick="abrirOtraFecha()">Ninguna me va bien</button>';
+  if (f === 'visita_confirmada') return '<h2>Visita confirmada</h2><div class="card" style="border:2px solid var(--ok)"><div class="lbl">Tu cita</div><div class="big" style="font-size:30px;text-transform:capitalize">' + fsemana(el.t) + '</div><div style="font-size:18px">' + esc(el.h) + '</div><div class="muted" style="margin:6px 0 12px">' + esc(S.cliente.direccion) + '</div><div class="row"><button class="btn sm" onclick="descargarIcs()">📆 Añadir al calendario</button><button class="btn sm" onclick="abrirReprogramar()">Cambiar el día</button></div></div>' +
+    '<div class="card"><h3>Prepara la visita</h3>' + ['Despeja el acceso a todas las estancias', 'Ten a mano las llaves de trasteros o accesos', 'Piensa qué acabados te gustan (suelos, alicatados…)', 'Si puedes, ten los planos o las facturas de instalaciones'].map((t, i) => '<label class="chk"><input type="checkbox" ' + (UI.previa[i] ? 'checked' : '') + ' onchange="UI.previa[' + i + ']=this.checked"> ' + t + '</label>').join('') + '</div>' +
+    '<div class="info">Cambiar el día es gratis hasta 24 h antes. Después se retiene el importe de la visita (' + eur0(S.visita.importe) + ').</div>';
+  return '<h2>Visita técnica</h2><div class="card"><div style="font-size:36px">✅</div><b>Visita realizada</b>' + (el ? '<div class="muted" style="text-transform:capitalize">' + fsemana(el.t) + '</div>' : '') + '<p class="muted" style="margin-top:6px">Tu presupuesto se actualizó tras la visita. La visita (' + eur0(S.visita.importe) + ') se descuenta como pago a cuenta.</p></div>';
+}
+
+function vObra() {
+  const o = S.obra;
+  if (!o.hitos.length) return '<h2>Mi obra</h2><div class="card"><div style="font-size:44px">🏗️</div><b>' + (S.fase === 'aceptada' ? 'Estamos preparando el inicio' : 'Tu obra aún no ha empezado') + '</b><p class="muted">' + (S.fase === 'aceptada' ? 'Tu reformista te confirmará la fecha de inicio. Aquí verás los hitos y las fotos del avance.' : 'Cuando aceptes el presupuesto y comience la obra, verás aquí cada hito y las fotos del avance.') + '</p></div>';
+  const pr = progresoObra(S); const fin_ = o.hitos[o.hitos.length - 1].previsto; const fotos = [...o.hitos.flatMap(h => h.fotos.map(f => ({ ...f, h:h.nombre }))), ...o.fotos].sort((a, b) => b.f - a.f);
+  const idxNow = o.hitos.findIndex(h => h.estado !== 'hecho');
+  return '<h2>Mi obra</h2><div class="card"><div class="row"><div class="sp"><div class="lbl">Avance</div><div class="big">' + pr + ' %</div></div><div style="text-align:right"><div class="lbl">Fin previsto</div><b>' + fdia(fin_) + '</b></div></div><div class="progress" style="margin-top:10px"><i style="width:' + pr + '%"></i></div><div class="muted" style="margin-top:6px">Inicio: ' + ffecha(o.inicio) + '</div></div>' +
+    '<h3>Hitos</h3><div class="card"><div class="tl">' + o.hitos.map((h, i) => '<div class="it ' + (h.estado === 'hecho' ? 'done' : i === idxNow ? 'now' : '') + '"><div class="row"><b class="sp">' + esc(h.nombre) + '</b><span class="pill ' + (h.estado === 'hecho' ? 'ok' : i === idxNow ? 'wip' : '') + '">' + (h.estado === 'hecho' ? 'Hecho' : i === idxNow ? 'En curso' : 'Pendiente') + '</span></div><div class="muted">' + (h.estado === 'hecho' ? 'Completado el ' + fdia(h.real) : 'Previsto: ' + fdia(h.previsto)) + '</div>' + (h.fotos.length ? '<div class="thumbs">' + h.fotos.map(f => '<button class="thumb" onclick="verFoto(\'' + f.id + '\')" aria-label="Ver foto: ' + esc(f.cap) + '"><img src="' + f.src + '" alt="' + esc(f.cap) + '"><em>' + esc(f.cap) + '</em></button>').join('') + '</div>' : '') + '</div>').join('') + '</div></div>' +
+    '<h3>Galería de la obra (' + fotos.length + ')</h3><div class="thumbs" style="margin-bottom:14px">' + (fotos.map(f => '<button class="thumb" onclick="verFoto(\'' + f.id + '\')" aria-label="Ver foto: ' + esc(f.cap) + '"><img src="' + f.src + '" alt="' + esc(f.cap) + '"><em>' + esc(f.cap) + '</em></button>').join('') || '<span class="muted">Aún no hay fotos.</span>') + '</div>' +
+    (['obra', 'aceptada'].includes(S.fase) ? '<div class="card"><h3>¿Quieres algo distinto?</h3><p class="muted" style="margin-bottom:10px">Pide un cambio o haz una consulta. Tu reformista lo valorará y te dirá el coste <b>antes</b> de hacer nada.</p><button class="btn pri blk" onclick="abrirPedirCambioObra()">＋ Pedir un cambio</button></div>' : '');
+}
+
+function vCambios() {
+  const o = S.obra; const tv = totalVigente(S); const pend = o.cambios.filter(c => c.estado === 'pendiente_cliente');
+  const card = c => '<div class="card" style="' + (c.estado === 'pendiente_cliente' ? 'border:2px solid var(--accent)' : '') + '"><div class="row"><b class="sp">' + esc(c.concepto) + '</b><span class="pill ' + ({ pendiente_cliente:'wip', aceptado:'new', en_desacuerdo:'bad', consolidado:'ok' }[c.estado]) + '">' + ({ pendiente_cliente:'Por responder', aceptado:'Aceptado', en_desacuerdo:'En revisión', consolidado:'Firmado' }[c.estado]) + '</span></div><div class="big" style="font-size:28px;margin:4px 0">' + (c.importe < 0 ? '−' : '+') + eur0(Math.abs(conIva(c.importe))) + '</div><div class="muted">' + esc(c.motivo) + ' · ' + ffecha(c.f) + (c.bloquea ? ' · <b style="color:var(--danger)">Necesario para continuar la obra</b>' : '') + '</div>' + (c.comentario ? '<div class="info" style="margin:8px 0 0">Tu comentario: ' + esc(c.comentario) + '</div>' : '') +
+    (c.estado === 'pendiente_cliente' ? '<div class="row" style="margin-top:12px"><button class="btn ok sp" onclick="aceptarCambio(\'' + c.id + '\')">✓ Estoy de acuerdo</button><button class="btn dng sp" onclick="abrirDesacuerdo(\'' + c.id + '\')">No estoy de acuerdo</button></div>' : '') + '</div>';
+  return '<h2>Cambios y adendas</h2>' + (S.aceptacion ? '<div class="card"><div class="kv"><span>Presupuesto aceptado</span><b>' + eur(tv.aceptada) + '</b></div><div class="kv"><span>+ Adendas firmadas</span><b>' + eur(r2(tv.firmado - tv.aceptada)) + '</b></div><div class="kv"><span>+ Cambios por confirmar</span><b>' + eur(tv.provisional) + '</b></div><div class="kv" style="border:none"><b>Total vigente</b><b style="font-size:20px">' + eur(tv.total) + '</b></div></div>' : '<div class="info">Aquí verás los cambios que surjan durante la obra. Nada se cobra sin que tú lo apruebes antes.</div>') +
+    (pend.length ? '<h3>Por responder</h3>' + pend.map(card).join('') : '') +
+    (o.adendas.length ? '<h3>Adendas</h3>' + o.adendas.map(a => '<div class="card" style="' + (a.estado === 'por_firmar' ? 'border:2px solid var(--accent)' : '') + '"><div class="row"><b class="sp">Adenda ' + a.id + '</b><span class="pill ' + (a.estado === 'firmada' ? 'ok' : 'wip') + '">' + (a.estado === 'firmada' ? 'Firmada' : 'Por firmar') + '</span></div><div class="muted" style="margin:4px 0">' + a.cambios.map(id => { const c = o.cambios.find(x => x.id === id); return c ? esc(c.concepto) : ''; }).join(' · ') + '</div><div class="big" style="font-size:28px">' + eur0(conIva(a.delta)) + '</div>' + (a.estado === 'por_firmar' ? '<button class="btn pri blk" style="margin-top:10px" onclick="abrirFirmaAdenda(\'' + a.id + '\')">✍️ Revisar y firmar</button>' : '<div class="muted">Firmada por ' + esc(a.firma.nombre) + ' el ' + ffecha(a.firma.f) + '</div><button class="btn sm" style="margin-top:8px" onclick="imprimirAdenda(\'' + a.id + '\')">🖨 Imprimir</button>') + '</div>').join('') : '') +
+    (o.solicitudes.length ? '<h3>Mis solicitudes</h3>' + o.solicitudes.map(s => '<div class="card"><div class="row"><span class="sp">' + esc(s.texto) + '</span><span class="pill ' + (s.estado === 'valorada' ? 'ok' : s.estado === 'rechazada' ? 'bad' : 'wip') + '">' + ({ abierta:'En valoración', valorada:'Valorada', rechazada:'No viable' }[s.estado]) + '</span></div><div class="muted">' + ffecha(s.f) + (s.respuesta ? ' · ' + esc(s.respuesta) : '') + '</div></div>').join('') : '') +
+    (o.cambios.filter(c => c.estado !== 'pendiente_cliente').length ? '<h3>Historial</h3>' + o.cambios.filter(c => c.estado !== 'pendiente_cliente').map(card).join('') : '') +
+    (!o.cambios.length && !o.adendas.length && !o.solicitudes.length ? '<div class="card" style="text-align:center"><div style="font-size:40px">🙌</div><b>Sin cambios por ahora</b><p class="muted">Si durante la obra aparece algo imprevisto, lo verás aquí.</p></div>' : '');
+}
+
+function vPagos() {
+  if (!S.aceptacion) return '<h2>Pagos</h2><div class="card"><div style="font-size:40px">💶</div><b>Todavía no hay pagos</b><p class="muted">Cuando aceptes el presupuesto verás aquí el plan de pagos: ' + S.plan.map(p => p.pct + ' % ' + p.label.toLowerCase()).join(' · ') + '.</p></div>' + (S.visita.estado === 'realizada' ? '' : '');
+  const tv = totalVigente(S); const pag = cobrado(S); const pl = planPagos(S); const pend = Math.max(0, r2(tv.total - pag));
+  return '<h2>Pagos</h2><div class="card"><div class="row"><div class="sp"><div class="lbl">Total vigente</div><div class="big">' + eur0(tv.total) + '</div></div><div style="text-align:right"><div class="lbl">Pendiente</div><b style="font-size:22px;color:' + (pend ? 'var(--danger)' : 'var(--ok)') + '">' + eur0(pend) + '</b></div></div><div class="progress" style="margin:10px 0 4px"><i style="width:' + Math.min(100, Math.round(pag / tv.total * 100)) + '%"></i></div><div class="muted">Pagado ' + eur(pag) + '</div></div>' +
+    '<h3>Plan de pagos</h3>' + pl.map(t => '<div class="card"><div class="row"><div class="sp"><b>' + esc(t.label) + '</b><div class="muted">' + t.pct + ' % · ' + eur(t.importe) + '</div></div><span class="pill ' + ({ pagado:'ok', debido:'wip', previsto:'' }[t.estado]) + '">' + ({ pagado:'Pagado', debido:'Toca pagar', previsto:'Previsto' }[t.estado]) + '</span></div>' + (t.estado === 'debido' ? '<div class="row" style="margin-top:10px"><button class="btn pri sp" onclick="abrirComoPagar(' + t.falta + ')">Cómo pagar ' + eur0(t.falta) + '</button></div>' : '') + '</div>').join('') +
+    (tv.firmado + tv.provisional > tv.aceptada ? '<div class="info">Además del plan, tienes ' + eur(r2(tv.total - tv.aceptada)) + ' de adendas y cambios que se facturarán cuando los apruebes.</div>' : '') +
+    '<h3>Movimientos</h3><div class="card">' + (S.cobros.length ? S.cobros.map(c => '<div class="kv"><span>' + fdia(c.f) + ' · ' + esc(c.concepto) + '<div class="muted">' + esc(c.medio) + '</div></span><b>' + eur(c.importe) + '</b></div>').join('') : '<div class="muted">Sin pagos registrados.</div>') + '</div>' +
+    '<div class="row"><button class="btn sp" onclick="abrirAvisoPago()">He hecho un pago</button><button class="btn sp" onclick="imprimirResumen()">🖨 Resumen económico</button></div><div class="muted" style="margin-top:10px">Este resumen es informativo y no sustituye a la factura oficial.</div>';
+}
+
+function vEntrega() {
+  const o = S.obra; const f = S.fase;
+  if (f !== 'remates' && f !== 'cerrada') return '<h2>Entrega y conformidad</h2><div class="card" style="text-align:center"><div style="font-size:44px">🔑</div><b>Disponible al terminar la obra</b><p class="muted">Cuando tu reformista dé la obra por terminada podrás revisar el resultado, indicar los remates y firmar tu conformidad desde aquí.</p></div>';
+  const ci = o.cierre;
+  if (f === 'cerrada') return '<h2>Obra cerrada</h2><div class="good" style="font-size:16px">✓ Diste tu conformidad el ' + ffecha(ci.conformidad.f) + '. ¡Gracias por confiar en nosotros!</div><div class="card"><h3>Tu acta de entrega</h3><p class="muted" style="margin-bottom:10px">Documento firmado con el resultado de la obra, el importe final y el inicio de la garantía.</p><div class="row"><button class="btn pri sp" onclick="imprimirActa()">🖨 Ver / imprimir acta</button></div></div><div class="card"><h3>Garantía</h3><p>' + esc(GARANTIA) + '</p><div class="muted" style="margin-top:6px">Desde el ' + ffecha(ci.conformidad.f) + '. Para cualquier incidencia, escríbenos desde Mensajes.</div></div>' +
+    '<div class="card"><h3>¿Qué tal ha ido?</h3>' + (S.valoracion ? '<div class="stars" aria-label="Tu valoración">' + [1, 2, 3, 4, 5].map(i => '<span style="font-size:32px;color:' + (i <= S.valoracion.n ? '#e6a100' : 'var(--warm)') + '">★</span>').join('') + '</div><p class="muted">Gracias por tu valoración' + (S.valoracion.t ? ': «' + esc(S.valoracion.t) + '»' : '') + '.</p>' : '<div class="stars" role="radiogroup" aria-label="Valoración">' + [1, 2, 3, 4, 5].map(i => '<button class="' + (i <= UI.estrellas ? 'on' : '') + '" role="radio" aria-checked="' + (i === UI.estrellas) + '" aria-label="' + i + ' estrellas" onclick="UI.estrellas=' + i + ';render()">★</button>').join('') + '</div><label class="field"><span>Comentario (opcional)</span><textarea id="val-t" placeholder="Cuéntanos tu experiencia"></textarea></label><button class="btn pri blk" ' + (UI.estrellas ? '' : 'disabled') + ' onclick="enviarValoracion()">Enviar valoración</button>') + '</div>';
+  const abiertos = o.remates.filter(r => r.estado === 'abierto'); const items = ci.items; const okN = items.filter(i => i.estado === 'ok').length; const listo = okN === items.length && !abiertos.length;
+  return '<h2>Revisión final y conformidad</h2><div class="info">Tu obra está terminada. Recórrela con calma, indica lo que no te convenza y, cuando todo esté bien, firma tu conformidad. Tu reformista resolverá cualquier remate.</div>' +
+    '<div class="card"><div class="row"><h3 class="sp" style="margin:0">1 · Remates (' + abiertos.length + ' abiertos)</h3><button class="btn sm" onclick="abrirRemate()">＋ Añadir</button></div>' + (o.remates.length ? o.remates.map(r => '<div class="kv"><span>' + (r.estado === 'resuelto' ? '☑' : '☐') + ' ' + esc(r.texto) + (r.foto ? ' 📷' : '') + '<div class="muted">' + (r.estado === 'resuelto' ? 'Resuelto por tu reformista' : 'Pendiente de resolver') + '</div></span><span class="pill ' + (r.estado === 'resuelto' ? 'ok' : 'wip') + '">' + (r.estado === 'resuelto' ? 'Resuelto' : 'Abierto') + '</span></div>').join('') : '<div class="muted" style="margin-top:6px">Sin remates. Si ves algo que arreglar, añádelo aquí con una foto.</div>') + '</div>' +
+    '<div class="card"><div class="row" style="margin-bottom:6px"><h3 class="sp" style="margin:0">2 · Checklist de conformidad</h3><span class="muted">' + okN + '/' + items.length + '</span></div><div class="progress" style="margin-bottom:10px"><i style="width:' + Math.round(okN / items.length * 100) + '%"></i></div>' +
+    items.map(i => '<div class="kv" style="align-items:center;flex-wrap:wrap"><span class="sp" style="min-width:220px">' + (i.estado === 'ok' ? '✅ ' : i.estado === 'problema' ? '⚠️ ' : '⬜ ') + esc(i.label) + (i.nota ? '<div class="muted">' + esc(i.nota) + '</div>' : '') + '</span><span class="row"><button class="btn sm ' + (i.estado === 'ok' ? 'ok' : '') + '" onclick="itemOk(\'' + i.id + '\')">Conforme</button><button class="btn sm ' + (i.estado === 'problema' ? 'dng' : '') + '" onclick="abrirProblema(\'' + i.id + '\')">Hay un problema</button></span></div>').join('') + '</div>' +
+    '<div class="card" style="' + (listo ? 'border:2px solid var(--ok)' : '') + '"><h3>3 · Firma tu conformidad</h3>' + (listo ? '<p class="muted" style="margin-bottom:10px">Todo revisado y sin remates abiertos. Al firmar das por finalizada la obra.</p><button class="btn ok blk" onclick="abrirFirmaFinal()">✍️ Firmar conformidad</button>' : '<div class="warn" style="margin:0">Para firmar necesitas: ' + (okN < items.length ? 'marcar todo el checklist como «Conforme»' : '') + (okN < items.length && abiertos.length ? ' y ' : '') + (abiertos.length ? 'que tu reformista resuelva los ' + abiertos.length + ' remate(s) abierto(s)' : '') + '.</div>') + '</div>';
+}
+const GARANTIA = 'Garantía de 2 años sobre la mano de obra y la que otorgue cada fabricante sobre los materiales instalados.';
+
+function vDocs() {
+  const docs = [];
+  S.versiones.forEach(v => docs.push([v.tipo === 'estimacion' ? 'Presupuesto estimado ' + v.id : 'Presupuesto ' + v.id + (S.aceptacion && S.aceptacion.versionId === v.id ? ' (aceptado)' : ''), ffecha(v.fecha), "imprimirPres('" + v.id + "')"]));
+  S.obra.adendas.filter(a => a.estado === 'firmada').forEach(a => docs.push(['Adenda ' + a.id + ' (firmada)', ffecha(a.firma.f), "imprimirAdenda('" + a.id + "')"]));
+  if (S.aceptacion) docs.push(['Resumen económico', 'Hoy', 'imprimirResumen()']);
+  if (S.fase === 'cerrada') docs.push(['Acta de entrega firmada', ffecha(S.obra.cierre.conformidad.f), 'imprimirActa()']);
+  return '<h2>Documentos</h2><div class="card">' + docs.map(d => '<div class="kv" style="align-items:center"><span class="sp">📄 ' + esc(d[0]) + '<div class="muted">' + d[1] + '</div></span><button class="btn sm" onclick="' + d[2] + '">Ver / imprimir</button></div>').join('') + '</div>' +
+    '<div class="card"><h3>Tu enlace privado</h3><p class="muted" style="margin-bottom:10px">Es personal y sirve durante toda tu reforma. Guárdalo en favoritos o búscalo en el correo de bienvenida.</p><div class="row"><button class="btn sm" onclick="abrirEnlace()">🔗 Ver y copiar mi enlace</button><a class="btn sm" href="#/correo">✉ Ver correo de bienvenida</a></div></div>';
+}
+
+function vMensajes() {
+  const chat = S.chat.map(m => '<div class="bubble ' + (m.autor === 'cliente' ? 'yo' : 'el') + '">' + esc(m.t) + '<small>' + (m.autor === 'cliente' ? 'Tú' : esc(S.reformista.contacto)) + ' · ' + fdia(m.f) + ' ' + fhora(m.f) + '</small></div>').join('');
+  return '<h2>Mensajes</h2><div class="card"><h3>Conversación con ' + esc(S.reformista.contacto) + '</h3><div style="max-height:360px;overflow:auto;margin-bottom:10px" id="chat">' + (chat || '<div class="muted">Escribe aquí tus dudas. Normalmente respondemos en menos de 24 h.</div>') + '</div><div class="row" style="flex-wrap:nowrap"><textarea id="chat-t" aria-label="Tu mensaje" style="min-height:52px;height:52px" placeholder="Escribe tu mensaje…"></textarea><button class="btn pri" onclick="enviarChat()" aria-label="Enviar mensaje">Enviar</button></div></div>' +
+    '<h3>Avisos que te hemos enviado</h3><div class="muted" style="margin-bottom:8px">Copia en el panel de lo que recibes por correo y WhatsApp.</div>' + S.avisos.slice().reverse().map(a => '<button class="card" style="width:100%;text-align:left;display:block;' + (a.leido ? '' : 'border:2px solid var(--accent)') + '" onclick="verAviso(\'' + a.id + '\')"><div class="row"><b class="sp">' + esc(a.asunto) + '</b>' + (a.leido ? '' : '<span class="pill wip">Nuevo</span>') + '</div><div class="muted">' + ffecha(a.f) + ' · correo y WhatsApp</div></button>').join('');
+}
+
+// ═══════════════════════════════════════════════════════
+// 7. DOCUMENTOS IMPRIMIBLES
+// ═══════════════════════════════════════════════════════
+function cabDoc(t) { return '<div style="font-family:Georgia,serif;font-size:26px;color:#8a5c38">' + esc(S.reformista.empresa) + '</div><h2 style="font-family:Georgia,serif;margin:6px 0">' + t + '</h2><div style="font-size:12px;color:#555;margin-bottom:10px">' + esc(S.cliente.nombre) + ' · ' + esc(S.cliente.direccion) + ' · ' + S.ref + '</div>'; }
+function imprimir(html) { $('#print-area').innerHTML = html; setTimeout(() => window.print(), 50); }
+function imprimirPres(id) {
+  const v = S.versiones.find(x => x.id === id); const est = v.tipo === 'estimacion';
+  imprimir(cabDoc((est ? 'Presupuesto estimado ' : 'Presupuesto ') + v.id) + v.est.map(e => '<h3 style="font-family:Georgia,serif;margin:12px 0 4px">' + esc(e.nombre) + ' · ' + eur0(totalEstF(e)) + '</h3><table style="width:100%;border-collapse:collapse;font-size:13px">' + e.lineas.map(l => '<tr><td style="padding:3px 0;border-bottom:1px solid #ddd">' + esc(l.l) + ' <span style="color:#777">(' + fnum(l.cant) + ' ' + esc(l.u) + ')</span></td><td style="text-align:right;border-bottom:1px solid #ddd">' + eur(fin(subL(l))) + '</td></tr>').join('') + '</table>').join('') + '<h2 style="font-family:Georgia,serif;margin-top:16px">Total ' + (est ? 'estimado ' : '') + eur(totalV(v)) + ' (IVA incluido)</h2><p style="font-size:12px;color:#555">' + (est ? 'Estimación orientativa sujeta a la visita técnica.' : 'Presupuesto vigente. Los trabajos adicionales se acordarán por escrito mediante adenda.') + '</p>');
+}
+function imprimirAdenda(id) { const a = S.obra.adendas.find(x => x.id === id); imprimir(cabDoc('Adenda ' + a.id) + a.cambios.map(cid => { const c = S.obra.cambios.find(x => x.id === cid); return '<p style="font-size:14px;margin:4px 0">• ' + esc(c.concepto) + ': <b>' + eur(conIva(c.importe)) + '</b></p>'; }).join('') + '<h3 style="font-family:Georgia,serif">Importe de la adenda: ' + eur(conIva(a.delta)) + ' (IVA incl.)</h3>' + (a.firma ? '<p style="margin-top:18px">Firmada por <b>' + esc(a.firma.nombre) + '</b> el ' + ffecha(a.firma.f) + '.</p>' : '')); }
+function imprimirResumen() { const tv = totalVigente(S); imprimir(cabDoc('Resumen económico') + '<table style="width:100%;font-size:14px;border-collapse:collapse">' + [['Presupuesto aceptado', tv.aceptada], ['Adendas firmadas', r2(tv.firmado - tv.aceptada)], ['Cambios por confirmar', tv.provisional], ['Total vigente', tv.total], ['Pagado', cobrado(S)], ['Pendiente', Math.max(0, r2(tv.total - cobrado(S)))]].map(r => '<tr><td style="padding:5px 0;border-bottom:1px solid #ddd">' + r[0] + '</td><td style="text-align:right;border-bottom:1px solid #ddd">' + eur(r[1]) + '</td></tr>').join('') + '</table><p style="font-size:12px;color:#a00;margin-top:12px"><b>Documento informativo: no es una factura.</b></p>'); }
+function imprimirActa() {
+  const ci = S.obra.cierre; const tv = totalVigente(S);
+  imprimir(cabDoc('Acta de entrega de obra') + '<table style="width:100%;font-size:14px;border-collapse:collapse">' + [['Inicio de obra', ffecha(S.obra.inicio)], ['Terminada el', ffecha(ci.terminadaAt)], ['Conformidad del cliente', ffecha(ci.conformidad.f)], ['Importe final (IVA incl.)', eur(tv.total)], ['Pagado', eur(cobrado(S))], ['Pendiente', eur(Math.max(0, r2(tv.total - cobrado(S))))]].map(r => '<tr><td style="padding:5px 0;border-bottom:1px solid #ddd">' + r[0] + '</td><td style="text-align:right;border-bottom:1px solid #ddd">' + r[1] + '</td></tr>').join('') + '</table><h3 style="font-family:Georgia,serif;margin-top:14px">Checklist de conformidad</h3>' + ci.items.map(i => '<div style="font-size:13px">☑ ' + esc(i.label) + '</div>').join('') + '<h3 style="font-family:Georgia,serif;margin-top:14px">Garantía</h3><p style="font-size:13px">' + esc(GARANTIA) + ' Inicio: ' + ffecha(ci.conformidad.f) + '.</p><div style="display:flex;justify-content:space-between;margin-top:30px"><div style="width:45%;border-top:1px solid #000;padding-top:4px;font-size:12px">Por el reformista · ' + esc(S.reformista.contacto) + '</div><div style="width:45%;font-size:12px"><img src="' + ci.conformidad.firma + '" alt="Firma del cliente" style="height:70px;display:block"><div style="border-top:1px solid #000;padding-top:4px">' + esc(ci.conformidad.nombre) + '</div></div></div>');
+}
+
+// ═══════════════════════════════════════════════════════
+// 8. HOJAS, AVISOS Y VISOR
+// ═══════════════════════════════════════════════════════
+function toast(m) { const t = $('#toast'); t.textContent = m; t.classList.add('on'); clearTimeout(toastT); toastT = setTimeout(() => t.classList.remove('on'), 3200); }
+function sheet(html) { $('#sheet').innerHTML = '<div class="grab"></div>' + html; $('#ov').classList.add('on'); }
+function cerrarSheet() { $('#ov').classList.remove('on'); $('#sheet').innerHTML = ''; }
+$('#ov').addEventListener('click', e => { if (e.target.id === 'ov') cerrarSheet(); });
+document.addEventListener('keydown', e => { if (e.key === 'Escape') { if ($('#viewer').classList.contains('on')) cerrarVisor(); else cerrarSheet(); } });
+const head = (t) => '<div class="row" style="margin-bottom:10px"><h3 class="sp" style="margin:0">' + t + '</h3><button class="btn sm" onclick="cerrarSheet()">Cerrar</button></div>';
+function allFotos() { return [...(S.datos.find(d => d.id === 'fotos') || { valor:[] }).valor, ...S.obra.hitos.flatMap(h => h.fotos), ...S.obra.fotos]; }
+function verFoto(id) { const f = allFotos().find(x => x.id === id); if (!f) return; $('#viewer').innerHTML = '<img src="' + f.src + '" alt="' + esc(f.cap) + '"><div class="vb"><span class="sp">' + esc(f.cap) + '</span><button class="btn sm" onclick="cerrarVisor()">Cerrar</button></div>'; $('#viewer').classList.add('on'); }
+function cerrarVisor() { $('#viewer').classList.remove('on'); $('#viewer').innerHTML = ''; }
+function abrirMas() { sheet(head('Más') + ['visita', 'pagos', 'entrega', 'docs', 'mensajes'].map(id => { const n = NAV.find(x => x[0] === id); const b = badgeSec(id); return '<button class="btn blk" style="justify-content:flex-start;margin-bottom:8px" onclick="cerrarSheet();ir(\'' + id + '\')"><span style="font-size:22px">' + n[1] + '</span><span class="sp" style="text-align:left">' + n[2] + '</span>' + (b ? '<span class="pill wip">pendiente</span>' : '') + '</button>'; }).join('')); }
+function abrirEnlace() { const l = linkPanel(S); sheet(head('Tu enlace privado') + '<p class="muted" style="margin-bottom:10px">Con este enlace entras a tu panel durante toda la reforma. Es personal: no lo compartas.</p><input id="lnk" readonly value="' + esc(l) + '" aria-label="Enlace privado" onclick="this.select()"><div class="row" style="margin-top:10px"><button class="btn pri sp" onclick="copiar(\'lnk\')">Copiar enlace</button><button class="btn sp" onclick="cerrarSheet();toast(\'Enlace reenviado a ' + esc(S.cliente.email) + ' (simulado)\')">Reenviármelo al correo</button></div>'); }
+function copiar(id) { const el = $('#' + id); el.select(); try { navigator.clipboard.writeText(el.value).then(() => toast('Copiado')); } catch (e) { document.execCommand('copy'); toast('Copiado'); } }
+function verAviso(id) { const a = S.avisos.find(x => x.id === id); a.leido = true; guardar(); sheet(head('Aviso recibido') + '<div class="chips"><button class="chip ' + (UI.canal === 'email' ? 'on' : '') + '" onclick="UI.canal=\'email\';verAviso(\'' + id + '\')">✉️ Correo</button><button class="chip ' + (UI.canal === 'wa' ? 'on' : '') + '" onclick="UI.canal=\'wa\';verAviso(\'' + id + '\')">💬 WhatsApp</button></div>' + vAviso(a)); const d = $('#sheet .cta'); if (d) d.setAttribute('onclick', 'cerrarSheet()'); render(); sheetKeep(id); }
+function sheetKeep() {}
+
+// ═══════════════════════════════════════════════════════
+// 9. ACCIONES DEL CLIENTE
+// ═══════════════════════════════════════════════════════
+function enviarSolicitud() { S = nuevoCaso(); UI.ver = null; ev('Solicitud de presupuesto enviada desde la web', 'cliente'); ev('La solicitud entra en el panel de tu reformista', 'sistema'); avisoPrimero(); guardar(); const h = '#/correo'; if (location.hash !== h) location.hash = h; render(); }
+function reiniciar() { try { localStorage.removeItem(LS); } catch (e) {} S = null; UI.ver = null; UI.slot = null; location.hash = '#/'; render(); }
+function comprimir(file) { return new Promise((res, rej) => { const u = URL.createObjectURL(file), im = new Image(); im.onload = () => { const k = Math.min(1, 1000 / Math.max(im.naturalWidth, im.naturalHeight)); const c = document.createElement('canvas'); c.width = Math.round(im.naturalWidth * k); c.height = Math.round(im.naturalHeight * k); c.getContext('2d').drawImage(im, 0, 0, c.width, c.height); URL.revokeObjectURL(u); res(c.toDataURL('image/jpeg', 0.65)); }; im.onerror = () => { URL.revokeObjectURL(u); rej(); }; im.src = u; }); }
+
+function abrirDatos() {
+  sheet(head('Completa tus datos') + '<p class="muted" style="margin-bottom:12px">Con esto afinamos mejor tu presupuesto. Puedes guardar y volver cuando quieras.</p>' + S.datos.map(d => d.tipo === 'fotos' ? '<div class="field"><span>' + esc(d.label) + '</span><label class="btn blk" style="position:relative">📷 Añadir fotos<input type="file" accept="image/*" multiple style="position:absolute;opacity:0;width:1px;height:1px" aria-label="Añadir fotos" onchange="datoFotos(this)"></label><div class="thumbs">' + d.valor.map(f => '<div class="thumb"><img src="' + f.src + '" alt="Foto"></div>').join('') + '</div></div>' :
+    '<label class="field"><span>' + esc(d.label) + '</span>' + (d.tipo === 'select' ? '<select id="d-' + d.id + '"><option value="">— elige —</option>' + d.opts.map(o => '<option' + (d.valor === o ? ' selected' : '') + '>' + o + '</option>').join('') + '</select>' : '<input id="d-' + d.id + '" type="' + d.tipo + '" value="' + esc(d.valor) + '" placeholder="' + esc(d.ph || '') + '">') + '</label>').join('') + '<button class="btn pri blk" onclick="guardarDatos()">Guardar mis datos</button>');
+}
+function leerDatos() { S.datos.forEach(d => { if (d.tipo !== 'fotos') { const el = $('#d-' + d.id); if (el) d.valor = el.value.trim(); } }); }
+async function datoFotos(input) { leerDatos(); const d = S.datos.find(x => x.id === 'fotos'); for (const f of [...input.files]) { try { d.valor.push({ id:uid('f'), src:await comprimir(f), cap:'Foto del estado actual', f:ahora(S) }); } catch (e) { toast('No se pudo leer una foto'); } } input.value = ''; guardar(); abrirDatos(); }
+function guardarDatos() {
+  leerDatos(); const ok = S.datos.every(d => d.tipo === 'fotos' ? d.valor.length : d.valor);
+  ev(ok ? 'Has completado todos tus datos' : 'Has actualizado tus datos', 'cliente'); guardar(); cerrarSheet(); render();
+  toast(ok ? 'Datos completos. ¡Gracias! Tu reformista ya puede afinar el presupuesto.' : 'Datos guardados. Aún faltan algunos.');
+}
+function confirmarVisita() { if (UI.slot == null) return; S.visita.elegida = S.visita.franjas[UI.slot]; S.visita.estado = 'confirmada'; S.fase = 'visita_confirmada'; UI.slot = null; ev('Has confirmado la visita técnica: ' + fsemana(S.visita.elegida.t) + ', ' + S.visita.elegida.h, 'cliente'); avisar('visita_ok', 'Visita técnica confirmada', ['Tu visita está confirmada para el ' + fsemana(S.visita.elegida.t) + ' (' + S.visita.elegida.h + '). Te recordaremos el día antes.'], 'Visita confirmada: ' + fsemana(S.visita.elegida.t) + ', ' + S.visita.elegida.h + '. ¡Hasta entonces!', { sec:'visita' }); guardar(); render(); toast('Visita confirmada. Se ha avisado a tu reformista.'); }
+function abrirOtraFecha() { sheet(head('Proponer otro día') + '<label class="field"><span>¿Qué días y horas te vienen mejor?</span><textarea id="of-t" placeholder="Ej.: martes o jueves por la tarde"></textarea></label><button class="btn pri blk" onclick="enviarOtraFecha()">Enviar a mi reformista</button>'); }
+function enviarOtraFecha() { const t = $('#of-t').value.trim(); if (!t) { toast('Escribe tu disponibilidad'); return; } S.chat.push({ f:ahora(S), autor:'cliente', t:'Ninguna de las fechas me va bien. Me vendría mejor: ' + t }); ev('Has pedido otras fechas para la visita', 'cliente'); guardar(); cerrarSheet(); toast('Enviado. Tu reformista te propondrá nuevas fechas.'); render(); }
+function abrirReprogramar() { const otros = S.visita.franjas.filter(s => s.t !== S.visita.elegida.t); sheet(head('Cambiar el día de la visita') + '<div class="info">Cambiar es gratis hasta 24 h antes de la cita.</div>' + (otros.length ? otros.map((s, i) => '<button class="slot" onclick="reprogramar(' + S.visita.franjas.indexOf(s) + ')"><span style="font-size:24px">🗓️</span><span class="sp"><b style="text-transform:capitalize">' + fsemana(s.t) + '</b><div class="muted">' + esc(s.h) + '</div></span></button>').join('') : '<p class="muted">No hay más huecos propuestos. Escribe a tu reformista.</p>')); }
+function reprogramar(i) { S.visita.elegida = S.visita.franjas[i]; ev('Has cambiado la visita a ' + fsemana(S.visita.elegida.t), 'cliente'); guardar(); cerrarSheet(); render(); toast('Visita cambiada'); }
+function descargarIcs() { const e = S.visita.elegida; const d = new Date(e.t); const p = n => String(n).padStart(2, '0'); const dt = d.getFullYear() + p(d.getMonth() + 1) + p(d.getDate()); const hi = e.h.slice(0, 5).replace(':', ''), hf = e.h.slice(-5).replace(':', '');
+  const ics = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'BEGIN:VEVENT', 'UID:' + S.ref + '@panel', 'SUMMARY:Visita técnica · ' + S.reformista.empresa, 'DTSTART:' + dt + 'T' + hi + '00', 'DTEND:' + dt + 'T' + hf + '00', 'LOCATION:' + S.cliente.direccion, 'END:VEVENT', 'END:VCALENDAR'].join('\r\n');
+  const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([ics], { type:'text/calendar' })); a.download = 'visita-tecnica.ics'; document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 500); toast('Evento descargado'); }
+
+const CODIGO = '482913';
+function abrirAceptar() { const v = vigente(S); sheet(head('Aceptar el presupuesto ' + v.id) + '<div class="card" style="text-align:center"><div class="lbl">Importe total</div><div class="big">' + eur(totalV(v)) + '</div><div class="muted">IVA incluido</div></div>' +
+  '<label class="chk"><input type="checkbox" id="ac-1" onchange="acCheck()"> He revisado el presupuesto estancia por estancia.</label><label class="chk"><input type="checkbox" id="ac-2" onchange="acCheck()"> Entiendo que cualquier cambio durante la obra se me consultará y se recogerá en una adenda que yo firmo.</label>' +
+  '<label class="field"><span>Tu nombre completo</span><input id="ac-n" value="' + esc(S.cliente.nombre) + '" oninput="acCheck()"></label><label class="field"><span>Código recibido por SMS (demo: ' + CODIGO + ')</span><input id="ac-c" inputmode="numeric" maxlength="6" placeholder="6 dígitos" oninput="acCheck()"></label><button class="btn ok blk" id="ac-b" disabled onclick="aceptarOk()">✓ Aceptar y firmar</button>'); }
+function acCheck() { $('#ac-b').disabled = !($('#ac-1').checked && $('#ac-2').checked && $('#ac-n').value.trim().length > 3 && $('#ac-c').value.trim() === CODIGO); }
+function aceptarInterno(nombre) {
+  const v = vigente(S); S.aceptacion = { versionId:v.id, total:totalV(v), f:ahora(S), nombre }; v.estado = 'aceptada'; S.fase = 'aceptada'; ev('Presupuesto ' + v.id + ' aceptado (' + eur0(totalV(v)) + ')', 'cliente');
+  const pl = planPagos(S); avisar('aceptado', '¡Gracias! Presupuesto aceptado · ' + S.ref, ['Hemos recibido tu aceptación del presupuesto ' + v.id + ' por ' + eur(totalV(v)) + '.', 'Plan de pagos: ' + pl.map(t => t.pct + ' % ' + t.label.toLowerCase() + ' (' + eur0(t.importe) + ')').join(' · ') + '. Tu visita técnica (' + eur0(S.visita.importe) + ') ya está descontada como pago a cuenta.', 'En breve te confirmaremos la fecha de inicio de obra.'], 'Presupuesto aceptado ✔. Te confirmo pronto la fecha de inicio. Aquí tienes tu panel:', { sec:'pagos' });
+}
+function aceptarOk() { aceptarInterno($('#ac-n').value.trim()); guardar(); cerrarSheet(); ir('inicio'); render(); toast('¡Presupuesto aceptado! Gracias por tu confianza.'); }
+function abrirPedirCambios() { sheet(head('Pedir cambios al presupuesto') + '<label class="field"><span>¿Qué te gustaría cambiar?</span><textarea id="pc-t" placeholder="Ej.: prefiero porcelánico en la cocina y quitar el radiador del salón"></textarea></label><button class="btn pri blk" onclick="enviarPedirCambios()">Enviar a mi reformista</button>'); }
+function enviarPedirCambios() { const t = $('#pc-t').value.trim(); if (!t) { toast('Cuéntanos qué quieres cambiar'); return; } S.chat.push({ f:ahora(S), autor:'cliente', t:'Quiero pedir cambios en el presupuesto: ' + t }); ev('Has pedido cambios en el presupuesto', 'cliente'); guardar(); cerrarSheet(); toast('Enviado. Recibirás una nueva versión del presupuesto.'); render(); }
+function abrirRechazo() { sheet(head('No me interesa') + '<p class="muted" style="margin-bottom:10px">Lamentamos que no encaje. ¿Nos cuentas el motivo? Nos ayuda a mejorar.</p>' + ['Lo he encontrado más barato', 'Voy a esperar más adelante', 'He elegido a otro profesional', 'Otro motivo'].map((m, i) => '<label class="chk"><input type="radio" name="rz" value="' + m + '" ' + (i === 0 ? 'checked' : '') + '> ' + m + '</label>').join('') + '<button class="btn dng blk" style="margin-top:10px" onclick="rechazoOk()">Confirmar</button>'); }
+function rechazoOk() { S.rechazo = { motivo:document.querySelector('input[name=rz]:checked').value, f:ahora(S) }; ev('Has indicado que no te interesa el presupuesto', 'cliente'); guardar(); cerrarSheet(); render(); toast('Entendido. Si cambias de idea, escríbenos.'); }
+
+function abrirPedirCambioObra() { sheet(head('Pedir un cambio') + '<p class="muted" style="margin-bottom:10px">Tu reformista valorará el cambio y te dirá el coste antes de hacer nada.</p><label class="field"><span>¿Qué quieres cambiar o añadir?</span><textarea id="po-t" placeholder="Ej.: me gustaría un enchufe más en la cocina"></textarea></label><button class="btn pri blk" onclick="enviarCambioObra()">Enviar petición</button>'); }
+function enviarCambioObra() { const t = $('#po-t').value.trim(); if (!t) { toast('Describe el cambio'); return; } S.obra.solicitudes.push({ id:uid('s'), texto:t, estado:'abierta', f:ahora(S) }); ev('Has pedido un cambio: ' + t, 'cliente'); guardar(); cerrarSheet(); toast('Petición enviada. Tu reformista te dirá el coste.'); ir('cambios'); render(); }
+function aceptarCambio(id) { const c = S.obra.cambios.find(x => x.id === id); c.estado = 'aceptado'; ev('Has aceptado el cambio «' + c.concepto + '»', 'cliente'); guardar(); render(); toast('Cambio aceptado. Se incluirá en la próxima adenda.'); }
+function abrirDesacuerdo(id) { sheet(head('No estoy de acuerdo') + '<p class="muted" style="margin-bottom:10px">No se hará nada sin tu visto bueno. Cuéntanos qué te preocupa.</p><label class="field"><span>Tu comentario</span><textarea id="ds-t" placeholder="Ej.: me parece caro / quiero ver otra opción"></textarea></label><button class="btn dng blk" onclick="desacuerdoOk(\'' + id + '\')">Enviar</button>'); }
+function desacuerdoOk(id) { const c = S.obra.cambios.find(x => x.id === id); c.estado = 'en_desacuerdo'; c.comentario = $('#ds-t').value.trim(); ev('No estás de acuerdo con el cambio «' + c.concepto + '»', 'cliente'); guardar(); cerrarSheet(); render(); toast('Tu reformista se pondrá en contacto contigo.'); }
+function abrirFirmaAdenda(id) { const a = S.obra.adendas.find(x => x.id === id); sheet(head('Firmar la adenda ' + a.id) + a.cambios.map(cid => { const c = S.obra.cambios.find(x => x.id === cid); return '<div class="kv"><span>' + esc(c.concepto) + '</span><b>' + eur(conIva(c.importe)) + '</b></div>'; }).join('') + '<div class="kv" style="border:none"><b>Total adenda</b><b>' + eur(conIva(a.delta)) + '</b></div><label class="chk"><input type="checkbox" id="fa-c" onchange="faCheck()"> Acepto estos trabajos y su importe.</label><label class="field"><span>Tu nombre completo</span><input id="fa-n" value="' + esc(S.cliente.nombre) + '" oninput="faCheck()"></label><button class="btn ok blk" id="fa-b" disabled onclick="firmarAdendaOk(\'' + id + '\')">✍️ Firmar adenda</button>'); }
+function faCheck() { $('#fa-b').disabled = !($('#fa-c').checked && $('#fa-n').value.trim().length > 3); }
+function firmarAdendaOk(id) { const a = S.obra.adendas.find(x => x.id === id); a.estado = 'firmada'; a.firma = { nombre:$('#fa-n').value.trim(), f:ahora(S) }; a.cambios.forEach(cid => { S.obra.cambios.find(x => x.id === cid).estado = 'consolidado'; }); ev('Has firmado la adenda ' + a.id + ' (' + eur0(conIva(a.delta)) + ')', 'cliente'); guardar(); cerrarSheet(); render(); toast('Adenda firmada. Quedará reflejada en tu total.'); }
+function abrirComoPagar(f) { sheet(head('Cómo pagar') + '<div class="card" style="text-align:center"><div class="lbl">Importe a pagar</div><div class="big">' + eur(f) + '</div></div><div class="kv"><span>Titular</span><b>' + esc(S.reformista.empresa) + '</b></div><div class="kv"><span>IBAN</span><b id="ib">' + esc(S.reformista.iban) + '</b></div><div class="kv"><span>Concepto</span><b>' + S.ref + ' ' + esc(S.cliente.nombre.split(' ')[0]) + '</b></div><div class="muted" style="margin:8px 0 12px">También puedes pagar por Bizum o en efectivo acordándolo con tu reformista.</div><button class="btn blk" onclick="navigator.clipboard&&navigator.clipboard.writeText(\'' + esc(S.reformista.iban) + '\');toast(\'IBAN copiado\')">Copiar IBAN</button><button class="btn pri blk" style="margin-top:10px" onclick="abrirAvisoPago(' + f + ')">Ya he pagado: avisar</button>'); }
+function abrirAvisoPago(f) { sheet(head('Avisar de un pago') + '<label class="field"><span>Importe pagado (€)</span><input id="ap-i" inputmode="decimal" value="' + (f || '') + '"></label><label class="field"><span>Medio</span><select id="ap-m"><option>Transferencia</option><option>Bizum</option><option>Efectivo</option></select></label><label class="field"><span>Fecha</span><input id="ap-f" type="date" value="' + new Date().toISOString().slice(0, 10) + '"></label><button class="btn pri blk" onclick="avisoPagoOk()">Avisar a mi reformista</button><div class="muted" style="margin-top:8px">Tu reformista confirmará el pago y aparecerá en tus movimientos.</div>'); }
+function avisoPagoOk() { const i = num($('#ap-i').value); if (!(i > 0)) { toast('Indica el importe'); return; } S.chat.push({ f:ahora(S), autor:'cliente', t:'He realizado un pago de ' + eur(i) + ' por ' + $('#ap-m').value + ' (' + $('#ap-f').value + '). ¿Puedes confirmarlo?' }); ev('Has avisado de un pago de ' + eur0(i), 'cliente'); guardar(); cerrarSheet(); toast('Avisado. Tu reformista lo confirmará.'); render(); }
+function abrirRemate() { sheet(head('Añadir un remate') + '<label class="field"><span>¿Qué hay que arreglar?</span><textarea id="rm-t" placeholder="Ej.: rozadura en la puerta del dormitorio 2"></textarea></label><label class="chk"><input type="checkbox" id="rm-f" checked> Adjuntar una foto (demo)</label><button class="btn pri blk" onclick="remateOk()">Añadir remate</button>'); }
+function remateOk(itemId, texto) { const t = texto || $('#rm-t').value.trim(); if (!t) { toast('Describe el remate'); return; } const f = itemId ? false : $('#rm-f').checked; const r = { id:uid('r'), texto:t, estado:'abierto', foto:f, autor:'cliente', itemId:itemId || null, f:ahora(S) }; S.obra.remates.push(r); if (f) S.obra.fotos.push({ id:uid('f'), src:fotoSvg('Remate: ' + t.slice(0, 22), 20), cap:'Remate: ' + t, f:ahora(S) }); ev('Has indicado un remate: ' + t, 'cliente'); guardar(); if (!itemId) { cerrarSheet(); toast('Remate enviado a tu reformista.'); render(); } }
+function itemOk(id) { const i = S.obra.cierre.items.find(x => x.id === id); i.estado = 'ok'; i.nota = ''; guardar(); render(); }
+function abrirProblema(id) { const i = S.obra.cierre.items.find(x => x.id === id); sheet(head('Hay un problema') + '<p class="muted" style="margin-bottom:10px">' + esc(i.label) + '</p><label class="field"><span>¿Qué has visto?</span><textarea id="pr-t" placeholder="Describe el problema"></textarea></label><button class="btn dng blk" onclick="problemaOk(\'' + id + '\')">Enviar a mi reformista</button>'); }
+function problemaOk(id) { const i = S.obra.cierre.items.find(x => x.id === id); const t = $('#pr-t').value.trim(); if (!t) { toast('Describe el problema'); return; } i.estado = 'problema'; i.nota = t; remateOk(id, i.label.replace(/^«(.+?)».*/, '$1') + ': ' + t); cerrarSheet(); render(); toast('Problema enviado como remate.'); }
+let sigPts = false;
+function abrirFirmaFinal() {
+  sigPts = false; sheet(head('Firmar mi conformidad') + '<p class="muted" style="margin-bottom:10px">Con tu firma das la obra por finalizada y conforme. Se generará tu acta de entrega.</p><label class="field"><span>Tu nombre completo</span><input id="ff-n" value="' + esc(S.cliente.nombre) + '" oninput="ffCheck()"></label><div class="lbl">Dibuja tu firma</div><canvas id="sig" class="sig" aria-label="Zona de firma"></canvas><div class="row" style="margin:8px 0"><button class="btn sm" onclick="sigClear()">Borrar firma</button></div><label class="chk"><input type="checkbox" id="ff-c" onchange="ffCheck()"> Declaro que he revisado la obra y doy mi conformidad.</label><button class="btn ok blk" id="ff-b" disabled onclick="firmaFinalOk()">✍️ Firmar y cerrar la obra</button>');
+  const c = $('#sig'), d = window.devicePixelRatio || 1; c.width = c.clientWidth * d; c.height = c.clientHeight * d; const g = c.getContext('2d'); g.scale(d, d); g.lineWidth = 2.5; g.lineCap = 'round'; g.strokeStyle = '#1c140d'; let on = false;
+  const pos = e => { const r = c.getBoundingClientRect(); return [e.clientX - r.left, e.clientY - r.top]; };
+  c.onpointerdown = e => { on = true; c.setPointerCapture(e.pointerId); const [x, y] = pos(e); g.beginPath(); g.moveTo(x, y); e.preventDefault(); };
+  c.onpointermove = e => { if (!on) return; const [x, y] = pos(e); g.lineTo(x, y); g.stroke(); if (!sigPts) { sigPts = true; ffCheck(); } };
+  c.onpointerup = () => { on = false; };
+}
+function sigClear() { const c = $('#sig'); c.getContext('2d').clearRect(0, 0, c.width, c.height); sigPts = false; ffCheck(); }
+function ffCheck() { $('#ff-b').disabled = !($('#ff-n').value.trim().length > 3 && $('#ff-c').checked && sigPts); }
+function firmaFinalOk() { const firma = $('#sig').toDataURL('image/png'); cerrarObra($('#ff-n').value.trim(), firma); guardar(); cerrarSheet(); ir('entrega'); render(); toast('¡Obra cerrada! Tu acta ya está disponible.'); }
+function cerrarObra(nombre, firma) { S.obra.cierre.conformidad = { f:ahora(S), nombre, firma }; S.fase = 'cerrada'; ev('Has firmado tu conformidad: obra cerrada', 'cliente'); avisar('cerrada', 'Obra cerrada · acta y garantía · ' + S.ref, ['Gracias por tu conformidad. Tu obra ha quedado cerrada.', 'Ya tienes disponible el acta de entrega y la información de la garantía en tu panel.'], 'Obra cerrada ✔ Gracias por confiar en nosotros. Tu acta y garantía están en tu panel:', { sec:'entrega' }); }
+function enviarValoracion() { S.valoracion = { n:UI.estrellas, t:($('#val-t') || { value:'' }).value.trim() }; ev('Has valorado el servicio con ' + UI.estrellas + ' estrellas', 'cliente'); guardar(); render(); toast('¡Gracias por tu valoración!'); }
+function enviarChat() { const t = $('#chat-t').value.trim(); if (!t) return; S.chat.push({ f:ahora(S), autor:'cliente', t }); guardar(); render(); const c = $('#chat'); if (c) c.scrollTop = c.scrollHeight; toast('Mensaje enviado'); }
+
+// ═══════════════════════════════════════════════════════
+// 10. SIMULADOR DEL REFORMISTA (lo que haría desde su panel)
+// ═══════════════════════════════════════════════════════
+function diaT(off, h) { const d = new Date(ahora(S) + off * D_MS); d.setHours(12, 0, 0, 0); return { t:d.getTime(), h }; }
+function simPropVisita() {
+  if (S.fase !== 'recibida') { toast('La visita ya se propuso'); return false; }
+  const v1 = S.versiones[0]; v1.estado = 'sustituida'; S.versiones.push({ id:'V2', tipo:'estimacion', fecha:ahora(S), estado:'vigente', est:JSON.parse(JSON.stringify(v1.est)) });
+  S.fase = 'visita_propuesta'; S.visita.estado = 'propuesta'; S.visita.franjas = [diaT(2, '10:00 – 11:00'), diaT(2, '17:00 – 18:00'), diaT(3, '12:00 – 13:00'), diaT(5, '10:00 – 11:00')];
+  ev('Tu reformista ha revisado la solicitud y propone fechas para la visita', 'reformista'); avisar('visita', 'Elige el día de la visita técnica · ' + S.ref, ['Hemos revisado tu solicitud y nos gustaría visitar tu vivienda para ajustar el presupuesto.', 'Estos son los huecos disponibles: ' + S.visita.franjas.map(s => fdia(s.t) + ' ' + s.h).join(' · ') + '.', 'La visita cuesta ' + eur0(S.visita.importe) + ' y se descuenta íntegramente si aceptas el presupuesto.'], 'Hola, ya he revisado tu solicitud. Elige el día de la visita técnica en tu panel:', { sec:'visita' });
+  return true;
+}
+function generarV3() {
+  const base = vigente(S); const est = JSON.parse(JSON.stringify(base.est)); const g = t => est.find(e => e.tipo === t);
+  const sal = g('salon'); sal.lineas = sal.lineas.filter(l => l.k !== 'falso_techo'); sal.quitados = { falso_techo:'El techo está en buen estado: no hace falta falso techo' };
+  const tar = sal.lineas.find(l => l.k === 'tarima'); tar.cant = 28; tar.nota = 'Medición real en la visita: 28 m²';
+  sal.lineas.push(linea('humedades', 'salon', sal.m2, 1, 'Humedad detectada en la esquina del techo'));
+  const co = g('cocina'); co.lineas.push(linea('tuberias', 'cocina', co.m2, 1, 'Las tuberías son de plomo y hay que sustituirlas'));
+  const pa = g('pasillo'); pa.lineas.push(linea('punto_luz', 'pasillo', pa.m2, 2, 'Pasillo oscuro: proponemos 2 puntos de luz'));
+  return { id:'V3', tipo:'propuesta', fecha:ahora(S), estado:'vigente', est };
+}
+function simHacerVisita() {
+  if (S.fase !== 'visita_confirmada') { toast(S.fase === 'visita_propuesta' ? 'El cliente aún no ha elegido día' : 'No hay una visita confirmada'); return false; }
+  S.dias = Math.max(S.dias, Math.ceil((S.visita.elegida.t - Date.now()) / D_MS) + 0); const b = vigente(S); b.estado = 'sustituida'; const v3 = generarV3(); S.versiones.push(v3);
+  S.visita.estado = 'realizada'; S.cobros.push({ id:uid('c'), f:ahora(S), concepto:'Visita técnica (pago a cuenta del presupuesto)', importe:S.visita.importe, medio:'Efectivo', tipo:'visita' }); S.fase = 'propuesta';
+  const d = diffVersiones(b, v3);
+  ev('Visita técnica realizada. Tu reformista te envía el presupuesto ' + v3.id, 'reformista');
+  avisar('v3', 'Tu presupuesto actualizado ' + v3.id + ' · ' + S.ref, ['Gracias por recibirnos. Tras la visita hemos actualizado tu presupuesto: ' + eur(totalV(v3)) + ' (IVA incluido).', 'Qué ha cambiado: ' + [...d.anadidos.map(x => '+ ' + x.e.nombre + ': ' + x.l.l), ...d.quitados.map(x => '− ' + x.e.nombre + ': ' + x.l.l), ...d.modificados.map(x => '~ ' + x.e.nombre + ': ' + x.l.l)].join(' · ') + '.', 'Puedes revisarlo estancia por estancia y aceptarlo desde tu panel.'], 'Tu presupuesto actualizado ' + v3.id + ' ya está listo: ' + eur0(totalV(v3)) + ' (IVA incl.). Revísalo y acéptalo aquí:', { sec:'presupuesto', tabla:v3.est.map(e => [e.nombre, eur0(totalEstF(e))]), total:'Total ' + v3.id + ': ' + eur0(totalV(v3)) });
+  return true;
+}
+function simIniciarObra() {
+  if (S.fase !== 'aceptada') { toast(S.fase === 'propuesta' ? 'El cliente debe aceptar primero el presupuesto' : 'La obra no puede iniciarse ahora'); return false; }
+  let t = ahora(S) + 3 * D_MS; S.obra.inicio = t; S.obra.hitos = HITOS.map(([n, d], i) => { t += d * D_MS; return { id:'h' + i, nombre:n, dias:d, estado:'pendiente', previsto:t, real:null, fotos:[] }; }); S.fase = 'obra';
+  ev('Tu obra comienza el ' + ffecha(S.obra.inicio), 'reformista'); avisar('inicio', 'Tu obra comienza el ' + fdia(S.obra.inicio) + ' · ' + S.ref, ['¡Empezamos! Tu obra comienza el ' + ffecha(S.obra.inicio) + ' y está prevista para terminar el ' + ffecha(S.obra.hitos[S.obra.hitos.length - 1].previsto) + '.', 'Cada hito completado aparecerá en tu panel con sus fotos.'], 'Tu obra empieza el ' + fdia(S.obra.inicio) + ' 🏗️ Sigue el avance en tu panel:', { sec:'obra' }); return true;
+}
+function simHito() {
+  if (S.fase !== 'obra') { toast('La obra no está en curso'); return false; } const h = S.obra.hitos.find(x => x.estado !== 'hecho'); if (!h) { toast('Todos los hitos están hechos: termina la obra'); return false; }
+  S.dias += h.dias; h.estado = 'hecho'; h.real = ahora(S); h.fotos = [{ id:uid('f'), src:fotoSvg(h.nombre + ' · antes', 30 + S.obra.hitos.indexOf(h) * 25), cap:h.nombre + ' (en curso)', f:ahora(S) }, { id:uid('f'), src:fotoSvg(h.nombre + ' · terminado', 40 + S.obra.hitos.indexOf(h) * 25), cap:h.nombre + ' (terminado)', f:ahora(S) }];
+  ev('Hito completado: ' + h.nombre, 'reformista'); const i = S.obra.hitos.indexOf(h);
+  avisar('hito', 'Hito completado: ' + h.nombre, ['Hemos completado «' + h.nombre + '». Ya puedes ver las fotos en tu panel. Avance de la obra: ' + progresoObra(S) + ' %.'], 'Hito completado ✅ ' + h.nombre + ' (' + progresoObra(S) + ' % de la obra). Fotos en tu panel:', { sec:'obra' });
+  if (i === 1) { const d = planPagos(S).find(t => t.estado === 'debido'); if (d) avisar('pago', 'Toca el pago: ' + d.label, ['Hemos completado las instalaciones, así que corresponde el pago del ' + d.pct + ' % (' + eur(d.falta) + ').', 'Tienes los datos para pagar en la sección Pagos.'], 'Pago del hito «' + d.label + '»: ' + eur0(d.falta) + '. Datos en tu panel:', { sec:'pagos' }); }
+  return true;
+}
+const CAMB = [{ concepto:'Cambio de plato de ducha por uno de resina', importe:200, motivo:'Petición tuya' }, { concepto:'Punto de luz adicional en el dormitorio principal', importe:120, motivo:'Lo hablamos en la obra' }, { concepto:'Refuerzo de vigueta detectado al demoler', importe:450, motivo:'Imprevisto estructural', bloquea:true }, { concepto:'Sustitución de la bajante del baño', importe:380, motivo:'Imprevisto: bajante en mal estado' }];
+function simCambio() {
+  if (!['obra', 'aceptada'].includes(S.fase)) { toast('Solo durante la obra'); return false; } const t = CAMB[S.obra.cambios.length % CAMB.length]; const c = { id:'C' + (S.obra.cambios.length + 1), concepto:t.concepto, importe:t.importe, motivo:t.motivo, bloquea:!!t.bloquea, estado:'pendiente_cliente', f:ahora(S) }; S.obra.cambios.push(c);
+  ev('Tu reformista te propone un cambio: ' + c.concepto, 'reformista'); avisar('cambio', 'Cambio pendiente de tu respuesta · ' + S.ref, ['Tu reformista ha registrado un cambio: «' + c.concepto + '» (' + eur(conIva(c.importe)) + ' IVA incl.). Motivo: ' + c.motivo + '.', 'Necesitamos que lo aceptes o nos cuentes tus dudas. No se hará nada sin tu visto bueno.'], 'Cambio pendiente: «' + c.concepto + '» (' + eur0(conIva(c.importe)) + '). Respóndelo en tu panel:', { sec:'cambios' }); return true;
+}
+function simAdenda() {
+  const ac = S.obra.cambios.filter(c => c.estado === 'aceptado' && !S.obra.adendas.some(a => a.cambios.includes(c.id))); if (!ac.length) { toast('No hay cambios aceptados que agrupar'); return false; }
+  const a = { id:'A' + (S.obra.adendas.length + 1), cambios:ac.map(c => c.id), delta:r2(ac.reduce((s, c) => s + c.importe, 0)), estado:'por_firmar', f:ahora(S) }; S.obra.adendas.push(a);
+  ev('Tu reformista ha preparado la adenda ' + a.id + ' para firmar', 'reformista'); avisar('adenda', 'Adenda ' + a.id + ' para firmar · ' + S.ref, ['Hemos agrupado los cambios que has aceptado en la adenda ' + a.id + ' por ' + eur(conIva(a.delta)) + '.', 'Puedes revisarla y firmarla desde tu panel.'], 'Adenda ' + a.id + ' lista para firmar (' + eur0(conIva(a.delta)) + '). Revísala en tu panel:', { sec:'cambios' }); return true;
+}
+function simPago(q) {
+  const d = planPagos(S).find(t => t.estado === 'debido'); if (!d) { if (!q) toast('No hay ningún pago debido'); return false; }
+  S.cobros.push({ id:uid('c'), f:ahora(S), concepto:d.label, importe:d.falta, medio:'Transferencia', tipo:'plan' }); ev('Pago recibido: ' + d.label + ' (' + eur0(d.falta) + ')', 'reformista'); return true;
+}
+function simSolicitud() {
+  const s = S.obra.solicitudes.find(x => x.estado === 'abierta'); if (!s) { toast('No hay solicitudes abiertas'); return false; }
+  s.estado = 'valorada'; s.respuesta = 'Es posible. Coste: 180 € + IVA'; ev('Tu reformista ha valorado tu petición', 'reformista');
+  const c = { id:'C' + (S.obra.cambios.length + 1), concepto:s.texto, importe:180, motivo:'Petición tuya', bloquea:false, estado:'pendiente_cliente', f:ahora(S) }; S.obra.cambios.push(c); return true;
+}
+function simChat() { S.chat.push({ f:ahora(S), autor:'reformista', t:'Hola ' + S.cliente.nombre.split(' ')[0] + ', lo he visto. Mañana paso por la obra y lo comentamos. ¡Gracias!' }); return true; }
+function simTerminar() {
+  if (S.fase !== 'obra') { toast('La obra no está en curso'); return false; }
+  const pend = S.obra.cambios.filter(c => c.estado === 'pendiente_cliente' || c.estado === 'aceptado' && !S.obra.adendas.some(a => a.cambios.includes(c.id)));
+  S.obra.hitos.forEach(h => { if (h.estado !== 'hecho') { simHito(); } });
+  S.fase = 'remates'; S.obra.cierre = { terminadaAt:ahora(S), items:checklistFinal(S), conformidad:null };
+  ev('Tu obra está terminada: revisión final', 'reformista'); avisar('terminada', 'Tu obra está terminada · revisión final · ' + S.ref, ['¡Hemos terminado! Recorre tu vivienda con calma y revisa cada estancia desde tu panel.', 'Indica los remates que veas y, cuando todo esté bien, firma tu conformidad: así damos la obra por cerrada.'], 'Tu obra está terminada 🎉 Haz la revisión final y firma tu conformidad en tu panel:', { sec:'entrega' }); return true;
+}
+function simResolverRemates() {
+  const ab = S.obra.remates.filter(r => r.estado === 'abierto'); if (!ab.length) { toast('No hay remates abiertos'); return false; }
+  ab.forEach(r => { r.estado = 'resuelto'; const it = r.itemId && S.obra.cierre.items.find(i => i.id === r.itemId); if (it) { it.estado = 'pendiente'; it.nota = 'Resuelto por tu reformista: vuelve a revisarlo'; } });
+  ev('Tu reformista ha resuelto ' + ab.length + ' remate(s)', 'reformista'); return true;
+}
+const SIG_DEMO = 'data:image/svg+xml;utf8,' + encodeURIComponent("<svg xmlns='http://www.w3.org/2000/svg' width='300' height='100'><path d='M10 70 C40 10 60 90 90 40 S130 20 150 60 S200 80 290 30' fill='none' stroke='#1c140d' stroke-width='3'/></svg>");
+function simStage(n) {
+  const old = S; S = nuevoCaso(); S.token = old.token; S.ref = old.ref; UI.ver = null; UI.slot = null; UI.estrellas = 0; ev('Solicitud de presupuesto enviada desde la web', 'cliente'); avisoPrimero();
+  if (n >= 2) simPropVisita();
+  if (n >= 3) { S.visita.elegida = S.visita.franjas[0]; S.visita.estado = 'confirmada'; S.fase = 'visita_confirmada'; ev('Has confirmado la visita técnica', 'cliente'); }
+  if (n >= 4) { simHacerVisita(); }
+  if (n >= 5) { aceptarInterno('Laura Martín'); simPago(); simIniciarObra(); simHito(); simHito(); simHito(); simCambio(); simCambio(); S.obra.cambios[0].estado = 'aceptado'; simAdenda(); S.obra.solicitudes.push({ id:uid('s'), texto:'Me gustaría un enchufe más en la cocina', estado:'abierta', f:ahora(S) }); simPago(); }
+  if (n >= 6) { S.obra.cambios.forEach(c => { if (c.estado === 'pendiente_cliente') c.estado = 'aceptado'; }); simAdenda(); S.obra.adendas.forEach(a => { if (a.estado === 'por_firmar') { a.estado = 'firmada'; a.firma = { nombre:'Laura Martín', f:ahora(S) }; a.cambios.forEach(id => { S.obra.cambios.find(c => c.id === id).estado = 'consolidado'; }); } }); S.obra.solicitudes.forEach(s => { s.estado = 'valorada'; s.respuesta = 'Hecho'; }); simTerminar(); }
+  if (n >= 7) { S.obra.cierre.items.forEach(i => { i.estado = 'ok'; }); while (simPago(true)) { } cerrarObra('Laura Martín', SIG_DEMO); }
+  guardar(); location.hash = '#/c/' + S.token + '/inicio'; render();
+}
+function abrirSim() {
+  const b = (t, fn) => '<button class="btn sm" onclick="' + fn + '">' + t + '</button>';
+  sheet(head('🧪 Simulador del reformista') + '<p class="muted" style="margin-bottom:10px">Esto no existiría para el cliente: representa lo que hace el reformista desde su panel de administración para que puedas probar cada fase.</p>' +
+    '<div class="lbl">Saltar a una fase (reinicia el caso)</div><div class="simbox">' + b('1 · Solicitud recibida', 'simStage(1);cerrarSheet()') + b('2 · Visita propuesta', 'simStage(2);cerrarSheet()') + b('3 · Visita confirmada', 'simStage(3);cerrarSheet()') + b('4 · Presupuesto V3 enviado', 'simStage(4);cerrarSheet()') + b('5 · Obra en curso', 'simStage(5);cerrarSheet()') + b('6 · Obra terminada', 'simStage(6);cerrarSheet()') + b('7 · Obra cerrada', 'simStage(7);cerrarSheet()') + '</div>' +
+    '<div class="lbl" style="margin-top:12px">Acciones sueltas</div><div class="simbox">' + b('Proponer visita', 'simDo(simPropVisita)') + b('Hacer visita y enviar V3', 'simDo(simHacerVisita)') + b('Iniciar obra', 'simDo(simIniciarObra)') + b('Completar siguiente hito', 'simDo(simHito)') + b('Registrar un cambio', 'simDo(simCambio)') + b('Preparar adenda', 'simDo(simAdenda)') + b('Registrar pago debido', 'simDo(simPago)') + b('Valorar mi petición', 'simDo(simSolicitud)') + b('Responder mensaje', 'simDo(simChat)') + b('Terminar obra', 'simDo(simTerminar)') + b('Resolver remates', 'simDo(simResolverRemates)') + b('Avanzar 3 días', 'S.dias+=3;simDo(()=>true)') + '</div>');
+}
+function simDo(fn) { if (fn()) { guardar(); cerrarSheet(); render(); toast('Hecho (como reformista). Mira qué ve el cliente.'); } }
+
+// ═══════════════════════════════════════════════════════
+// 11. PRUEBAS INTERNAS  (consola: __tests())
+// ═══════════════════════════════════════════════════════
+window.__tests = function () {
+  let ok = 0, tot = 0; const fails = []; const a = (d, c) => { tot++; if (c) ok++; else { fails.push(d); console.error('✗ ' + d); } };
+  const guardado = S; S = nuevoCaso();
+  try {
+    const v1 = S.versiones[0]; const t1 = totalV(v1);
+    a('el caso de ejemplo tiene 8 estancias y un total razonable', v1.est.length === 8 && t1 > 20000 && t1 < 60000);
+    a('el total incluye margen e IVA', Math.abs(t1 - fin(v1.est.reduce((s, e) => s + subEst(e), 0))) < 0.01 && K > 1.47 && K < 1.48);
+    a('estimación: horquilla ±12 %', Math.round(t1 * 0.88) < t1 && Math.round(t1 * 1.12) > t1);
+    avisoPrimero(); a('el primer aviso incluye rango, datos pedidos y tabla por estancias', S.avisos[0].parrafos.join(' ').includes('estimado') && S.avisos[0].tabla.length === 8 && S.avisos[0].parrafos.some(p => p.includes('NIF')));
+    a('el enlace privado lleva el token', linkPanel(S).includes('#/c/' + S.token) && S.token.length >= 10);
+    a('pendientes iniciales: completar datos', pendientes(S).some(p => p.t === 'Completa tus datos'));
+    a('stepper: recibida = paso 0, cerrada = paso 6', stepIdx('recibida') === 0 && stepIdx('cerrada') === 6);
+    simPropVisita(); a('proponer visita crea V2 y 4 huecos', S.versiones.length === 2 && S.visita.franjas.length === 4 && S.fase === 'visita_propuesta' && pendientes(S).some(p => p.sec === 'visita'));
+    a('no se puede hacer la visita antes de que el cliente elija día', simHacerVisita() === false);
+    S.visita.elegida = S.visita.franjas[0]; S.fase = 'visita_confirmada'; simHacerVisita();
+    const v3 = S.versiones[2]; const d = diffVersiones(S.versiones[1], v3);
+    a('V3: añadidos, quitados y modificados respecto a V2', d.anadidos.length === 3 && d.quitados.length === 1 && d.modificados.length === 1 && v3.id === 'V3' && S.fase === 'propuesta');
+    a('V3 cuesta más que V2 (humedades, tuberías, luces)', totalV(v3) > totalV(S.versiones[1]));
+    a('la visita queda como pago a cuenta', S.cobros.length === 1 && cobrado(S) === 60);
+    a('pendientes: aceptar el presupuesto', pendientes(S).some(p => p.sec === 'presupuesto'));
+    aceptarInterno('Laura Martín'); a('aceptar fija el total aceptado y pasa a «aceptada»', S.aceptacion.total === totalV(v3) && S.fase === 'aceptada' && v3.estado === 'aceptada');
+    const pl = planPagos(S); a('plan de pagos 30/30/40 suma el total aceptado', r2(pl.reduce((s, t) => s + t.importe, 0)) === S.aceptacion.total && pl.map(t => t.pct).join() === '30,30,40');
+    a('señal debida y visita descontada', pl[0].estado === 'debido' && pl[0].falta === r2(pl[0].importe - 60));
+    simPago(); a('al pagar la señal, el primer tramo queda pagado', planPagos(S)[0].estado === 'pagado' && planPagos(S)[1].estado === 'previsto');
+    a('no se puede iniciar con otra fase / sí desde aceptada', simIniciarObra() === true && S.obra.hitos.length === 8 && S.fase === 'obra');
+    simHito(); simHito(); a('hitos: progreso ponderado y tramo de instalaciones debido', progresoObra(S) === Math.round(7 / 29 * 100) && planPagos(S)[1].estado === 'debido');
+    simCambio(); const c1 = S.obra.cambios[0]; a('cambio nuevo queda pendiente del cliente y suma al provisional', c1.estado === 'pendiente_cliente' && totalVigente(S).provisional === conIva(c1.importe));
+    c1.estado = 'aceptado'; simAdenda(); const ad = S.obra.adendas[0];
+    a('la adenda agrupa los cambios aceptados', ad.estado === 'por_firmar' && ad.cambios.join() === c1.id && ad.delta === c1.importe);
+    ad.estado = 'firmada'; ad.firma = { nombre:'x', f:1 }; c1.estado = 'consolidado';
+    const tv = totalVigente(S); a('total vigente = aceptada + adendas firmadas + provisional', tv.firmado === r2(S.aceptacion.total + conIva(c1.importe)) && tv.total === tv.firmado + tv.provisional);
+    simCambio(); const c2 = S.obra.cambios[1]; c2.estado = 'en_desacuerdo'; a('un cambio en desacuerdo no suma al total', totalVigente(S).provisional === 0);
+    a('terminar obra completa los hitos y abre la revisión final', simTerminar() && S.fase === 'remates' && S.obra.hitos.every(h => h.estado === 'hecho') && S.obra.cierre.items.length === 11);
+    a('checklist final: una línea por estancia + 3 generales', S.obra.cierre.items.filter(i => i.id.startsWith('e_')).length === 8 && S.obra.cierre.items.filter(i => i.id.startsWith('g_')).length === 3);
+    a('fase remates pide la revisión final', pendientes(S).some(p => p.sec === 'entrega'));
+    S.obra.remates.push({ id:'r1', texto:'x', estado:'abierto', autor:'cliente', itemId:'e_' + S.versiones[2].est[0].id }); a('simular resolver remates reabre el ítem vinculado', simResolverRemates() && S.obra.remates[0].estado === 'resuelto' && S.obra.cierre.items[0].estado === 'pendiente');
+    S.obra.cierre.items.forEach(i => i.estado = 'ok'); while (simPago(true)) { } cerrarObra('Laura Martín', 'data:,'); a('cerrar la obra firma la conformidad y genera el aviso final', S.fase === 'cerrada' && S.obra.cierre.conformidad.nombre === 'Laura Martín' && S.avisos[S.avisos.length - 1].tipo === 'cerrada');
+    a('al cerrar, todo está pagado', Math.abs(cobrado(S) - totalVigente(S).aceptada) < 0.02 || cobrado(S) >= totalVigente(S).aceptada - 0.02);
+    a('formato de euros con miles', eur(1234.5) === '1.234,50 €' && eur0(12500) === '12.500 €');
+  } finally { S = guardado; }
+  const m = ok + '/' + tot + ' pruebas correctas'; console.log('%c' + m + (fails.length ? ' · fallos: ' + fails.join(' | ') : ' ✓'), 'font-weight:bold'); return { ok, total:tot, fails };
+};
+
+// ═══════════════════════════════════════════════════════
+// 12. ARRANQUE
+// ═══════════════════════════════════════════════════════
+render();
+</script>
+</body>
+</html>
