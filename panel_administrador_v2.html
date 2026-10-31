@@ -182,6 +182,7 @@ input,select,textarea{font-family:inherit}
 .etiq-warn{background:#fff8e1;color:#f57f17}
 .etiq-bad{background:#ffebee;color:#b71c1c}
 .etiq-info{background:#e3f2fd;color:#0d47a1}
+.etiq-neu{background:var(--stone);color:var(--muted)}
 
 /* ── RESUMEN ─────────────────────────────────────── */
 .res-section-title{font-family:'Cormorant Garamond',serif;font-size:20px;color:var(--deep);margin:24px 0 12px}
@@ -475,6 +476,10 @@ const CFG_DEFAULT = {
   margen: 22, iva: 21, minimo: 500, validezDias: 30,
   // Triaje
   plazoRespuestaHoras: 48, importeMinimoUtil: 2000, diasPausaAuto: 8,
+  sinVisita:{ tipos:['pintura','suelo_flotante'], hiMax:3000, fotosMin:2 },
+  catalogo:{ mermaPorCategoria:{ suelo:0.10, pintura:0.05, tabiqueria:0.08, sanitario:0, mueble:0, fontaneria:0, caldera:0, calefaccion:0 }, mermaDefecto:0.05, umbralAlerta:5 },
+  textoGarantia:'Garantía de 2 años sobre la mano de obra y la que otorgue cada fabricante sobre los materiales, desde la fecha de este acta.',
+  rematesPlazoDias: 7, adendaModo:'pct', adendaUmbralEur:500, adendaPorHito:true,
   // Zona (prefijos de CP)
   zonaTramos: { dentro:['280'], limite:['281','282'] },
   // Visita
@@ -550,11 +555,6 @@ const ESTADO_LABEL = {
   aceptada:'Aceptada', en_obra:'En obra', terminada:'Terminada', en_remates:'En remates', cerrada:'Cerrada',
   en_pausa:'En pausa', rechazada:'Rechazada', caducada:'Caducada', descartada:'Descartada', archivada:'Archivada'
 };
-const ESTADO_ACTIVIDAD = {
-  recibida:20, en_triaje:15, esperando_info:10, visita_propuesta:18, visita_confirmada:20, en_visita:20,
-  propuesta_enviada:12, caducada:8, rechazada:5, aceptada:15, en_obra:12, terminada:8, en_remates:10,
-  cerrada:0, en_pausa:5, descartada:0, archivada:0
-};
 
 // ═══════════════════════════════════════════════════════
 // SECCIÓN 4: REGLAS DE NEGOCIO (FUNCIONES PURAS)
@@ -571,7 +571,7 @@ function zonaDeCp(cp, cfg){
 // 4.2 — Importe de la visita técnica
 function importeVisita(caso, cfg){
   if (!cfg.visita || !cfg.visita.cobra) return 0;
-  const zona = caso.vivienda?.zona || zonaDeCp(caso.vivienda?.cp, cfg);
+  const zona = zonaDeCp(caso.vivienda?.cp, cfg);
   const m = cfg.visita.importePorZona || {};
   return m[zona] != null ? m[zona] : 0;
 }
@@ -632,7 +632,7 @@ function scoreCalidad(caso, cfg){
     fUrgencia = d <= 30 ? 1 : d <= 90 ? 0.67 : d <= 180 ? 0.33 : 0.13;
   }
   // F4 Zona
-  const zona = v.zona || zonaDeCp(v.cp, cfg);
+  const zona = zonaDeCp(v.cp, cfg);
   const fZona = zona === 'dentro' ? 1 : zona === 'limite' ? (8/15) : 0;
   // F5 Propietario + comunidad
   const fProp = v.propietario ? 0.6 : 0.2;
@@ -656,7 +656,16 @@ function scoreCalidad(caso, cfg){
     {id:'encaje',      label:'Encaje de presupuesto'},
     {id:'tipo',        label:'Tipo de obra'},
   ];
-  const factores = meta.map((m,i) => ({ id:m.id, label:m.label, max:pesos[i], f:r(fs[i]), puntos:Math.round(pesos[i]*fs[i]) }));
+  const razones = [
+    'Punto medio ' + fmtEur0(mid) + ' frente a mínimo útil ' + fmtEur0(minUtil),
+    (caso.clienteId?'Contacto completo; ':'') + nFotos + ' foto(s)',
+    v.fechaInicioDeseada ? 'Inicio deseado en ' + diasEntre(hoy(), v.fechaInicioDeseada) + ' días' : 'Sin fecha de inicio',
+    'Zona ' + zona,
+    (v.propietario?'Propietario':'No propietario') + ' · comunidad ' + (v.comunidad||'—'),
+    tope > 0 ? 'Tope ' + fmtEur0(tope) + ' frente a ' + fmtEur0(lo) + '–' + fmtEur0(hi) : 'Sin tope declarado',
+    'Tipo ' + (tObra||'—')
+  ];
+  const factores = meta.map((m,i) => ({ id:m.id, label:m.label, max:pesos[i], f:r(fs[i]), puntos:Math.round(pesos[i]*fs[i]), razon:razones[i] }));
   const total = factores.reduce((s,f) => s + f.puntos, 0);
 
   const etiquetas = [];
@@ -668,46 +677,82 @@ function scoreCalidad(caso, cfg){
   else etiquetas.push({texto:'Fuera de zona', tono:'bad'});
   if (v.comunidad === 'pendiente') etiquetas.push({texto:'Comunidad pendiente', tono:'warn'});
   if (tope > 0 && tope < lo) etiquetas.push({texto:'Tope bajo estimación', tono:'bad'});
-  if (v.propietario) etiquetas.push({texto:'Propietario', tono:'info'});
-  if (ratio < 1) etiquetas.push({texto:'Importe pequeño', tono:'warn'});
+  if (v.propietario) etiquetas.push({texto:'Propietario', tono:'neu'});
+  if (ratio < 1) etiquetas.push({texto:'Importe bajo', tono:'warn'});
+  if (clienteActuoDesde(caso)) etiquetas.push({texto:'Cliente respondió', tono:'ok'});
+  const trabsAll = (s.espacios||[]).flatMap(e => (e.trabajos||[]).map(t => t.key||t));
+  if (trabsAll.length && !trabsAll.some(k => TRABAJOS_COMPLEJOS.includes(k)) && ratio >= 1) etiquetas.push({texto:'Obra sencilla', tono:'neu'});
 
   return { total, factores, etiquetas };
 }
+
+// Helpers de actividad del cliente
+const TRABAJOS_COMPLEJOS = ['demolicion','demolicion_completa','tirar_pared','demolicion_integral','fontaneria_bano','electricidad_vivienda','instalacion_caldera'];
+function ultimaAccionReformista(caso){ const evs = caso.eventos||[]; for (let i = evs.length-1; i >= 0; i--) if (evs[i].autor === 'reformista') return i; return -1; }
+function clienteActuoDesde(caso){ const evs = caso.eventos||[]; return evs.slice(ultimaAccionReformista(caso) + 1).some(e => e.autor === 'cliente'); }
+function fechaUltimaRespuesta(caso){ const evs = (caso.eventos||[]).filter(e => e.autor === 'cliente'); return evs.length ? evs[evs.length-1].fecha : null; }
 
 // 4.7 — Puntuación de prioridad (0-100) = espera + calidad + actividad
 function scorePrioridad(caso, cfg, ahora){
   ahora = ahora || hoy();
   const plazo = cfg.plazoRespuestaHoras || 48;
-  const desde = caso.creadoAt || (caso.eventos||[])[0]?.fecha || ahora;
+  let desde = caso.creadoAt || (caso.eventos||[])[0]?.fecha || ahora;
+  if (caso.estado === 'esperando_info' && clienteActuoDesde(caso)) desde = fechaUltimaRespuesta(caso) || desde;
+  else if (!['recibida','en_triaje'].includes(caso.estado)){ const ult = (caso.eventos||[]).slice(-1)[0]; if (ult) desde = ult.fecha; }
   const horas = Math.max(0, horasEntre(desde, ahora));
-  const espera = Math.round(clamp(50 * horas / (plazo * 3), 0, 50)); // satura a 3× el plazo
+  const espera = Math.round(Math.min(horas / plazo, 1) * 50);
   const sc = scoreCalidad(caso, cfg);
-  const calidad = Math.round(30 * sc.total / 100);
-  const actividad = ESTADO_ACTIVIDAD[caso.estado] != null ? ESTADO_ACTIVIDAD[caso.estado] : 5;
-  const total = Math.min(100, espera + calidad + actividad);
+  const calidad = Math.round(sc.total * 0.30);
+  const actividad = clienteActuoDesde(caso) ? 20 : 0;
+  const total = espera + calidad + actividad;
   const u = cfg.umbralesPrioridad || {hoy:60, pronto:40};
-  const nivel = total >= u.hoy ? 'Atender hoy' : total >= u.pronto ? 'Atender pronto' : 'Puede esperar';
+  const nivel = total >= u.hoy ? 'Atender hoy' : total >= u.pronto ? 'Pronto' : 'Sin prisa';
   return { total, espera, calidad, actividad, nivel, horasEspera: Math.round(horas) };
 }
 
-// 4.8 — Acción sugerida (orden de evaluación importa)
+// 4.8 — Acción sugerida (orden de evaluación del spec 6.6)
 function accionSugerida(caso, cfg){
   const v = caso.vivienda||{}, s = caso.solicitud||{};
-  const zona = v.zona || zonaDeCp(v.cp, cfg);
-  // 1) Fuera de zona → revisar descarte
-  if (zona === 'fuera')
-    return { id:'revisar_descarte', label:'Revisar descarte', motivo:'La vivienda está fuera de la zona de servicio.' };
-  // 2) Faltan fotos/datos y no se ha hecho visita → pedir info
-  const nFotos = (s.fotosCliente||[]).length;
-  const visitaHecha = ['realizada','confirmada','en_visita'].includes(caso.visita?.estado);
-  if (nFotos === 0 && !visitaHecha)
-    return { id:'pedir_info_fotos', label:'Pedir fotos y datos', motivo:'Faltan fotos o información para presupuestar con fiabilidad.' };
-  // 3) Hay versión vigente lista → enviar presupuesto
-  const vigente = (caso.versiones||[]).some(x => x.estado === 'vigente');
-  if (['en_triaje','en_visita','visita_confirmada'].includes(caso.estado) && vigente)
-    return { id:'enviar_presupuesto', label:'Enviar presupuesto', motivo:'Hay un presupuesto preparado para enviar.' };
-  // 4) Por defecto → proponer visita
-  return { id:'hacer_visita', label:'Proponer visita', motivo:'El siguiente paso natural es agendar una visita técnica.' };
+  const zona = zonaDeCp(v.cp, cfg);
+  const sc = scoreCalidad(caso, cfg);
+  const ver = (caso.versiones||[]).find(x => x.estado === 'vigente') || (caso.versiones||[])[0];
+  const hi = ver?.totales?.hi || 0;
+  const nFotos = (s.fotosCliente||[]).length + (caso.visita?.fotos||[]).length;
+  const inc = calcularIncertidumbre(caso);
+  if (zona === 'fuera') return { id:'revisar_descarte', label:'Revisar descarte', motivo:'La vivienda está fuera de tu zona de trabajo.' };
+  if (sc.total < 30) return { id:'revisar_descarte', label:'Revisar descarte', motivo:'Calidad del pedido muy baja (' + sc.total + '/100).' };
+  if (hi < (cfg.importeMinimoUtil||2000)) return { id:'revisar_descarte', label:'Revisar descarte', motivo:'El importe máximo estimado (' + fmtEur0(hi) + ') queda por debajo del mínimo útil.' };
+  if (nFotos === 0) return { id:'pedir_info', label:'Pedir fotos o más info', motivo: v.humedades ? 'Declara humedades y no hay ninguna foto.' : 'No hay fotos para valorar el estado.' };
+  if (inc.nivel === 'alta') return { id:'pedir_info', label:'Pedir fotos o más info', motivo:'La incertidumbre es alta: conviene aclarar antes de presupuestar.' };
+  const sv = cfg.sinVisita || { tipos:[], hiMax:3000, fotosMin:2 };
+  const trabs = (s.espacios||[]).flatMap(e => (e.trabajos||[]).map(t => t.key||t));
+  if ((sv.tipos||[]).includes(s.tipoObra) && !trabs.some(k => TRABAJOS_COMPLEJOS.includes(k)) && hi <= sv.hiMax && nFotos >= sv.fotosMin)
+    return { id:'presupuesto_sin_visita', label:'Presupuesto sin visita', motivo:'Obra sencilla, importe ≤ ' + fmtEur0(sv.hiMax) + ' y ' + nFotos + ' fotos: puedes presupuestar sin visitar.' };
+  return { id:'proponer_visita', label:'Proponer visita', motivo:'Hace falta ver la vivienda para presupuestar con fiabilidad.' };
+}
+
+// Siguiente paso según el estado (la sugerencia de triaje solo aplica a casos por triar)
+function accionSiguiente(caso, cfg){
+  const e = caso.estado;
+  if (['recibida','en_triaje'].includes(e) || (e === 'esperando_info' && clienteActuoDesde(caso))) return accionSugerida(caso, cfg);
+  const eco = caso.aceptacion ? estadoEconomico(caso, (typeof DB !== 'undefined' ? DB.cobros : [])) : null;
+  const mapa = {
+    esperando_info:{ id:'esperar', label:'Esperar al cliente', motivo:'Se pidió información; hay un recordatorio programado.' },
+    visita_propuesta:{ id:'esperar', label:'Esperar que elija franja', motivo:'El cliente aún no ha elegido hueco de visita.' },
+    visita_confirmada:{ id:'hacer_visita', label:'Hacer la visita', motivo:'Hay una visita confirmada en agenda.' },
+    en_visita:{ id:'cerrar_visita', label:'Cerrar visita y enviar presupuesto', motivo:'La visita está en curso o pendiente de cerrar.' },
+    propuesta_enviada:{ id:'seguimiento', label:'Hacer seguimiento', motivo:'Hay una propuesta vigente esperando respuesta.' },
+    aceptada:{ id:'iniciar_obra', label:'Iniciar obra', motivo:'La propuesta está aceptada y la obra no ha empezado.' },
+    en_obra:{ id:'supervisar', label:'Supervisar la obra', motivo:'Obra en curso: revisa hitos, cambios y cobros.' },
+    terminada:{ id:'abrir_remates', label:'Abrir remates', motivo:'Obra terminada: pasa a la fase de remates.' },
+    en_remates:{ id:'cerrar_obra', label:'Resolver remates y cerrar', motivo:'Resuelve los remates y registra la conformidad.' },
+    cerrada:{ id:'cobrar', label:(eco && eco.saldo > 0) ? 'Reclamar saldo pendiente' : 'Archivar', motivo:(eco && eco.saldo > 0) ? 'Obra cerrada con ' + fmtEur(eco.saldo) + ' pendientes de cobro.' : 'Todo cobrado y cerrado.' },
+    en_pausa:{ id:'reactivar', label:'Reactivar o archivar', motivo:'El caso está en pausa.' },
+    caducada:{ id:'renovar', label:'Renovar o archivar', motivo:'La propuesta caducó.' },
+    rechazada:{ id:'renegociar', label:'Renegociar o archivar', motivo:'El cliente rechazó la propuesta.' },
+    descartada:{ id:'archivar', label:'Archivar o reabrir', motivo:'Caso descartado.' },
+  };
+  return mapa[e] || { id:'ninguna', label:'—', motivo:'' };
 }
 
 // 4.9 — Transiciones permitidas
@@ -737,8 +782,7 @@ function puedeTransitar(caso, hacia){
   if (!validas.includes(hacia)) return false;
   if (hacia === 'archivada' && ['en_obra','terminada','en_remates'].includes(de)) return false;
   if (de === 'en_obra' && hacia === 'terminada'){
-    const pend = (caso.obra?.cambios||[]).filter(c => c.estado === 'registrado').length;
-    if (pend > 0) return false; // no cerrar obra con cambios sin consolidar
+    if (cambiosPendientes(caso).length > 0) return false; // no terminar la obra con cambios sin consolidar
   }
   return true;
 }
@@ -778,7 +822,7 @@ function totalVigente(caso){
   const adendasFirmadasNeto = r((caso.obra?.adendas||[]).filter(a => a.estado === 'firmada').reduce((s,a) => s + (a.delta||0), 0));
   const adendasFirmadas = r(adendasFirmadasNeto * (1 + ivaPct));
   const firmado = r(aceptada + adendasFirmadas);
-  const provisionalNeto = r((caso.obra?.cambios||[]).filter(c => c.estado === 'registrado').reduce((s,c) => s + (c.importe||0), 0));
+  const provisionalNeto = r((caso.obra?.cambios||[]).filter(c => c.estado === 'registrado' || c.estado === 'en_desacuerdo').reduce((s,c) => s + (c.importe||0), 0));
   const provisional = r(provisionalNeto * (1 + ivaPct));
   const total = r(firmado + provisional);
   const desviacionPct = aceptada > 0 ? r((total - aceptada) / aceptada * 100) : 0;
@@ -903,19 +947,29 @@ function recalcularBorrador(caso, cfg){
   return { lineas, totales, avisos, ivaPct };
 }
 
-// 4.16 — Disparadores de adenda
+// 4.16 — Disparadores de adenda (spec 6.10)
+function cambiosPendientes(caso){ return (caso.obra?.cambios||[]).filter(c => c.estado === 'registrado' || c.estado === 'en_desacuerdo'); }
+function umbralAdendaEur(caso, cfg){
+  const base = caso.aceptacion?.importe || (caso.versiones||[]).find(v=>v.estado==='aceptada')?.totales?.total || 0;
+  return (cfg.adendaModo === 'eur') ? (cfg.adendaUmbralEur||0) : r(base * (cfg.adendaUmbral||5) / 100);
+}
 function debeGenerarAdenda(caso, cfg, contexto){
   contexto = contexto || {};
   const triggers = [];
-  const cambios = (caso.obra?.cambios||[]).filter(c => c.estado === 'registrado');
+  const pend = cambiosPendientes(caso);
+  const ivaPct = ((caso.versiones||[]).find(v => v.id === caso.aceptacion?.versionId)?.ivaPct || 21) / 100;
+  if (!pend.length && contexto.contexto !== 'manual') return triggers;
   const importeTotal = caso.aceptacion?.importe || (caso.versiones||[]).find(v=>v.estado==='aceptada')?.totales?.total || 0;
-  const suma = r(cambios.reduce((s,c) => s + (c.importe||0), 0));
-  if (suma > 0 && importeTotal > 0 && (suma / importeTotal * 100) > (cfg.adendaUmbral||5)) triggers.push('umbral');
-  if (cambios.some(c => (c.importe||0) >= (cfg.adendaTopeIndividual||1000))) triggers.push('tope');
-  if (contexto.contexto === 'hito' && cambios.length > 0) triggers.push('hito');
-  if (contexto.contexto === 'cierre' && cambios.length > 0) triggers.push('cierre');
+  const suma = r(pend.reduce((s,c) => s + (c.importe||0), 0));
+  const um = (cfg.adendaModo === 'eur') ? (cfg.adendaUmbralEur||0) : (importeTotal / (1 + ivaPct) * (cfg.adendaUmbral||5) / 100);
+  if (pend.length && suma > 0 && um > 0 && suma >= um) triggers.push('umbral');
+  if (pend.some(c => (c.importe||0) >= (cfg.adendaTopeIndividual||1000))) triggers.push('tope');
+  if (contexto.contexto === 'hito' && pend.length && cfg.adendaPorHito !== false) triggers.push('hito');
+  if (contexto.contexto === 'cobro' && pend.length) triggers.push('cobro');
+  if (contexto.contexto === 'manual') triggers.push('manual');
+  if (contexto.contexto === 'cierre' && pend.length) triggers.push('cierre');
   if (contexto.solicitudCliente) triggers.push('solicitud_cliente');
-  if (cambios.some(c => c.bloqueaObra)) triggers.push('bloqueante');
+  if (pend.some(c => c.bloqueaObra)) triggers.push('bloqueante');
   return triggers;
 }
 
@@ -929,25 +983,30 @@ function calcularProgreso(caso){
   return Math.round(avance / totalDias * 10000) / 10000; // fracción 0-1, 4 decimales
 }
 
-// 4.18 — Salud de la obra
+// 4.18 — Salud de la obra (spec 6.11)
 function saludObra(caso, cfg, ahora){
   ahora = ahora || hoy();
   const cambios = caso.obra?.cambios || [];
-  const bloq = cambios.filter(c => c.bloqueaObra && c.estado === 'registrado');
+  const pend = cambios.filter(c => c.estado === 'registrado' || c.estado === 'en_desacuerdo');
+  const bloq = pend.filter(c => c.bloqueaObra && !c.resuelto);
   if (bloq.length){
     const antiguo = bloq.reduce((m,c) => new Date(c.fecha) < new Date(m.fecha) ? c : m);
     if (horasEntre(antiguo.fecha, ahora) > 24) return 'bloqueada';
     return 'en_riesgo';
   }
-  if (cambios.some(c => c.estado === 'registrado')) return 'en_riesgo';
   const hitos = caso.obra?.hitos || [];
-  if (hitos.some(h => h.estado !== 'hecho' && h.fechaFinPrevista && diasEntre(h.fechaFinPrevista, ahora) > 2)) return 'en_riesgo';
+  if (hitos.some(h => h.estado !== 'hecho' && (h.fechaFinPrevista || h.fechaPrevista) && diasEntre(h.fechaFinPrevista || h.fechaPrevista, ahora) > 0)) return 'en_riesgo';
+  if (caso.aceptacion){
+    const tv = totalVigente(caso); const um = (cfg.adendaModo === 'eur') ? null : (cfg.adendaUmbral || 5);
+    if (um && tv.desviacionPct >= um * 0.8 && pend.length) return 'en_riesgo';
+  }
+  if (pend.some(c => c.fecha && diasEntre(c.fecha, ahora) > 7)) return 'en_riesgo';
   return 'al_dia';
 }
 
 // 4.19 — Cobros / saldo / estado económico
 function cobrosDeCaso(caso, cobros){ return (cobros||[]).filter(c => c.casoId === caso.id); }
-function calcularCobrado(caso, cobros){ return r(cobrosDeCaso(caso, cobros).filter(c => c.estado !== 'anulado' && !(c.tipo === 'visita' && c.descontable === false)).reduce((s,c) => s + (c.importe||0), 0)); }
+function calcularCobrado(caso, cobros){ return r(cobrosDeCaso(caso, cobros).filter(c => c.estado !== 'anulado').reduce((s,c) => { let imp = c.importe||0; if (c.tipo === 'visita'){ if (c.descontable === false) imp = 0; else if (c.descontablePct != null) imp = r(imp * c.descontablePct / 100); } return s + imp; }, 0)); }
 function estadoEconomico(caso, cobros){
   const tv = totalVigente(caso);
   const cobrado = calcularCobrado(caso, cobros);
@@ -956,62 +1015,56 @@ function estadoEconomico(caso, cobros){
   return { total: tv.total, cobrado, saldo, estado };
 }
 
-// 4.20 — Evaluar relojes (recordatorios, pausa, caducidad)
+// 4.20 — Evaluar relojes (spec 6.13): recordatorios debidos y acciones automáticas
+function recordatorioEnviado(caso, fase, n){ return (caso.recordatorios||[]).some(x => x.fase === fase && x.n === n && x.enviadoAt); }
 function evaluarRelojes(caso, cfg, ahora){
   ahora = ahora || hoy();
   const out = [];
-  const plazoH = cfg.plazoRespuestaHoras || 48;
   const ultTrans = [...(caso.eventos||[])].reverse().find(e => e.tipo === 'transicion');
-  if (caso.estado === 'esperando_info'){
-    const desde = ultTrans?.fecha || caso.creadoAt || ahora;
-    const dias = diasEntre(desde, ahora);
-    if (dias >= (cfg.diasPausaAuto||8))
-      out.push({ tipo:'pausa', texto:'Sin respuesta tras '+dias+' días. Pausar automáticamente.', accion:'transitar_a_pausa' });
-    else if (dias*24 >= plazoH)
-      out.push({ tipo:'recordatorio', texto:'Han pasado '+Math.round(dias*24)+'h sin respuesta del cliente.', accion:'enviar_recordatorio' });
-  }
+  const desdeFase = ultTrans?.fecha || caso.creadoAt || ahora;
+  const pausaDias = cfg.diasPausaAuto || 8;
+  const faseCliente = (fase, texto, concepto) => {
+    const dias = diasEntre(desdeFase, ahora);
+    if (dias >= pausaDias) out.push({ tipo:'pausa', fase, texto:'Sin respuesta tras ' + dias + ' días. Se pausa automáticamente.', accion:'transitar_a_pausa' });
+    else {
+      const n = dias >= 5 ? 2 : dias >= 2 ? 1 : 0;
+      if (n && !recordatorioEnviado(caso, fase, n)) out.push({ tipo:'recordatorio', fase, n, ultimo:n===2, concepto, texto:'Recordatorio ' + n + '/2: ' + texto + ' (día ' + dias + ').', accion:'enviar_recordatorio' });
+    }
+  };
+  if (caso.estado === 'esperando_info' && !clienteActuoDesde(caso)) faseCliente('esperando_info', 'el cliente no ha enviado lo pedido', 'enviarnos la información pendiente');
+  if (caso.estado === 'visita_propuesta') faseCliente('visita_propuesta', 'el cliente no ha elegido franja de visita', 'elegir el día de la visita');
   if (caso.estado === 'propuesta_enviada'){
     const v = (caso.versiones||[]).find(x => x.estado === 'vigente') || (caso.versiones||[]).slice(-1)[0];
     if (v?.enviadaAt){
-      const dias = diasEntre(v.enviadaAt, ahora);
-      const validez = cfg.validezDias || 30;
-      if (dias >= validez)
-        out.push({ tipo:'caducidad', texto:'Propuesta enviada hace '+dias+' días (validez '+validez+'). Caducada.', accion:'marcar_caducada' });
-      else if (dias >= validez - 5)
-        out.push({ tipo:'aviso_caducidad', texto:'La propuesta caduca en '+(validez-dias)+' días.', accion:'recordar_caducidad' });
+      const dias = diasEntre(v.enviadaAt, ahora); const validez = cfg.validezDias || 30;
+      if (dias >= validez) out.push({ tipo:'caducidad', fase:'propuesta_enviada', texto:'Propuesta enviada hace ' + dias + ' días (validez ' + validez + '). Caducada.', accion:'marcar_caducada' });
+      else {
+        if (dias >= validez - 5) out.push({ tipo:'aviso_caducidad', fase:'propuesta_enviada', texto:'La propuesta caduca en ' + (validez - dias) + ' días.', accion:'recordar_caducidad' });
+        const n = dias >= 7 ? 2 : dias >= 3 ? 1 : 0;
+        if (n && !recordatorioEnviado(caso, 'propuesta_enviada', n)) out.push({ tipo:'recordatorio', fase:'propuesta_enviada', n, ultimo:n===2, concepto:'revisar tu presupuesto', texto:'Recordatorio ' + n + '/2 de propuesta enviada (día ' + dias + ').', accion:'enviar_recordatorio' });
+      }
     }
   }
   if (caso.estado === 'visita_confirmada' && caso.visita?.elegida?.fecha){
     const d = diasEntre(ahora, caso.visita.elegida.fecha);
-    if (d === 1) out.push({ tipo:'recordatorio_visita', texto:'La visita es mañana. Recordar al cliente.', accion:'recordar_visita' });
-    if (d === 0) out.push({ tipo:'visita_hoy', texto:'La visita es hoy.', accion:'preparar_visita' });
+    if (d === 1) out.push({ tipo:'recordatorio_visita', fase:'visita_confirmada', texto:'La visita es mañana. Recordar al cliente.', accion:'recordar_visita' });
+    if (d === 0) out.push({ tipo:'visita_hoy', fase:'visita_confirmada', texto:'La visita es hoy.', accion:'preparar_visita' });
+  }
+  if (['en_obra','en_remates'].includes(caso.estado)){
+    (caso.obra?.cambios||[]).filter(c => c.estado === 'registrado' || c.estado === 'en_desacuerdo').forEach(c => {
+      const h = horasEntre(c.fecha, ahora);
+      if (c.bloqueaObra && !c.resuelto){
+        if (h >= 48){ if (!c.partidaPausada) out.push({ tipo:'pausar_partida', fase:'obra', cambioId:c.id, texto:'El cambio ' + c.id + ' bloquea la obra desde hace ' + Math.round(h) + ' h: partida pausada pendiente de aprobación.', accion:'pausar_partida' }); else out.push({ tipo:'cambio_bloqueante', fase:'obra', cambioId:c.id, n:2, texto:'Cambio bloqueante ' + c.id + ' sin resolver (' + Math.round(h) + ' h).', accion:'recordar_cambio' }); }
+        else if (h >= 24) out.push({ tipo:'cambio_bloqueante', fase:'obra', cambioId:c.id, n:1, texto:'El cambio ' + c.id + ' bloquea la obra (24 h sin resolver).', accion:'recordar_cambio' });
+      } else if (h >= 72 && Math.floor(h/72) > (c.recordatoriosEnviados||0)) out.push({ tipo:'cambio_pendiente', fase:'obra', cambioId:c.id, texto:'Cambio ' + c.id + ' sin consolidar desde hace ' + Math.round(h/24) + ' días: impide terminar la obra.', accion:'recordar_cambio' });
+    });
+    (caso.obra?.solicitudesCambio||[]).filter(sc => sc.estado === 'abierta').forEach(sc => out.push({ tipo:'solicitud_cambio', fase:'obra', texto:'Solicitud de cambio del cliente sin valorar: «' + sc.texto + '»', accion:'valorar_solicitud' }));
+  }
+  if (caso.estado === 'en_remates' && caso.obra?.cierre?.terminadaAt){
+    const plazo = cfg.rematesPlazoDias || 7; const d = diasEntre(caso.obra.cierre.terminadaAt, ahora);
+    if (d >= plazo && !caso.obra.cierre.conformidad) out.push({ tipo:'remates_plazo', fase:'remates', texto:'Pasó el plazo de remates (' + plazo + ' días): puedes cerrar por plazo.', accion:'cerrar_por_plazo' });
   }
   return out;
-}
-
-// 4.21 — Lista de compra agrupada por categoría
-function listaCompra(caso, catalogo){
-  const v1 = (caso.versiones||[]).find(v => ['aceptada','vigente'].includes(v.estado)) || (caso.versiones||[])[0];
-  if (!v1) return [];
-  const grupos = {};
-  (v1.lineas||[]).filter(l => l.tipo === 'mat' && l.productoId).forEach(l => {
-    const prod = (catalogo||[]).find(p => p.id === l.productoId); if (!prod) return;
-    const cat = prod.cat || 'otros';
-    (grupos[cat] = grupos[cat] || []).push({ productoId:l.productoId, nombre:prod.nombre, cantidad:l.cantidad, unidad:l.unidad||prod.unidad, precio:prod.precio, subtotal:r(l.cantidad*prod.precio) });
-  });
-  return Object.entries(grupos).map(([cat, items]) => ({ cat, items, total: r(items.reduce((s,i)=>s+i.subtotal,0)) }));
-}
-
-// 4.22 — Impacto de cambiar el precio de un producto
-function impactoCambioPrecio(db, productoId, nuevoPrecio){
-  const afectados = [];
-  (db.casos||[]).forEach(caso => (caso.versiones||[]).forEach(v => {
-    (v.lineas||[]).filter(l => l.productoId === productoId && l.tipo === 'mat').forEach(l => {
-      const deltaTotal = r((nuevoPrecio - l.precio) * l.cantidad);
-      afectados.push({ casoId:caso.id, versionId:v.id, lineaId:l.id, cantidad:l.cantidad, precioActual:l.precio, precioNuevo:nuevoPrecio, deltaTotal });
-    });
-  }));
-  return { afectados, deltaAgregado: r(afectados.reduce((s,a) => s + a.deltaTotal, 0)), nCasos: new Set(afectados.map(a=>a.casoId)).size };
 }
 
 // ═══════════════════════════════════════════════════════
@@ -1020,16 +1073,20 @@ function impactoCambioPrecio(db, productoId, nuevoPrecio){
 
 // Catálogo de productos (del panel v1)
 const CATALOGO_INICIAL = [
-  {id:'p1', cat:'suelo',      nombre:'Azulejo porcelánico Travertino Beige 60×60', marca:'Aparici',   precio:18.90, unidad:'m²', proveedor:'Obramart',     stock:true, visible:true, hist:[17.70,17.70,18.10,18.50,18.90], alerta:true },
-  {id:'p2', cat:'suelo',      nombre:'Parquet laminado Roble Natural AC5 8mm',      marca:'Kronotex',  precio:16.50, unidad:'m²', proveedor:'Obramart',     stock:true, visible:true, hist:[16.50,16.50,16.50,16.50,16.50], alerta:false},
-  {id:'p3', cat:'suelo',      nombre:'Gres porcelánico Cemento Gris 80×80',         marca:'Vives',     precio:24.30, unidad:'m²', proveedor:'Obramart',     stock:true, visible:true, hist:[24.30,24.30,24.00,24.00,24.30], alerta:false},
-  {id:'p4', cat:'pintura',    nombre:'Pintura plástica blanca mate 15L',            marca:'Titanlux',  precio:32.50, unidad:'l',  proveedor:'Obramart',     stock:true, visible:true, hist:[30.00,30.00,31.20,31.20,32.50], alerta:false},
-  {id:'p6', cat:'tabiqueria', nombre:'Placa Pladur N 15mm 120×260 cm',              marca:'Pladur',    precio:11.20, unidad:'m²', proveedor:'Obramart',     stock:true, visible:true, hist:[11.00,11.00,11.00,11.20,11.20], alerta:false},
-  {id:'p8', cat:'sanitario',  nombre:'Inodoro suspendido Rimless doble descarga',   marca:'Roca',      precio:189.00,unidad:'ud', proveedor:'Leroy Merlin', stock:true, visible:true, hist:[185,185,185,189,189],           alerta:false},
-  {id:'p9', cat:'sanitario',  nombre:'Lavabo sobre encimera 60cm ovalado blanco',   marca:'Villeroy',  precio:145.00,unidad:'ud', proveedor:'Leroy Merlin', stock:true, visible:true, hist:[145,145,148,148,145],           alerta:false},
-  {id:'p10',cat:'mueble',     nombre:'Mueble lavabo 80cm suspendido con cajones',   marca:'Camargue',  precio:385.00,unidad:'ud', proveedor:'Leroy Merlin', stock:true, visible:true, hist:[380,385,385,385,385],           alerta:false},
-  {id:'p11',cat:'fontaneria', nombre:'Grifo monomando baño cromado',                marca:'Grohe',     precio:89.00, unidad:'ud', proveedor:'Leroy Merlin', stock:true, visible:true, hist:[89,89,89,89,89],                alerta:false},
-  {id:'p12',cat:'caldera',    nombre:'Caldera de condensación gas natural 24kW',    marca:'Baxi',      precio:1290.0,unidad:'ud', proveedor:'Bricomart',    stock:true, visible:true, hist:[1250,1260,1270,1280,1290],      alerta:false},
+  {id:'p1', cat:'suelo',      nombre:'Azulejo porcelánico Travertino Beige 60×60', marca:'Aparici',   precio:18.90, precioManual:null, unidad:'m²', pack:1.44, merma:null, proveedor:'Obramart',     stock:true,  visible:true, favorito:true,  hist:[17.70,17.70,18.10,18.50,18.90], alerta:true },
+  {id:'p2', cat:'suelo',      nombre:'Parquet laminado Roble Natural AC5 8mm',      marca:'Kronotex',  precio:16.50, precioManual:null, unidad:'m²', pack:2.22, merma:null, proveedor:'Obramart',     stock:true,  visible:true, favorito:false, hist:[16.50,16.50,16.50,16.50,16.50], alerta:false},
+  {id:'p3', cat:'suelo',      nombre:'Gres porcelánico Cemento Gris 80×80',         marca:'Vives',     precio:24.30, precioManual:null, unidad:'m²', pack:1.28, merma:null, proveedor:'Obramart',     stock:true,  visible:true, favorito:false, hist:[24.30,24.30,24.00,24.00,24.30], alerta:false},
+  {id:'p14',cat:'suelo',      nombre:'Tarima flotante AC4 8mm Roble Natural',       marca:'Quickstep', precio:22.50, precioManual:null, unidad:'m²', pack:2.20, merma:null, proveedor:'Leroy Merlin', stock:true,  visible:true, favorito:false, hist:[22.50,22.50,22.50,22.50,22.50], alerta:false},
+  {id:'p4', cat:'pintura',    nombre:'Pintura plástica blanca mate 15L',            marca:'Titanlux',  precio:32.50, precioManual:null, unidad:'l',  pack:15,   merma:null, proveedor:'Obramart',     stock:true,  visible:true, favorito:false, hist:[30.00,30.00,31.20,31.20,32.50], alerta:false},
+  {id:'p5', cat:'pintura',    nombre:'Esmalte satinado blanco paredes 4L',          marca:'Valentine', precio:18.90, precioManual:null, unidad:'l',  pack:4,    merma:null, proveedor:'Obramart',     stock:true,  visible:true, favorito:false, hist:[18.90,18.90,18.90,18.90,18.90], alerta:false},
+  {id:'p6', cat:'tabiqueria', nombre:'Placa Pladur N 15mm 120×260 cm',              marca:'Pladur',    precio:11.20, precioManual:null, unidad:'m²', pack:3.12, merma:null, proveedor:'Obramart',     stock:true,  visible:true, favorito:false, hist:[11.00,11.00,11.00,11.20,11.20], alerta:false},
+  {id:'p7', cat:'tabiqueria', nombre:'Placa Pladur WA antihumedad 15mm',            marca:'Pladur',    precio:14.80, precioManual:null, unidad:'m²', pack:3.12, merma:null, proveedor:'Obramart',     stock:false, visible:true, favorito:false, hist:[14.80,14.80,14.80,14.80,14.80], alerta:false},
+  {id:'p8', cat:'sanitario',  nombre:'Inodoro suspendido Rimless doble descarga',   marca:'Roca',      precio:189.00,precioManual:null, unidad:'ud', pack:1,    merma:null,    proveedor:'Leroy Merlin', stock:true,  visible:true, favorito:true,  hist:[185,185,185,189,189],           alerta:false},
+  {id:'p9', cat:'sanitario',  nombre:'Lavabo sobre encimera 60cm ovalado blanco',   marca:'Villeroy',  precio:145.00,precioManual:null, unidad:'ud', pack:1,    merma:null,    proveedor:'Leroy Merlin', stock:true,  visible:true, favorito:false, hist:[145,145,148,148,145],           alerta:false},
+  {id:'p10',cat:'mueble',     nombre:'Mueble lavabo 80cm suspendido con cajones',   marca:'Camargue',  precio:385.00,precioManual:null, unidad:'ud', pack:1,    merma:null,    proveedor:'Leroy Merlin', stock:true,  visible:true, favorito:false, hist:[380,385,385,385,385],           alerta:false},
+  {id:'p11',cat:'fontaneria', nombre:'Grifo monomando baño cromado',                marca:'Grohe',     precio:89.00, precioManual:null, unidad:'ud', pack:1,    merma:null,    proveedor:'Leroy Merlin', stock:true,  visible:true, favorito:false, hist:[89,89,89,89,89],                alerta:false},
+  {id:'p12',cat:'caldera',    nombre:'Caldera de condensación gas natural 24kW',    marca:'Baxi',      precio:1290.0,precioManual:null, unidad:'ud', pack:1,    merma:null,    proveedor:'Bricomart',    stock:true,  visible:true, favorito:false, hist:[1250,1260,1270,1280,1290],      alerta:false},
+  {id:'p13',cat:'calefaccion',nombre:'Radiador acero tubular 600mm 6 elementos',    marca:'Zehnder',   precio:145.00,precioManual:null, unidad:'ud', pack:1,    merma:null,    proveedor:'Bricomart',    stock:true,  visible:true, favorito:false, hist:[145,145,145,145,145],           alerta:false},
 ];
 
 // Conjuntos de trabajos por tipo de estancia
@@ -1042,6 +1099,8 @@ const TRB = {
   hab:       ['cambiar_suelo','pintar_paredes','pintar_techo','puertas_interior'],
 };
 
+const PROD_TRABAJO = { cambiar_suelo:(e)=>['bano','cocina'].includes(e.tipo)?'p3':'p14', alicatar_paredes:()=>'p1', tabique_pladur:()=>'p6', instalacion_caldera:()=>'p12' };
+function precioProducto(p){ return p.precioManual != null ? p.precioManual : p.precio; }
 function mkLineas(espacios, calidad){
   const coef = CAL_COEF[calidad] || 1; const lineas = [];
   (espacios||[]).forEach(e => (e.trabajos||[]).forEach(tk => {
@@ -1049,7 +1108,11 @@ function mkLineas(espacios, calidad){
     const cant = cantidadEstimada(t.base, e.m2, null);
     const u = (t.base==='ud'||t.base==='fijo') ? 'ud' : 'm²';
     lineas.push({ id:uid('L'), key:tk, concepto:t.label+' · M.O.', espacioId:e.id, unidad:u, base:t.base, cantidad:cant, precio:r(t.mo), subtotal:r(t.mo*cant), tipo:'mo', origen:'calculo', bloqueada:false });
-    if (t.mat > 0) lineas.push({ id:uid('L'), key:tk, concepto:t.label+' · material', espacioId:e.id, unidad:u, base:t.base, cantidad:cant, precio:r(t.mat*coef), subtotal:r(t.mat*coef*cant), tipo:'mat', origen:'calculo', bloqueada:false });
+    if (t.mat > 0){
+      const pid = PROD_TRABAJO[tk] ? PROD_TRABAJO[tk](e) : null; const prod = pid ? CATALOGO_INICIAL.find(x => x.id === pid) : null;
+      const pm = prod ? precioProducto(prod) : r(t.mat*coef);
+      lineas.push({ id:uid('L'), key:tk, concepto:t.label+' · material' + (prod ? ' (' + prod.marca + ')' : ''), espacioId:e.id, unidad:u, base:t.base, cantidad:cant, precio:pm, subtotal:r(pm*cant), tipo:'mat', origen:'calculo', bloqueada:false, productoId: prod ? prod.id : undefined });
+    }
   }));
   return lineas;
 }
@@ -1064,7 +1127,9 @@ function mkHitos(cfg, inicio, estados){
   let d = new Date(inicio); const dur=[2,3,4,3,3,2,3,2];
   return cfg.hitosTipo.map((nombre,i) => {
     const ini = new Date(d); d.setDate(d.getDate()+(dur[i]||3));
-    return { id:'H'+(i+1), nombre, diasEstimados:dur[i]||3, estado:estados[i]||'pendiente', fechaInicioPrevista:ini.toISOString().split('T')[0], fechaFinPrevista:new Date(d).toISOString().split('T')[0] };
+    const fin = new Date(d).toISOString().split('T')[0]; const est = estados[i]||'pendiente';
+    return { id:'H'+(i+1), nombre, diasEstimados:dur[i]||3, estado:est, fechaInicioPrevista:ini.toISOString().split('T')[0], fechaFinPrevista:fin, fechaPrevista:fin,
+      fechaReal: est==='hecho' ? fin : null, fotos: est==='hecho' ? [{ id:'hf'+(i+1), url:'hito-simulado.jpg', momento:'durante', fecha:fin }] : [] };
   });
 }
 
@@ -1093,14 +1158,18 @@ function crearDBInicial(){
     {id:'CL-12', nombre:'Raquel García',    email:'raquel.g@gmail.com',       tel:'677 889 900', canal:'email',    cp:'45001', zona:'Toledo'},
     {id:'CL-13', nombre:'Antonio Vega',     email:'antonio.vega@gmail.com',   tel:'688 990 011', canal:'telefono', cp:'28801', zona:'Alcalá de Henares'},
     {id:'CL-14', nombre:'Elena Pérez',      email:'elena.perez@gmail.com',    tel:'699 001 122', canal:'whatsapp', cp:'28012', zona:'Lavapiés'},
+    {id:'CL-15', nombre:'Sergio Navarro',   email:'sergio.navarro@gmail.com', tel:'611 998 877', canal:'email',    cp:'28020', zona:'Tetuán'},
+    {id:'CL-16', nombre:'Lorenzo Gil',      email:'lorenzo.gil@hotmail.com',  tel:'622 887 766', canal:'telefono', cp:'19001', zona:'Guadalajara'},
+    {id:'CL-17', nombre:'M. García',        email:'maria.garcia@gmail.com',   tel:'612345678',   canal:'email',    cp:'28010', zona:'Chamberí'},
   ];
+  clientes.forEach((cl,i) => { cl.horario = cl.horario||'cualquiera'; cl.rgpd = cl.rgpd || { aceptadoAt: rel(-(20 + i*9)) }; cl.whatsappOk = cl.canal === 'whatsapp'; cl.notas = cl.notas || ''; });
 
   const casos = [];
 
   // 1 — RECIBIDA · sin fotos · humedades
   casos.push(base({
     id:'REF-0001', clienteId:'CL-01', creadoAt:rel(-1), estado:'recibida',
-    vivienda:{cp:'28010', zona:'dentro', tipo:'piso', m2:70, plantas:1, antiguedad:'<1980', humedades:true, propietario:true, comunidad:'no_aplica', topePresupuesto:12000, fechaInicioDeseada:rel(45)},
+    vivienda:{cp:'28010', tipo:'piso', m2:70, plantas:1, antiguedad:'<1980', humedades:true, propietario:true, comunidad:'no_aplica', topePresupuesto:12000, fechaInicioDeseada:rel(45)},
     solicitud:{calidad:'media', tipoObra:'reforma_bano', notasCliente:'Baño con humedades y cocina antigua. Quiero cambiar la bañera por ducha.', fotosCliente:[],
       espacios:[{id:'e1',tipo:'bano',m2:8,trabajos:TRB.banoFull},{id:'e2',tipo:'cocina',m2:12,trabajos:TRB.cocina}]},
     versiones:[mkVersion({id:'V1', espacios:[{id:'e1',tipo:'bano',m2:8,trabajos:TRB.banoFull},{id:'e2',tipo:'cocina',m2:12,trabajos:TRB.cocina}], calidad:'media', nivel:'alta', creadaAt:rel(-1)})],
@@ -1111,7 +1180,7 @@ function crearDBInicial(){
   // 2 — EN TRIAJE · calidad alta · fotos · propietario · integral premium
   casos.push(base({
     id:'REF-0002', clienteId:'CL-02', creadoAt:rel(-2), estado:'en_triaje',
-    vivienda:{cp:'28009', zona:'dentro', tipo:'piso', m2:95, plantas:1, antiguedad:'1980-2000', humedades:false, propietario:true, comunidad:'resuelta', topePresupuesto:70000, fechaInicioDeseada:rel(25)},
+    vivienda:{cp:'28009', tipo:'piso', m2:95, plantas:1, antiguedad:'1980-2000', humedades:false, propietario:true, comunidad:'resuelta', topePresupuesto:70000, fechaInicioDeseada:rel(25)},
     solicitud:{calidad:'premium', tipoObra:'reforma_integral', notasCliente:'Reforma integral de 95m². Busco acabados de alta calidad.', fotosCliente:['salon.jpg','cocina.jpg','bano1.jpg','pasillo.jpg'],
       espacios:[{id:'e1',tipo:'salon',m2:28,trabajos:TRB.salon},{id:'e2',tipo:'cocina',m2:14,trabajos:TRB.cocinaFull},{id:'e3',tipo:'bano',m2:9,trabajos:TRB.banoFull},{id:'e4',tipo:'bano',m2:5,trabajos:TRB.banoSimple},{id:'e5',tipo:'hab',m2:16,trabajos:TRB.hab},{id:'e6',tipo:'hab',m2:12,trabajos:TRB.hab}]},
     versiones:[mkVersion({id:'V1', espacios:[{id:'e1',tipo:'salon',m2:28,trabajos:TRB.salon},{id:'e2',tipo:'cocina',m2:14,trabajos:TRB.cocinaFull},{id:'e3',tipo:'bano',m2:9,trabajos:TRB.banoFull},{id:'e4',tipo:'bano',m2:5,trabajos:TRB.banoSimple},{id:'e5',tipo:'hab',m2:16,trabajos:TRB.hab},{id:'e6',tipo:'hab',m2:12,trabajos:TRB.hab}], calidad:'premium', nivel:'media', creadaAt:rel(-2)})],
@@ -1122,7 +1191,7 @@ function crearDBInicial(){
   // 3 — ESPERANDO INFO · cliente respondió hace poco · zona límite
   casos.push(base({
     id:'REF-0003', clienteId:'CL-03', creadoAt:rel(-4), estado:'esperando_info',
-    vivienda:{cp:'28031', zona:'limite', tipo:'piso', m2:60, plantas:1, antiguedad:'1980-2000', humedades:false, propietario:true, comunidad:'no_aplica', topePresupuesto:8000, fechaInicioDeseada:rel(70)},
+    vivienda:{cp:'28031', tipo:'piso', m2:60, plantas:1, antiguedad:'1980-2000', humedades:false, propietario:true, comunidad:'no_aplica', topePresupuesto:8000, fechaInicioDeseada:rel(70)},
     solicitud:{calidad:'media', tipoObra:'reforma_bano', notasCliente:'Reforma de un baño.', fotosCliente:['bano.jpg'],
       espacios:[{id:'e1',tipo:'bano',m2:7,trabajos:TRB.banoFull}]},
     versiones:[mkVersion({id:'V1', espacios:[{id:'e1',tipo:'bano',m2:7,trabajos:TRB.banoFull}], calidad:'media', nivel:'media', creadaAt:rel(-4)})],
@@ -1133,7 +1202,7 @@ function crearDBInicial(){
   // 4 — ESPERANDO INFO · sin respuesta · recordatorio debido · zona fuera
   casos.push(base({
     id:'REF-0004', clienteId:'CL-04', creadoAt:rel(-5), estado:'esperando_info',
-    vivienda:{cp:'28901', zona:'fuera', tipo:'piso', m2:55, plantas:1, antiguedad:'>2000', humedades:false, propietario:false, comunidad:'pendiente', topePresupuesto:5000, fechaInicioDeseada:null},
+    vivienda:{cp:'28901', tipo:'piso', m2:55, plantas:1, antiguedad:'>2000', humedades:false, propietario:false, comunidad:'pendiente', topePresupuesto:5000, fechaInicioDeseada:null},
     solicitud:{calidad:'basica', tipoObra:'reforma_bano', notasCliente:'Arreglar baño de alquiler.', fotosCliente:[],
       espacios:[{id:'e1',tipo:'bano',m2:5,trabajos:TRB.banoSimple}]},
     versiones:[mkVersion({id:'V1', espacios:[{id:'e1',tipo:'bano',m2:5,trabajos:TRB.banoSimple}], calidad:'basica', nivel:'media', creadaAt:rel(-5)})],
@@ -1144,7 +1213,7 @@ function crearDBInicial(){
   // 5 — VISITA PROPUESTA · franjas ofrecidas
   casos.push(base({
     id:'REF-0005', clienteId:'CL-05', creadoAt:rel(-6), estado:'visita_propuesta',
-    vivienda:{cp:'28015', zona:'dentro', tipo:'piso', m2:80, plantas:1, antiguedad:'1980-2000', humedades:false, propietario:true, comunidad:'no_aplica', topePresupuesto:22000, fechaInicioDeseada:rel(40)},
+    vivienda:{cp:'28015', tipo:'piso', m2:80, plantas:1, antiguedad:'1980-2000', humedades:false, propietario:true, comunidad:'no_aplica', topePresupuesto:22000, fechaInicioDeseada:rel(40)},
     solicitud:{calidad:'media', tipoObra:'reforma_parcial', notasCliente:'Baño y salón.', fotosCliente:['bano.jpg','salon.jpg'],
       espacios:[{id:'e1',tipo:'bano',m2:8,trabajos:TRB.banoFull},{id:'e2',tipo:'salon',m2:26,trabajos:TRB.salon}]},
     versiones:[mkVersion({id:'V1', espacios:[{id:'e1',tipo:'bano',m2:8,trabajos:TRB.banoFull},{id:'e2',tipo:'salon',m2:26,trabajos:TRB.salon}], calidad:'media', nivel:'media', creadaAt:rel(-6)})],
@@ -1156,7 +1225,7 @@ function crearDBInicial(){
   // 6 — VISITA CONFIRMADA · para hoy
   casos.push(base({
     id:'REF-0006', clienteId:'CL-06', creadoAt:rel(-8), estado:'visita_confirmada',
-    vivienda:{cp:'28004', zona:'dentro', tipo:'piso', m2:90, plantas:1, antiguedad:'<1980', humedades:true, propietario:true, comunidad:'resuelta', topePresupuesto:55000, fechaInicioDeseada:rel(30)},
+    vivienda:{cp:'28004', tipo:'piso', m2:90, plantas:1, antiguedad:'<1980', humedades:true, propietario:true, comunidad:'resuelta', topePresupuesto:55000, fechaInicioDeseada:rel(30)},
     solicitud:{calidad:'premium', tipoObra:'reforma_integral', notasCliente:'Reforma completa de piso en el centro.', fotosCliente:['f1.jpg','f2.jpg','f3.jpg'],
       espacios:[{id:'e1',tipo:'salon',m2:30,trabajos:TRB.salon},{id:'e2',tipo:'cocina',m2:12,trabajos:TRB.cocinaFull},{id:'e3',tipo:'bano',m2:8,trabajos:TRB.banoFull},{id:'e4',tipo:'hab',m2:15,trabajos:TRB.hab}]},
     versiones:[mkVersion({id:'V1', espacios:[{id:'e1',tipo:'salon',m2:30,trabajos:TRB.salon},{id:'e2',tipo:'cocina',m2:12,trabajos:TRB.cocinaFull},{id:'e3',tipo:'bano',m2:8,trabajos:TRB.banoFull},{id:'e4',tipo:'hab',m2:15,trabajos:TRB.hab}], calidad:'premium', nivel:'alta', creadaAt:rel(-8)})],
@@ -1173,7 +1242,7 @@ function crearDBInicial(){
     const v3 = mkVersion({id:'V3', espacios:esp, calidad:'media', nivel:'media', creadaAt:rel(-27), tipo:'propuesta', estado:'vigente', enviadaAt:rel(-27)});
     casos.push(base({
       id:'REF-0007', clienteId:'CL-07', creadoAt:rel(-42), estado:'propuesta_enviada',
-      vivienda:{cp:'28006', zona:'dentro', tipo:'piso', m2:85, plantas:1, antiguedad:'1980-2000', humedades:false, propietario:true, comunidad:'no_aplica', topePresupuesto:10000, fechaInicioDeseada:rel(20)},
+      vivienda:{cp:'28006', tipo:'piso', m2:85, plantas:1, antiguedad:'1980-2000', humedades:false, propietario:true, comunidad:'no_aplica', topePresupuesto:10000, fechaInicioDeseada:rel(20)},
       solicitud:{calidad:'media', tipoObra:'reforma_cocina', notasCliente:'Reforma de cocina.', fotosCliente:['cocina.jpg','cocina2.jpg'], espacios:esp},
       versiones:[v1,v2,v3],
       eventos:[{fecha:rel(-42),tipo:'sistema',texto:'Pedido recibido',autor:'sistema'},{fecha:rel(-32),tipo:'mensaje',texto:'Enviada propuesta V2',autor:'reformista'},{fecha:rel(-27),tipo:'transicion',texto:'Enviada propuesta V3 revisada',autor:'reformista'}],
@@ -1187,10 +1256,12 @@ function crearDBInicial(){
     const v1 = mkVersion({id:'V1', espacios:esp, calidad:'media', nivel:'media', creadaAt:rel(-20), tipo:'propuesta', estado:'aceptada', enviadaAt:rel(-18)});
     casos.push(base({
       id:'REF-0008', clienteId:'CL-08', creadoAt:rel(-22), estado:'aceptada',
-      vivienda:{cp:'28005', zona:'dentro', tipo:'piso', m2:65, plantas:1, antiguedad:'1980-2000', humedades:false, propietario:true, comunidad:'no_aplica', topePresupuesto:11000, fechaInicioDeseada:rel(10)},
+      vivienda:{cp:'28005', tipo:'piso', m2:65, plantas:1, antiguedad:'1980-2000', humedades:false, propietario:true, comunidad:'no_aplica', topePresupuesto:11000, fechaInicioDeseada:rel(10)},
       solicitud:{calidad:'media', tipoObra:'reforma_bano', notasCliente:'Reforma de baño principal.', fotosCliente:['bano.jpg'], espacios:esp},
       versiones:[v1],
       aceptacion:{versionId:'V1', fecha:rel(-3), importe:v1.totales.total},
+      visita:{estado:'realizada', franjasOfrecidas:[], elegida:{fecha:rel(-12),franja:'10:00-11:00'}, cobro:{estado:'cobrada', importe:60, fecha:rel(-12)}, checks:{}, medidas:{}, fotos:[], notas:[]},
+      fiscal:{nombre:'Javier Moreno Ruiz', nif:'50123456K', direccion:'C/ Delicias 12, 28045 Madrid'},
       eventos:[{fecha:rel(-22),tipo:'sistema',texto:'Pedido recibido',autor:'sistema'},{fecha:rel(-18),tipo:'mensaje',texto:'Propuesta enviada',autor:'reformista'},{fecha:rel(-3),tipo:'transicion',texto:'Estado → Aceptada',autor:'cliente'}],
       interno:{etiquetas:[], nota:'Pendiente de agendar inicio de obra.', proximaAccion:'Planificar obra', motivoDescarte:null},
     }));
@@ -1200,19 +1271,23 @@ function crearDBInicial(){
   (function(){
     const esp=[{id:'e1',tipo:'salon',m2:35,trabajos:TRB.salon},{id:'e2',tipo:'cocina',m2:16,trabajos:TRB.cocinaFull},{id:'e3',tipo:'bano',m2:10,trabajos:TRB.banoFull},{id:'e4',tipo:'bano',m2:6,trabajos:TRB.banoSimple},{id:'e5',tipo:'hab',m2:18,trabajos:TRB.hab},{id:'e6',tipo:'hab',m2:14,trabajos:TRB.hab}];
     const v1 = mkVersion({id:'V1', espacios:esp, calidad:'premium', nivel:'media', creadaAt:rel(-50), tipo:'propuesta', estado:'aceptada', enviadaAt:rel(-48)});
-    const inicio = rel(-20);
-    const obra = { inicio, hitos:mkHitos(cfg, inicio, ['hecho','hecho','en_curso','pendiente','pendiente','pendiente','pendiente','pendiente']),
-      cambios:[{id:'C1', fecha:rel(-10), concepto:'Refuerzo de vigueta detectado en demolición', importe:450, estado:'consolidado', bloqueaObra:false}],
-      adendas:[{id:'A1', fecha:rel(-8), delta:450, estado:'firmada', cambios:['C1'], concepto:'Adenda nº1 · imprevisto estructural'}],
-      fotos:[{fecha:rel(-18),url:'obra1.jpg'},{fecha:rel(-12),url:'obra2.jpg'}], solicitudesCambio:[], remates:[], cierre:null };
+    const inicio = rel(-14);
+    const obra = { inicio, hitos:mkHitos(cfg, inicio, ['hecho','hecho','hecho','hecho','en_curso','pendiente','pendiente','pendiente']),
+      cambios:[
+        {id:'C1', fecha:rel(-10), tipo:'imprevisto', concepto:'Refuerzo de vigueta detectado en demolición', importe:450, estado:'consolidado', bloqueaObra:false, urgente:false, aprobacion:'presencial', adendaId:'A1', avisoCliente:{enviadoAt:rel(-10), desacuerdo:false}},
+        {id:'C2', fecha:rel(-3), tipo:'cliente', concepto:'Cambio de plato de ducha por uno de resina', importe:200, estado:'registrado', bloqueaObra:false, urgente:false, aprobacion:'telefono', avisoCliente:{enviadoAt:rel(-3), desacuerdo:false}},
+        {id:'C3', fecha:rel(-1), tipo:'alcance', concepto:'Punto de luz adicional en el pasillo', importe:120, estado:'registrado', bloqueaObra:false, urgente:false, aprobacion:'enlace', avisoCliente:{enviadoAt:rel(-1), desacuerdo:false}}],
+      adendas:[{id:'A1', fecha:rel(-8), delta:450, estado:'firmada', motivo:'tope', cambios:['C1'], concepto:'Adenda nº1 · imprevisto estructural', enviadaAt:rel(-8), firmadaAt:rel(-7)}],
+      fotos:[{id:'of1',fecha:rel(-15),url:'antes-salon.jpg',momento:'antes',espacioId:'e1'},{id:'of2',fecha:rel(-13),url:'demolicion.jpg',momento:'durante',espacioId:'e2'},{id:'of3',fecha:rel(-6),url:'tabiques.jpg',momento:'durante',espacioId:'e1'},{id:'of4',fecha:rel(-2),url:'alicatado-bano.jpg',momento:'durante',espacioId:'e3'}], solicitudesCambio:[{id:'S1', fecha:rel(-1), texto:'¿Podríamos cambiar el color del alicatado del baño 2?', estado:'abierta'}], remates:[], cierre:null };
     casos.push(base({
       id:'REF-0009', clienteId:'CL-09', creadoAt:rel(-55), estado:'en_obra',
-      vivienda:{cp:'28224', zona:'limite', tipo:'chalet', m2:160, plantas:2, antiguedad:'1980-2000', humedades:false, propietario:true, comunidad:'no_aplica', topePresupuesto:100000, fechaInicioDeseada:rel(-20)},
+      vivienda:{cp:'28224', tipo:'chalet', m2:160, plantas:2, antiguedad:'1980-2000', humedades:false, propietario:true, comunidad:'no_aplica', topePresupuesto:100000, fechaInicioDeseada:rel(-14)},
       solicitud:{calidad:'premium', tipoObra:'reforma_integral', notasCliente:'Reforma integral de chalet.', fotosCliente:['f1.jpg','f2.jpg'], espacios:esp},
       versiones:[v1],
       aceptacion:{versionId:'V1', fecha:rel(-28), importe:v1.totales.total},
       obra,
-      eventos:[{fecha:rel(-55),tipo:'sistema',texto:'Pedido recibido',autor:'sistema'},{fecha:rel(-28),tipo:'transicion',texto:'Estado → Aceptada',autor:'cliente'},{fecha:rel(-20),tipo:'transicion',texto:'Estado → En obra',autor:'reformista'},{fecha:rel(-8),tipo:'adenda',texto:'Adenda nº1 firmada (+450€)',autor:'cliente'}],
+      eventos:[{fecha:rel(-55),tipo:'sistema',texto:'Pedido recibido',autor:'sistema'},{fecha:rel(-28),tipo:'transicion',texto:'Estado → Aceptada',autor:'cliente'},{fecha:rel(-14),tipo:'transicion',texto:'Estado → En obra',autor:'reformista'},{fecha:rel(-8),tipo:'adenda',texto:'Adenda nº1 firmada (+450€)',autor:'cliente'}],
+      fiscal:{nombre:'Carmen Ruiz Prieto', nif:'02345678B', direccion:'Camino de la Fuente 4, 28224 Pozuelo'},
       interno:{etiquetas:['obra_grande'], nota:'Obra en marcha, al día.', proximaAccion:'Supervisar albañilería', motivoDescarte:null},
     }));
   })();
@@ -1223,16 +1298,16 @@ function crearDBInicial(){
     const v1 = mkVersion({id:'V1', espacios:esp, calidad:'media', nivel:'media', creadaAt:rel(-30), tipo:'propuesta', estado:'aceptada', enviadaAt:rel(-28)});
     const inicio = rel(-8);
     const obra = { inicio, hitos:mkHitos(cfg, inicio, ['hecho','en_curso','pendiente','pendiente','pendiente','pendiente','pendiente','pendiente']),
-      cambios:[{id:'C1', fecha:rel(-2), concepto:'Instalación eléctrica no cumple normativa: requiere decisión del cliente', importe:1200, estado:'registrado', bloqueaObra:true}],
+      cambios:[{id:'C1', fecha:rel(-2), tipo:'imprevisto', concepto:'Instalación eléctrica no cumple normativa: requiere decisión del cliente', importe:1200, estado:'registrado', bloqueaObra:true, urgente:true, aprobacion:'telefono', partidaPausada:true, avisoCliente:{enviadoAt:rel(-2), desacuerdo:false}}],
       adendas:[], fotos:[], solicitudesCambio:[{id:'S1', fecha:rel(-2), texto:'¿Rehacemos el cuadro eléctrico completo?', estado:'abierta'}], remates:[], cierre:null };
     casos.push(base({
       id:'REF-0010', clienteId:'CL-10', creadoAt:rel(-35), estado:'en_obra',
-      vivienda:{cp:'28044', zona:'dentro', tipo:'piso', m2:70, plantas:1, antiguedad:'<1980', humedades:false, propietario:true, comunidad:'no_aplica', topePresupuesto:16000, fechaInicioDeseada:rel(-8)},
+      vivienda:{cp:'28044', tipo:'piso', m2:70, plantas:1, antiguedad:'<1980', humedades:false, propietario:true, comunidad:'no_aplica', topePresupuesto:16000, fechaInicioDeseada:rel(-8)},
       solicitud:{calidad:'media', tipoObra:'reforma_cocina', notasCliente:'Reforma de cocina.', fotosCliente:['cocina.jpg'], espacios:esp},
       versiones:[v1],
       aceptacion:{versionId:'V1', fecha:rel(-14), importe:v1.totales.total},
       obra,
-      eventos:[{fecha:rel(-35),tipo:'sistema',texto:'Pedido recibido',autor:'sistema'},{fecha:rel(-14),tipo:'transicion',texto:'Estado → Aceptada',autor:'cliente'},{fecha:rel(-8),tipo:'transicion',texto:'Estado → En obra',autor:'reformista'},{fecha:rel(-2),tipo:'cambio',texto:'Cambio bloqueante registrado (eléctrico)',autor:'reformista'}],
+      eventos:[{fecha:rel(-35),tipo:'sistema',texto:'Pedido recibido',autor:'sistema'},{fecha:rel(-14),tipo:'transicion',texto:'Estado → Aceptada',autor:'cliente'},{fecha:rel(-8),tipo:'transicion',texto:'Estado → En obra',autor:'reformista'},{fecha:rel(-2),tipo:'cambio',texto:'Cambio bloqueante registrado (eléctrico)',autor:'reformista'},{fecha:rel(0),tipo:'sistema',texto:'Partida eléctrica pausada pendiente de aprobación (48 h sin resolver)',autor:'sistema'}],
       interno:{etiquetas:['bloqueada'], nota:'Obra parada esperando decisión del cliente sobre el cuadro eléctrico.', proximaAccion:'Llamar al cliente urgente', motivoDescarte:null},
     }));
   })();
@@ -1242,12 +1317,12 @@ function crearDBInicial(){
     const esp=[{id:'e1',tipo:'bano',m2:9,trabajos:TRB.banoFull},{id:'e2',tipo:'cocina',m2:14,trabajos:TRB.cocina}];
     const v1 = mkVersion({id:'V1', espacios:esp, calidad:'media', nivel:'media', creadaAt:rel(-70), tipo:'propuesta', estado:'aceptada', enviadaAt:rel(-68)});
     const inicio = rel(-40);
-    const obra = { inicio, hitos:mkHitos(cfg, inicio, ['hecho','hecho','hecho','hecho','hecho','hecho','hecho','en_curso']),
+    const obra = { inicio, hitos:mkHitos(cfg, inicio, ['hecho','hecho','hecho','hecho','hecho','hecho','hecho','hecho']),
       cambios:[], adendas:[], fotos:[{fecha:rel(-5),url:'final1.jpg'}],
-      solicitudesCambio:[], remates:[{id:'R1',texto:'Sellado de junta en ducha',estado:'abierto'},{id:'R2',texto:'Retocar pintura en salón',estado:'abierto'},{id:'R3',texto:'Ajustar puerta de cocina',estado:'resuelto'}], cierre:null };
+      solicitudesCambio:[], remates:[{id:'R1',texto:'Sellado de junta en ducha',foto:true,estado:'abierto',autor:'cliente'},{id:'R2',texto:'Retocar pintura en salón',foto:true,estado:'abierto',autor:'cliente'},{id:'R3',texto:'Ajustar puerta de cocina',foto:false,estado:'resuelto',autor:'cliente'}], cierre:{ terminadaAt:rel(-4), conformidad:null, actaId:null } };
     casos.push(base({
       id:'REF-0011', clienteId:'CL-07', creadoAt:rel(-75), estado:'en_remates',
-      vivienda:{cp:'28006', zona:'dentro', tipo:'piso', m2:80, plantas:1, antiguedad:'1980-2000', humedades:false, propietario:true, comunidad:'no_aplica', topePresupuesto:20000, fechaInicioDeseada:rel(-40)},
+      vivienda:{cp:'28006', tipo:'piso', m2:80, plantas:1, antiguedad:'1980-2000', humedades:false, propietario:true, comunidad:'no_aplica', topePresupuesto:20000, fechaInicioDeseada:rel(-40)},
       solicitud:{calidad:'media', tipoObra:'reforma_parcial', notasCliente:'Baño y cocina.', fotosCliente:['b.jpg','c.jpg'], espacios:esp},
       versiones:[v1],
       aceptacion:{versionId:'V1', fecha:rel(-50), importe:v1.totales.total},
@@ -1263,24 +1338,24 @@ function crearDBInicial(){
     const v1 = mkVersion({id:'V1', espacios:esp, calidad:'premium', nivel:'media', creadaAt:rel(-120), tipo:'propuesta', estado:'aceptada', enviadaAt:rel(-118)});
     const inicio = rel(-90);
     const obra = { inicio, hitos:mkHitos(cfg, inicio, ['hecho','hecho','hecho','hecho','hecho','hecho','hecho','hecho']),
-      cambios:[], adendas:[{id:'A1', fecha:rel(-60), delta:1800, estado:'firmada', cambios:['C1'], concepto:'Adenda · ampliación de alicatado'}], fotos:[], solicitudesCambio:[], remates:[{id:'R1',texto:'Todo resuelto',estado:'resuelto'}],
-      cierre:{fecha:rel(-15), conformidad:true, nota:'Cliente conforme. Falta último pago.'} };
+      cambios:[{id:'C1', fecha:rel(-62), tipo:'alcance', concepto:'Ampliación de alicatado a toda la cocina', importe:1800, estado:'consolidado', bloqueaObra:false, urgente:false, aprobacion:'presencial', adendaId:'A1', avisoCliente:{enviadoAt:rel(-62), desacuerdo:false}}], adendas:[{id:'A1', fecha:rel(-60), delta:1800, estado:'firmada', motivo:'tope', cambios:['C1'], concepto:'Adenda · ampliación de alicatado', enviadaAt:rel(-60), firmadaAt:rel(-59)}], fotos:[{id:'f1',fecha:rel(-88),url:'antes.jpg',momento:'antes',espacioId:'e1'},{id:'f2',fecha:rel(-16),url:'despues.jpg',momento:'despues',espacioId:'e1'}], solicitudesCambio:[], remates:[{id:'R1',texto:'Todo resuelto',foto:false,estado:'resuelto',autor:'reformista'}],
+      cierre:{ terminadaAt:rel(-30), conformidad:{ tipo:'expresa', fecha:rel(-15) }, actaId:'ACTA-0001' } };
     casos.push(base({
       id:'REF-0012', clienteId:'CL-11', creadoAt:rel(-125), estado:'cerrada',
-      vivienda:{cp:'28100', zona:'fuera', tipo:'chalet', m2:200, plantas:2, antiguedad:'>2000', humedades:false, propietario:true, comunidad:'no_aplica', topePresupuesto:null, fechaInicioDeseada:rel(-90)},
+      vivienda:{cp:'28100', tipo:'chalet', m2:200, plantas:2, antiguedad:'>2000', humedades:false, propietario:true, comunidad:'no_aplica', topePresupuesto:null, fechaInicioDeseada:rel(-90)},
       solicitud:{calidad:'premium', tipoObra:'reforma_integral', notasCliente:'Reforma integral de chalet en Alcobendas.', fotosCliente:['f.jpg'], espacios:esp},
       versiones:[v1],
       aceptacion:{versionId:'V1', fecha:rel(-100), importe:v1.totales.total},
       obra,
       eventos:[{fecha:rel(-125),tipo:'sistema',texto:'Pedido recibido',autor:'sistema'},{fecha:rel(-100),tipo:'transicion',texto:'Estado → Aceptada',autor:'cliente'},{fecha:rel(-90),tipo:'transicion',texto:'Estado → En obra',autor:'reformista'},{fecha:rel(-15),tipo:'transicion',texto:'Estado → Cerrada',autor:'reformista'}],
-      interno:{etiquetas:['excepcion_zona'], nota:'Obra fuera de zona aceptada por volumen. Falta el pago final.', proximaAccion:'Reclamar pago final', motivoDescarte:null},
+      interno:{etiquetas:['zona_limite'], nota:'Obra en zona límite aceptada por volumen. Falta el pago final.', proximaAccion:'Reclamar pago final', motivoDescarte:null},
     }));
   })();
 
   // 13 — DESCARTADA · fuera de zona
   casos.push(base({
     id:'REF-0013', clienteId:'CL-12', creadoAt:rel(-12), estado:'descartada',
-    vivienda:{cp:'45001', zona:'fuera', tipo:'piso', m2:50, plantas:1, antiguedad:'1980-2000', humedades:false, propietario:true, comunidad:'no_aplica', topePresupuesto:4000, fechaInicioDeseada:null},
+    vivienda:{cp:'45001', tipo:'piso', m2:50, plantas:1, antiguedad:'1980-2000', humedades:false, propietario:true, comunidad:'no_aplica', topePresupuesto:4000, fechaInicioDeseada:null},
     solicitud:{calidad:'basica', tipoObra:'reforma_bano', notasCliente:'Reforma de baño en Toledo.', fotosCliente:[], espacios:[{id:'e1',tipo:'bano',m2:5,trabajos:TRB.banoSimple}]},
     versiones:[mkVersion({id:'V1', espacios:[{id:'e1',tipo:'bano',m2:5,trabajos:TRB.banoSimple}], calidad:'basica', nivel:'media', creadaAt:rel(-12)})],
     eventos:[{fecha:rel(-12),tipo:'sistema',texto:'Pedido recibido',autor:'sistema'},{fecha:rel(-11),tipo:'transicion',texto:'Estado → Descartada',autor:'reformista'}],
@@ -1293,7 +1368,7 @@ function crearDBInicial(){
     const v1 = mkVersion({id:'V1', espacios:esp, calidad:'media', nivel:'media', creadaAt:rel(-50), tipo:'propuesta', estado:'caducada', enviadaAt:rel(-45)});
     casos.push(base({
       id:'REF-0014', clienteId:'CL-13', creadoAt:rel(-52), estado:'caducada',
-      vivienda:{cp:'28801', zona:'fuera', tipo:'piso', m2:60, plantas:1, antiguedad:'1980-2000', humedades:false, propietario:true, comunidad:'no_aplica', topePresupuesto:7000, fechaInicioDeseada:null},
+      vivienda:{cp:'28801', tipo:'piso', m2:60, plantas:1, antiguedad:'1980-2000', humedades:false, propietario:true, comunidad:'no_aplica', topePresupuesto:7000, fechaInicioDeseada:null},
       solicitud:{calidad:'media', tipoObra:'reforma_cocina', notasCliente:'Reforma de cocina en Alcalá.', fotosCliente:['c.jpg'], espacios:esp},
       versiones:[v1],
       eventos:[{fecha:rel(-52),tipo:'sistema',texto:'Pedido recibido',autor:'sistema'},{fecha:rel(-45),tipo:'mensaje',texto:'Propuesta enviada',autor:'reformista'},{fecha:rel(-14),tipo:'transicion',texto:'Estado → Caducada',autor:'sistema'}],
@@ -1304,24 +1379,57 @@ function crearDBInicial(){
   // 15 — EN PAUSA (venía de visita_propuesta)
   casos.push(base({
     id:'REF-0015', clienteId:'CL-14', creadoAt:rel(-18), estado:'en_pausa', estadoPrevio:'visita_propuesta',
-    vivienda:{cp:'28012', zona:'dentro', tipo:'piso', m2:75, plantas:1, antiguedad:'<1980', humedades:true, propietario:true, comunidad:'pendiente', topePresupuesto:14000, fechaInicioDeseada:null},
+    vivienda:{cp:'28012', tipo:'piso', m2:75, plantas:1, antiguedad:'<1980', humedades:true, propietario:true, comunidad:'pendiente', topePresupuesto:14000, fechaInicioDeseada:null},
     solicitud:{calidad:'media', tipoObra:'reforma_parcial', notasCliente:'Reforma parcial, pendiente de confirmar fechas.', fotosCliente:['f.jpg','f2.jpg'], espacios:[{id:'e1',tipo:'bano',m2:7,trabajos:TRB.banoFull},{id:'e2',tipo:'salon',m2:22,trabajos:TRB.salon}]},
     versiones:[mkVersion({id:'V1', espacios:[{id:'e1',tipo:'bano',m2:7,trabajos:TRB.banoFull},{id:'e2',tipo:'salon',m2:22,trabajos:TRB.salon}], calidad:'media', nivel:'media', creadaAt:rel(-18)})],
     eventos:[{fecha:rel(-18),tipo:'sistema',texto:'Pedido recibido',autor:'sistema'},{fecha:rel(-14),tipo:'transicion',texto:'Estado → Visita propuesta',autor:'reformista'},{fecha:rel(-7),tipo:'transicion',texto:'Estado → En pausa',autor:'cliente'}],
     interno:{etiquetas:['pausado'], nota:'Cliente pide pausar: pendiente de aprobación de la comunidad.', proximaAccion:'Retomar cuando confirme comunidad', motivoDescarte:null},
   }));
 
-  // COBROS (según plan 30/30/40 sobre importe aceptado)
-  const cobros = [{id:uid('cob'), casoId:'REF-0006', importe:60, concepto:'Visita técnica', fecha:rel(-2), estado:'cobrado', metodo:'bizum', tipo:'visita', descontable:true}];
-  const addCobro = (casoId, importe, concepto, fecha, estado) => cobros.push({id:uid('cob'), casoId, importe:r(importe), concepto, fecha, estado:estado||'cobrado', metodo:'transferencia'});
+  // 16 — RECIBIDA · obra sencilla (suelo flotante) · apta para presupuesto sin visita · prioridad baja
   (function(){
-    const c8  = casos.find(c=>c.id==='REF-0008'); addCobro('REF-0008', c8.aceptacion.importe*0.30, 'Señal 30% al aceptar', c8.aceptacion.fecha);
-    const c9  = casos.find(c=>c.id==='REF-0009'); addCobro('REF-0009', c9.aceptacion.importe*0.30, 'Señal 30% al aceptar', rel(-28)); addCobro('REF-0009', c9.aceptacion.importe*0.30, '30% en instalaciones', rel(-10));
-    const c11 = casos.find(c=>c.id==='REF-0011'); addCobro('REF-0011', c11.aceptacion.importe*0.30, 'Señal 30% al aceptar', rel(-50)); addCobro('REF-0011', c11.aceptacion.importe*0.30, '30% en instalaciones', rel(-20));
-    const c12 = casos.find(c=>c.id==='REF-0012'); const tv12=totalVigente(c12); addCobro('REF-0012', tv12.total*0.30, 'Señal 30% al aceptar', rel(-100)); addCobro('REF-0012', tv12.total*0.30, '30% en instalaciones', rel(-60)); addCobro('REF-0012', tv12.total*0.25, 'Pago parcial entrega', rel(-20));
+    const esp=[{id:'e1',tipo:'salon',m2:30,trabajos:['cambiar_suelo','instalar_rodapie']}];
+    casos.push(base({
+      id:'REF-0016', clienteId:'CL-15', creadoAt:rel(0), estado:'recibida',
+      vivienda:{cp:'28020', tipo:'piso', m2:75, plantas:1, antiguedad:'>2000', humedades:false, propietario:true, comunidad:'no_aplica', topePresupuesto:3500, fechaInicioDeseada:rel(60)},
+      solicitud:{calidad:'basica', tipoObra:'suelo_flotante', notasCliente:'Quiero cambiar el suelo del salón por tarima flotante.', fotosCliente:['salon1.jpg','salon2.jpg','salon3.jpg'], espacios:esp},
+      versiones:[mkVersion({id:'V1', espacios:esp, calidad:'basica', nivel:'baja', creadaAt:rel(0)})],
+      eventos:[{fecha:rel(0),tipo:'sistema',texto:'Pedido recibido desde el configurador web',autor:'sistema'}],
+      interno:{etiquetas:['sencilla'], nota:'', proximaAccion:'', motivoDescarte:null},
+    }));
   })();
 
-  return { clientes, casos, cfg, cobros, catalogo:JSON.parse(JSON.stringify(CATALOGO_INICIAL)), meta:{hoyOffsetDias:_hoyOffset, version:'2.0', creadaEn:hoy()} };
+  // 17 — EN TRIAJE · prioridad alta con calidad baja (lleva días esperando y el cliente ha vuelto a escribir)
+  (function(){
+    const esp=[{id:'e1',tipo:'bano',m2:5,trabajos:TRB.banoSimple}];
+    casos.push(base({
+      id:'REF-0017', clienteId:'CL-16', creadoAt:rel(-4), estado:'en_triaje',
+      vivienda:{cp:'19001', tipo:'piso', m2:50, plantas:1, antiguedad:'>2000', humedades:false, propietario:false, comunidad:'no', topePresupuesto:1500, fechaInicioDeseada:null},
+      solicitud:{calidad:'basica', tipoObra:'reforma_bano', notasCliente:'Necesito arreglar el baño cuanto antes, es un piso de alquiler.', fotosCliente:[], espacios:esp},
+      versiones:[mkVersion({id:'V1', espacios:esp, calidad:'basica', nivel:'alta', creadaAt:rel(-4)})],
+      eventos:[{fecha:rel(-4),tipo:'sistema',texto:'Pedido recibido',autor:'sistema'},{fecha:rel(-3),tipo:'transicion',texto:'Estado → En triaje',autor:'reformista'},{fecha:rel(-1),tipo:'mensaje',texto:'El cliente escribe de nuevo preguntando si podemos ir ya',autor:'cliente'}],
+      interno:{etiquetas:['fuera_zona'], nota:'Insiste mucho; fuera de zona y con tope bajo.', proximaAccion:'Decidir descarte', motivoDescarte:null},
+    }));
+  })();
+
+  // COBROS (según plan 30/30/40 sobre importe aceptado)
+  const cobros = [];
+  const addCobro = (casoId, importe, concepto, fecha, tipo, medio, ref) => cobros.push({ id:uid('cob'), casoId, fecha, tipo, concepto, importe:r(importe), medio:medio||'transferencia', registradoPor:'reformista', referencia:ref||'', estado:'cobrado' });
+  const addVisita = (casoId, fecha, medio) => cobros.push({ id:uid('cob'), casoId, fecha, tipo:'visita', concepto:'Visita técnica', importe:60, medio, registradoPor:'reformista', referencia:'', estado:'cobrado', descontable:true });
+  (function(){
+    addVisita('REF-0006', rel(-2), 'bizum');
+    addVisita('REF-0008', rel(-12), 'efectivo');
+    const c8  = casos.find(c=>c.id==='REF-0008'); addCobro('REF-0008', c8.aceptacion.importe*0.30, 'Señal 30% al aceptar', c8.aceptacion.fecha, 'senal', 'transferencia', 'TR-48213');
+    const c9  = casos.find(c=>c.id==='REF-0009'); addCobro('REF-0009', c9.aceptacion.importe*0.30, 'Señal 30% al aceptar', rel(-28), 'senal', 'transferencia', 'TR-47001'); addCobro('REF-0009', c9.aceptacion.importe*0.30, '30% en instalaciones', rel(-9), 'hito', 'pasarela', 'PG-8841');
+    const c11 = casos.find(c=>c.id==='REF-0011'); addCobro('REF-0011', c11.aceptacion.importe*0.30, 'Señal 30% al aceptar', rel(-50), 'senal', 'bizum'); addCobro('REF-0011', c11.aceptacion.importe*0.30, '30% en instalaciones', rel(-20), 'hito', 'transferencia', 'TR-46012');
+    const c12 = casos.find(c=>c.id==='REF-0012'); const tv12=totalVigente(c12); addCobro('REF-0012', tv12.total*0.30, 'Señal 30% al aceptar', rel(-100), 'senal', 'transferencia', 'TR-44100'); addCobro('REF-0012', tv12.total*0.30, '30% en instalaciones', rel(-60), 'hito', 'transferencia', 'TR-44870'); addCobro('REF-0012', tv12.total*0.25, 'Pago parcial entrega', rel(-20), 'final', 'efectivo');
+  })();
+
+  // PROFORMA y ACTA de ejemplo
+  const proformas = [ crearProforma(casos.find(c=>c.id==='REF-0009'), cobros, 1, rel(-5)) ];
+  const actas = [ crearActa(casos.find(c=>c.id==='REF-0012'), cobros, 1, rel(-15)) ];
+
+  return { clientes, casos, cfg, cobros, proformas, actas, catalogo:JSON.parse(JSON.stringify(CATALOGO_INICIAL)), meta:{hoyOffsetDias:_hoyOffset, version:'2.0', creadaEn:hoy()} };
 }
 
 let DB = crearDBInicial();
@@ -1382,6 +1490,226 @@ function politicaReprogramar(caso, cfg, ahora){
   return { gratis, horas: Math.round(horas*10)/10, limite: pol.reprogramarGratisHoras, tardia: pol.tardia, pagada, efecto };
 }
 
+// ═══════════════════════════════════════════════════════
+// SECCIÓN 4C: OBRAS, COBROS, CATÁLOGO (funciones puras)
+// ═══════════════════════════════════════════════════════
+const DIAS_HITO_DEF = [2,3,4,3,3,2,3,2];
+
+// ── Obra: hitos, cambios y adendas ──────────────────────
+function replanificarHitos(obra){
+  let cur = obra.inicio || hoy();
+  (obra.hitos||[]).forEach(h => {
+    const dias = Math.max(1, Math.round(h.diasEstimados||1));
+    h.fechaInicioPrevista = cur; h.fechaFinPrevista = fechaMasDias(cur, dias); h.fechaPrevista = h.fechaFinPrevista; cur = h.fechaFinPrevista;
+  });
+  return obra;
+}
+function iniciarObra(caso, cfg, fechaInicio){
+  if (!puedeTransitar(caso, 'en_obra')) throw new Error('La obra solo puede iniciarse desde «Aceptada»');
+  caso.obra = caso.obra || {};
+  caso.obra.inicio = fechaInicio || hoy();
+  caso.obra.hitos = (cfg.hitosTipo||[]).map((n,i) => ({ id:'H'+(i+1), nombre:n, diasEstimados:DIAS_HITO_DEF[i]||3, estado:'pendiente', fechaReal:null, fotos:[] }));
+  ['cambios','adendas','fotos','solicitudesCambio','remates'].forEach(k => caso.obra[k] = caso.obra[k] || []);
+  replanificarHitos(caso.obra);
+  transitar(caso, 'en_obra', { autor:'reformista', texto:'Obra iniciada el ' + fmtFecha(caso.obra.inicio) });
+  return caso.obra;
+}
+function marcarHito(caso, hitoId, estado, opciones){
+  opciones = opciones || {};
+  const h = (caso.obra.hitos||[]).find(x => x.id === hitoId); if (!h) return null;
+  h.estado = estado;
+  if (estado === 'hecho'){ h.fechaReal = opciones.fecha || hoy(); for (let i=0;i<(opciones.fotos||0);i++) (h.fotos = h.fotos||[]).push({ id:uid('hf'), url:'hito-simulado.jpg', momento:'durante', fecha:h.fechaReal }); }
+  else h.fechaReal = null;
+  (caso.eventos = caso.eventos||[]).push({ fecha:hoy(), tipo:'obra', texto:'Hito «' + h.nombre + '» → ' + estado.replace('_',' '), autor:'reformista' });
+  return h;
+}
+function nuevoIdSeq(lista, prefijo){ const mx = (lista||[]).reduce((m,x) => Math.max(m, parseInt(String(x.id).replace(/\D/g,''),10)||0), 0); return prefijo + (mx + 1); }
+function registrarCambio(caso, d){
+  caso.obra.cambios = caso.obra.cambios || [];
+  const ch = { id:nuevoIdSeq(caso.obra.cambios,'C'), fecha:hoy(), tipo:d.tipo||'imprevisto', concepto:d.concepto||'Cambio', importe:r(Number(d.importe)||0), foto:!!d.foto, nota:d.nota||'', aprobacion:d.aprobacion||'presencial',
+    bloqueaObra:!!d.bloqueaObra, urgente:!!d.urgente, estado:'registrado', adendaId:null, avisoCliente:{ enviadoAt:hoy(), desacuerdo:false } };
+  caso.obra.cambios.push(ch);
+  (caso.eventos = caso.eventos||[]).push({ fecha:hoy(), tipo:'cambio', texto:'Cambio ' + ch.id + ' registrado: ' + ch.concepto + ' (' + fmtEur(ch.importe) + ' sin IVA)' + (ch.bloqueaObra?' · bloquea la obra':''), autor:'reformista' });
+  return ch;
+}
+function marcarDesacuerdo(caso, cambioId){
+  const ch = (caso.obra.cambios||[]).find(x => x.id === cambioId); if (!ch || ch.estado === 'consolidado') return null;
+  ch.estado = 'en_desacuerdo'; ch.avisoCliente = Object.assign({}, ch.avisoCliente, { desacuerdo:true });
+  (caso.eventos = caso.eventos||[]).push({ fecha:hoy(), tipo:'cliente', texto:'El cliente NO está de acuerdo con el cambio ' + ch.id + ': ' + ch.concepto, autor:'cliente' });
+  return ch;
+}
+function resolverDesacuerdo(caso, cambioId, accion, nuevoImporte){
+  const ch = (caso.obra.cambios||[]).find(x => x.id === cambioId); if (!ch || ch.estado !== 'en_desacuerdo') return null;
+  if (accion === 'ajustar') ch.importe = r(Number(nuevoImporte)||0);
+  ch.estado = 'registrado'; ch.avisoCliente = Object.assign({}, ch.avisoCliente, { desacuerdo:false, resueltoAt:hoy() });
+  (caso.eventos = caso.eventos||[]).push({ fecha:hoy(), tipo:'cambio', texto:'Desacuerdo del cambio ' + ch.id + ' resuelto (' + (accion==='ajustar'?'importe ajustado a ' + fmtEur(ch.importe):'se mantiene') + ')', autor:'reformista' });
+  return ch;
+}
+function crearAdenda(caso, cambioIds, motivo){
+  const cambios = (caso.obra.cambios||[]).filter(c => cambioIds.includes(c.id) && c.estado === 'registrado');
+  if (!cambios.length) throw new Error('Selecciona al menos un cambio registrado (los que están en desacuerdo no se pueden incluir)');
+  caso.obra.adendas = caso.obra.adendas || [];
+  const ad = { id:nuevoIdSeq(caso.obra.adendas,'A'), fecha:hoy(), cambios:cambios.map(c=>c.id), delta:r(cambios.reduce((s,c)=>s+c.importe,0)), estado:'enviada', motivo:motivo||'manual', concepto:'Adenda · ' + cambios.length + ' cambio(s)', enviadaAt:hoy(), firmadaAt:null };
+  caso.obra.adendas.push(ad); cambios.forEach(c => c.adendaId = ad.id);
+  (caso.eventos = caso.eventos||[]).push({ fecha:hoy(), tipo:'adenda', texto:'Adenda ' + ad.id + ' enviada al cliente (' + fmtEur(ad.delta) + ' sin IVA, motivo: ' + ad.motivo + ')', autor:'reformista' });
+  return ad;
+}
+function firmarAdenda(caso, adendaId){
+  const ad = (caso.obra.adendas||[]).find(a => a.id === adendaId); if (!ad || ad.estado === 'firmada') return null;
+  const vivos = ad.cambios.map(id => caso.obra.cambios.find(c => c.id === id)).filter(c => c && c.estado !== 'en_desacuerdo');
+  ad.cambios = vivos.map(c => c.id); ad.delta = r(vivos.reduce((s,c) => s + c.importe, 0));
+  vivos.forEach(c => c.estado = 'consolidado');
+  ad.estado = 'firmada'; ad.firmadaAt = hoy();
+  (caso.eventos = caso.eventos||[]).push({ fecha:hoy(), tipo:'adenda', texto:'Adenda ' + ad.id + ' firmada (' + fmtEur(ad.delta) + ' sin IVA); cambios consolidados', autor:'cliente' });
+  return ad;
+}
+function puedeTerminarObra(caso){
+  const pend = cambiosPendientes(caso); const des = pend.filter(c => c.estado === 'en_desacuerdo');
+  if (!pend.length) return { ok:true, motivo:'', pendientes:[], desacuerdos:[] };
+  const motivo = des.length
+    ? 'Hay ' + des.length + ' cambio(s) en desacuerdo (' + des.map(c=>c.id).join(', ') + '): resuélvelos antes de consolidar.'
+    : 'Hay ' + pend.length + ' cambio(s) sin consolidar (' + pend.map(c=>c.id).join(', ') + '): genera y firma una adenda de cierre.';
+  return { ok:false, motivo, pendientes:pend, desacuerdos:des };
+}
+function puedeCerrarObra(caso, cfg, modo){
+  const abiertos = (caso.obra?.remates||[]).filter(x => x.estado === 'abierto');
+  if (caso.estado !== 'en_remates') return { ok:false, motivo:'La obra debe estar en fase de remates.' };
+  if (abiertos.length) return { ok:false, motivo:'Quedan ' + abiertos.length + ' remate(s) abiertos: resuélvelos primero.' };
+  if (modo === 'plazo'){
+    const plazo = cfg.rematesPlazoDias || 7; const t = caso.obra?.cierre?.terminadaAt;
+    const d = t ? diasEntre(t, hoy()) : 0;
+    if (!t || d < plazo) return { ok:false, motivo:'El plazo de remates (' + plazo + ' días) aún no ha pasado' + (t ? ': faltan ' + (plazo - d) + ' día(s).' : '.') };
+  }
+  return { ok:true, motivo:'' };
+}
+
+// ── Cobros ──────────────────────────────────────────────
+function planCobros(caso, cfg, cobros){
+  const base = caso.aceptacion ? caso.aceptacion.importe : 0;
+  const pagado = calcularCobrado(caso, cobros);
+  const hitos = caso.obra?.hitos || [];
+  const entregado = ['terminada','en_remates','cerrada'].includes(caso.estado);
+  let acum = 0; const tramos = [];
+  (cfg.planCobros||[]).forEach(t => {
+    const importe = r(base * t.pct / 100); acum = r(acum + importe);
+    let alcanzado = false;
+    if (t.cuando === 'aceptacion') alcanzado = !!caso.aceptacion;
+    else if (String(t.cuando).startsWith('hito:')) alcanzado = hitos.some(h => h.nombre === String(t.cuando).slice(5) && h.estado === 'hecho');
+    else if (t.cuando === 'entrega') alcanzado = entregado;
+    const cubierto = pagado + 0.005 >= acum;
+    tramos.push({ label:t.label, pct:t.pct, cuando:t.cuando, importe, acumulado:acum, estado: cubierto ? 'cobrado' : (alcanzado ? 'debido' : 'pendiente'), falta: cubierto ? 0 : r(Math.min(importe, acum - pagado)) });
+  });
+  return tramos;
+}
+function proximoTramo(caso, cfg, cobros){ return planCobros(caso, cfg, cobros).find(t => t.estado !== 'cobrado') || null; }
+function cobrosPendientesDebidos(caso, cfg, cobros){ return planCobros(caso, cfg, cobros).filter(t => t.estado === 'debido'); }
+
+function crearProforma(caso, cobros, numero, fecha){
+  const tv = totalVigente(caso); const cobrado = calcularCobrado(caso, cobros);
+  const ver = (caso.versiones||[]).find(v => v.id === caso.aceptacion?.versionId); const ivaPct = ver?.ivaPct || 21;
+  const base = r(tv.total / (1 + ivaPct/100));
+  return { id:'PF-' + String(numero).padStart(4,'0'), numero, casoId:caso.id, clienteId:caso.clienteId, fecha, ivaPct, fiscal: caso.fiscal ? Object.assign({}, caso.fiscal) : null,
+    aceptada:tv.aceptada, adendasFirmadas:tv.adendasFirmadas, firmado:tv.firmado, provisional:tv.provisional, total:tv.total, base, iva:r(tv.total - base), cobrado, saldo:r(tv.total - cobrado),
+    movimientos: cobrosDeCaso(caso, cobros).filter(c => c.estado !== 'anulado').map(c => ({ fecha:c.fecha, concepto:c.concepto, tipo:c.tipo, importe:c.importe, medio:c.medio, aCuenta:c.tipo === 'visita' })),
+    leyenda:'Borrador de factura / proforma — no es una factura', congelada:true };
+}
+function crearActa(caso, cobros, numero, fecha, cfg){
+  const tv = totalVigente(caso); const cobrado = calcularCobrado(caso, cobros);
+  const firmadas = (caso.obra?.adendas||[]).filter(a => a.estado === 'firmada');
+  return { id:'ACTA-' + String(numero).padStart(4,'0'), numero, casoId:caso.id, fecha, totalFinal:tv.total, cobrado, saldo:r(tv.total - cobrado),
+    inicioObra:caso.obra?.inicio || null, finObra:caso.obra?.cierre?.terminadaAt || null, conformidad: caso.obra?.cierre?.conformidad || null,
+    garantiaInicio:fecha, textoGarantia:(cfg && cfg.textoGarantia) || CFG_DEFAULT.textoGarantia,
+    documentacion:[ 'Presupuesto aceptado ' + (caso.aceptacion?.versionId||''), ...firmadas.map(a => 'Adenda ' + a.id + ' firmada (' + fmtEur(a.delta) + ' sin IVA)'), (caso.obra?.fotos||[]).length + ' fotografías de la obra', (caso.obra?.remates||[]).length + ' remate(s) gestionados' ] };
+}
+function csvCelda(v){ return '"' + String(v == null ? '' : v).replace(/"/g, '""') + '"'; }
+function cobrosCSV(cobros){
+  const cab = ['id','caso','fecha','tipo','concepto','importe_iva_incl','medio','referencia','estado'];
+  const filas = (cobros||[]).map(c => [c.id, c.casoId, c.fecha, c.tipo, c.concepto, (c.importe||0).toFixed(2), c.medio, c.referencia, c.estado].map(csvCelda).join(','));
+  return [cab.join(','), ...filas].join('\r\n');
+}
+function resumenObraJSON(caso, cobros, cliente){
+  const tv = totalVigente(caso); const eco = estadoEconomico(caso, cobros);
+  return { caso:caso.id, estado:caso.estado, cliente: cliente ? { nombre:cliente.nombre, email:cliente.email, tel:cliente.tel } : null, fiscal:caso.fiscal || null,
+    economico:{ aceptada:tv.aceptada, adendasFirmadas:tv.adendasFirmadas, provisional:tv.provisional, total:tv.total, cobrado:eco.cobrado, saldo:eco.saldo, estado:eco.estado },
+    obra:{ inicio:caso.obra?.inicio||null, progreso:calcularProgreso(caso), hitos:(caso.obra?.hitos||[]).map(h => ({ nombre:h.nombre, estado:h.estado, fechaReal:h.fechaReal||null })), cambios:(caso.obra?.cambios||[]).map(c => ({ id:c.id, concepto:c.concepto, importe:c.importe, estado:c.estado })), adendas:(caso.obra?.adendas||[]).map(a => ({ id:a.id, delta:a.delta, estado:a.estado })) },
+    cobros:(cobros||[]).filter(c => c.casoId === caso.id).map(c => ({ fecha:c.fecha, tipo:c.tipo, concepto:c.concepto, importe:c.importe, medio:c.medio, referencia:c.referencia, estado:c.estado })) };
+}
+
+// ── Catálogo: precios, impacto y lista de compra ────────
+function precioEfectivo(p){ return p.precioManual != null ? p.precioManual : p.precio; }
+function esAbierto(c){ return !['cerrada','archivada','descartada','rechazada','caducada','aceptada','en_obra','terminada','en_remates'].includes(c.estado); }
+function impactoCambioPrecio(db, productoId, nuevoPrecio){
+  const afectados = [];
+  const push = (caso, origen, v, l) => afectados.push({ casoId:caso.id, origen, versionId:v?v.id:null, lineaId:l.id, cantidad:l.cantidad, precioActual:l.precio, precioNuevo:nuevoPrecio, deltaTotal:r((nuevoPrecio - l.precio) * l.cantidad), bloqueada:!!(l.bloqueada || l.origen === 'manual') });
+  (db.casos||[]).filter(esAbierto).forEach(caso => {
+    (caso.borrador?.lineas||[]).filter(l => l.productoId === productoId && l.tipo === 'mat').forEach(l => push(caso, 'borrador', null, l));
+    (caso.versiones||[]).filter(v => !['sustituida','caducada','rechazada','aceptada'].includes(v.estado)).forEach(v => {
+      (v.lineas||[]).filter(l => l.productoId === productoId && l.tipo === 'mat').forEach(l => push(caso, v.enviadaAt ? 'enviada' : 'estimacion', v, l));
+    });
+  });
+  const suma = arr => r(arr.reduce((s,a) => s + a.deltaTotal, 0));
+  const borr = afectados.filter(a => a.origen !== 'enviada'), env = afectados.filter(a => a.origen === 'enviada');
+  return { afectados, deltaAgregado:suma(afectados), nCasos:new Set(afectados.map(a => a.casoId)).size,
+    borradores:{ n:new Set(borr.map(a => a.casoId)).size, delta:suma(borr), recalculables:borr.filter(a => !a.bloqueada).length, bloqueadas:borr.filter(a => a.bloqueada).length },
+    enviadas:{ n:new Set(env.map(a => a.casoId)).size, delta:suma(env), casos:[...new Set(env.map(a => a.casoId))] } };
+}
+function aplicarPrecioABorradores(db, productoId, nuevoPrecio){
+  let lineas = 0; const casos = new Set();
+  const recalcLinea = l => { if (l.productoId !== productoId || l.tipo !== 'mat' || l.bloqueada || l.origen === 'manual') return false; l.precio = nuevoPrecio; l.subtotal = r(l.cantidad * l.precio); return true; };
+  (db.casos||[]).filter(esAbierto).forEach(caso => {
+    let tocado = false;
+    (caso.borrador?.lineas||[]).forEach(l => { if (recalcLinea(l)){ lineas++; tocado = true; } });
+    (caso.versiones||[]).filter(v => !['sustituida','caducada','rechazada','aceptada'].includes(v.estado) && !v.enviadaAt).forEach(v => {
+      let t = false; (v.lineas||[]).forEach(l => { if (recalcLinea(l)){ lineas++; t = true; } });
+      if (t){ const tot = calcularTotales(v.lineas, v.ivaPct, db.cfg.margen, db.cfg.minimo); const hq = calcularHorquilla(tot.total, calcularIncertidumbre(caso).nivel); tot.lo = hq.lo; tot.hi = hq.hi; v.totales = tot; tocado = true; }
+    });
+    if (tocado) casos.add(caso.id);
+  });
+  return { lineas, casos:[...casos] };
+}
+function mermaDe(prod, cfg){ if (prod.merma != null) return prod.merma; const m = cfg && cfg.catalogo && cfg.catalogo.mermaPorCategoria; return (m && m[prod.cat] != null) ? m[prod.cat] : ((cfg && cfg.catalogo && cfg.catalogo.mermaDefecto) != null ? cfg.catalogo.mermaDefecto : 0.05); }
+function listaCompra(caso, catalogo, cfg){
+  const v = (caso.versiones||[]).find(x => x.id === caso.aceptacion?.versionId) || (caso.versiones||[]).find(x => x.estado === 'vigente') || (caso.versiones||[])[0];
+  const mats = (v?.lineas||[]).filter(l => l.tipo === 'mat' && !l.anulada);
+  const porProd = {}; let sinVincular = 0;
+  mats.forEach(l => { if (l.productoId) porProd[l.productoId] = (porProd[l.productoId]||0) + (l.cantidad||0); else sinVincular++; });
+  const grupos = {};
+  Object.entries(porProd).forEach(([pid, cant]) => {
+    const prod = (catalogo||[]).find(p => p.id === pid); if (!prod) return;
+    const merma = mermaDe(prod, cfg); const pack = prod.pack || 1;
+    const packs = Math.ceil(Math.round(cant * (1 + merma) / pack * 1e6) / 1e6 - 1e-9);
+    const cantidadCompra = r(packs * pack);
+    const it = { productoId:pid, nombre:prod.nombre, necesaria:r(cant), merma, pack, packs, unidad:prod.unidad, cantidadCompra, precio:precioEfectivo(prod), subtotal:r(cantidadCompra * precioEfectivo(prod)) };
+    (grupos[prod.proveedor||'Sin proveedor'] = grupos[prod.proveedor||'Sin proveedor'] || []).push(it);
+  });
+  return { grupos:Object.entries(grupos).map(([proveedor, items]) => ({ proveedor, items, total:r(items.reduce((s,i) => s + i.subtotal, 0)) })).sort((a,b) => a.proveedor.localeCompare(b.proveedor)), sinVincular };
+}
+function anularMaterialesCliente(lineas, espacioIds, margenPct){
+  let neto = 0;
+  (lineas||[]).forEach(l => {
+    if (l.tipo !== 'mat' || l.anulada || (espacioIds && espacioIds.length && !espacioIds.includes(l.espacioId))) return;
+    neto = r(neto + l.subtotal);
+    l.anulada = true; l.subtotalOriginal = l.subtotal; l.precioOriginal = l.precio; l.precio = 0; l.subtotal = 0; l.bloqueada = true; l.origen = 'manual';
+    l.concepto = l.concepto.replace(/ \(aportado por el cliente\)$/, '') + ' (aportado por el cliente)';
+  });
+  return { ahorroSinMargen:neto, ahorro:r(neto * (1 + (margenPct||0)/100)) };
+}
+
+// ── Clientes: duplicados ────────────────────────────────
+function normTel(t){ return String(t||'').replace(/\D/g,'').replace(/^34(?=\d{9}$)/,''); }
+function normEmail(e){ return String(e||'').trim().toLowerCase(); }
+function coincideCliente(a, b){ return (normEmail(a.email) && normEmail(a.email) === normEmail(b.email)) || (normTel(a.tel) && normTel(a.tel) === normTel(b.tel)); }
+function buscarDuplicado(clientes, datos, excluirId){ return (clientes||[]).find(c => c.id !== excluirId && coincideCliente(c, datos)) || null; }
+function detectarDuplicados(clientes){ const pares = []; for (let i = 0; i < clientes.length; i++) for (let j = i + 1; j < clientes.length; j++) if (coincideCliente(clientes[i], clientes[j])) pares.push([clientes[i].id, clientes[j].id]); return pares; }
+function unirClientes(db, idMantener, idEliminar){
+  const k = db.clientes.find(c => c.id === idMantener), d = db.clientes.find(c => c.id === idEliminar); if (!k || !d || k === d) return null;
+  db.casos.forEach(c => { if (c.clienteId === idEliminar) c.clienteId = idMantener; });
+  if (d.notas) k.notas = (k.notas ? k.notas + '\n' : '') + d.notas;
+  k.whatsappOk = k.whatsappOk || d.whatsappOk;
+  db.clientes = db.clientes.filter(c => c.id !== idEliminar);
+  return k;
+}
+
 window.__tests = function(){
   let ok = 0, tot = 0; const fails = [];
   const a = (desc, cond) => { tot++; if (cond) ok++; else { fails.push(desc); console.error('✗ ' + desc); } };
@@ -1391,7 +1719,7 @@ window.__tests = function(){
   function mkCaso(ov){
     const c = {
       id:'TEST', estado:'en_triaje', clienteId:'CL-T', creadoAt:rel(-1),
-      vivienda:{cp:'28010', zona:'dentro', tipo:'piso', m2:70, antiguedad:'>2000', humedades:false, propietario:true, comunidad:'no_aplica', topePresupuesto:null, fechaInicioDeseada:rel(20)},
+      vivienda:{cp:'28010', tipo:'piso', m2:70, antiguedad:'>2000', humedades:false, propietario:true, comunidad:'no_aplica', topePresupuesto:null, fechaInicioDeseada:rel(20)},
       solicitud:{calidad:'media', tipoObra:'reforma_bano', fotosCliente:['f1','f2','f3'], notasCliente:'', espacios:[{id:'e1',tipo:'bano',m2:8,trabajos:['fontaneria_bano']}]},
       versiones:[{id:'V1', tipo:'estimacion', creadaAt:rel(-1), enviadaAt:null, ivaPct:21, lineas:[], totales:{subtotal:5000,margen:1100,base:6100,iva:1281,total:7381,lo:6274,hi:8487}, estado:'vigente'}],
       interno:{}, eventos:[{fecha:rel(-1),tipo:'transicion',texto:'',autor:'sistema'}], recordatorios:[], visita:{estado:'pendiente'}, obra:{cambios:[],adendas:[],hitos:[]}
@@ -1445,13 +1773,29 @@ window.__tests = function(){
   a('prioridad espera satura a 50', scorePrioridad(mkCaso({creadoAt:rel(-30)}), cfg, hoy()).espera === 50);
   a('prioridad componentes suman total', pr.espera + pr.calidad + pr.actividad >= pr.total);
   a('prioridad nivel "Atender hoy" si ≥60', scorePrioridad(mkCaso({creadoAt:rel(-10),estado:'recibida'}), cfg, hoy()).total >= 60 ? scorePrioridad(mkCaso({creadoAt:rel(-10),estado:'recibida'}), cfg, hoy()).nivel === 'Atender hoy' : true);
-  a('prioridad "Puede esperar" para caso flojo', scorePrioridad(mkCaso({creadoAt:rel(0),estado:'cerrada',vivienda:{cp:'45001',zona:'fuera'}}), cfg, hoy()).nivel === 'Puede esperar');
+  a('prioridad "Sin prisa" para caso flojo', scorePrioridad(mkCaso({creadoAt:rel(0),estado:'recibida',vivienda:{cp:'45001',propietario:false,comunidad:'no'}}), cfg, hoy()).nivel === 'Sin prisa');
+  a('prioridad espera = round(min(h/plazo,1)×50): 24 h de 48 h = 25', scorePrioridad(mkCaso({creadoAt:rel(-1),estado:'recibida'}), cfg, hoy()).espera === 25);
+  a('prioridad actividad = 20 si el cliente actuó tras la última acción del reformista', scorePrioridad(mkCaso({eventos:[{fecha:rel(-2),tipo:'mensaje',autor:'reformista'},{fecha:rel(-1),tipo:'mensaje',autor:'cliente'}]}), cfg, hoy()).actividad === 20);
+  a('prioridad actividad = 0 si el reformista actuó después', scorePrioridad(mkCaso({eventos:[{fecha:rel(-2),tipo:'mensaje',autor:'cliente'},{fecha:rel(-1),tipo:'mensaje',autor:'reformista'}]}), cfg, hoy()).actividad === 0);
+  a('prioridad calidad = round(calidad×0,30)', (()=>{ const c=mkCaso(); return scorePrioridad(c,cfg,hoy()).calidad === Math.round(scoreCalidad(c,cfg).total*0.3); })());
+  a('prioridad niveles: ≥60 hoy · ≥40 Pronto', (()=>{ const c=mkCaso({creadoAt:rel(-5),estado:'recibida'}); const p=scorePrioridad(c,cfg,hoy()); return p.nivel === (p.total>=60?'Atender hoy':p.total>=40?'Pronto':'Sin prisa'); })());
+  a('prioridad: esperando_info con respuesta cuenta desde la respuesta', scorePrioridad(mkCaso({estado:'esperando_info',creadoAt:rel(-9),eventos:[{fecha:rel(-5),tipo:'mensaje',autor:'reformista'},{fecha:rel(-1),tipo:'mensaje',autor:'cliente'}]}), cfg, hoy()).horasEspera === 24);
 
   // ── 6. acción sugerida: orden de evaluación ──
   a('acción: fuera de zona → revisar_descarte (primero)', accionSugerida(mkCaso({vivienda:{cp:'45001',zona:'fuera'}}), cfg).id === 'revisar_descarte');
-  a('acción: sin fotos ni visita → pedir_info_fotos', accionSugerida(mkCaso({solicitud:{calidad:'media',tipoObra:'reforma_bano',fotosCliente:[],espacios:[]}, visita:{estado:'pendiente'}}), cfg).id === 'pedir_info_fotos');
-  a('acción: versión vigente en triaje → enviar_presupuesto', accionSugerida(mkCaso(), cfg).id === 'enviar_presupuesto');
-  a('acción: por defecto → hacer_visita', accionSugerida(mkCaso({estado:'esperando_info', versiones:[{id:'V1',estado:'sustituida',tipo:'estimacion',totales:{lo:6000,hi:8000}}]}), cfg).id === 'hacer_visita');
+  const solic = (fotos, tipo, trabajos) => ({ calidad:'media', tipoObra:tipo||'reforma_bano', fotosCliente:fotos, notasCliente:'', espacios:[{ id:'e1', tipo:'salon', m2:8, trabajos:trabajos||['cambiar_suelo'] }] });
+  const conHi = (hi, ov) => { const c = mkCaso(ov||{}); c.versiones[0].totales.hi = hi; c.versiones[0].totales.lo = hi*0.85; return c; };
+  a('acción 1: importe máximo < mínimo útil → revisar_descarte', accionSugerida(conHi(1500), cfg).id === 'revisar_descarte');
+  a('acción 1: calidad < 30 → revisar_descarte (pesos configurables)', accionSugerida(mkCaso(), Object.assign({}, cfg, { pesosCalidad:[0,0,0,0,0,0,5] })).id === 'revisar_descarte');
+  a('acción 2: sin fotos → pedir_info', accionSugerida(mkCaso({ solicitud:solic([]) }), cfg).id === 'pedir_info');
+  a('acción 2: incertidumbre alta → pedir_info', accionSugerida(mkCaso({ vivienda:{cp:'28010', antiguedad:'<1980', humedades:true, propietario:true, comunidad:'no_aplica', fechaInicioDeseada:rel(20)}, solicitud:solic(['a'],'reforma_bano',['demolicion','fontaneria_bano']) }), cfg).id === 'pedir_info');
+  a('orden: fuera de zona gana a sin fotos', accionSugerida(mkCaso({ vivienda:{cp:'45001'}, solicitud:solic([]) }), cfg).id === 'revisar_descarte');
+  a('acción 3: suelo flotante sencillo, hi ≤ 3000 y ≥2 fotos → presupuesto_sin_visita', accionSugerida(conHi(2800, { solicitud:solic(['a','b','c'],'suelo_flotante') }), cfg).id === 'presupuesto_sin_visita');
+  a('acción 3 no aplica si hi > importe máximo sin visita', accionSugerida(conHi(3500, { solicitud:solic(['a','b','c'],'suelo_flotante') }), cfg).id === 'proponer_visita');
+  a('acción 3 no aplica con demolición', accionSugerida(conHi(2800, { solicitud:solic(['a','b','c'],'suelo_flotante',['cambiar_suelo','demolicion']) }), cfg).id === 'proponer_visita');
+  a('acción 3 no aplica con menos fotos que las mínimas', accionSugerida(conHi(2800, { solicitud:solic(['a'],'suelo_flotante') }), cfg).id === 'proponer_visita');
+  a('acción 4: por defecto → proponer_visita', accionSugerida(mkCaso(), cfg).id === 'proponer_visita');
+  a('acción siguiente según estado (en_obra → supervisar)', accionSiguiente({ estado:'en_obra', vivienda:{}, solicitud:{}, versiones:[] }, cfg).id === 'supervisar');
 
   // ── 7. transiciones: cada fila clave ──
   a('trans recibida→en_triaje OK', puedeTransitar({estado:'recibida'}, 'en_triaje'));
@@ -1501,7 +1845,10 @@ window.__tests = function(){
   a('progreso ponderado = 0.375', Math.abs(calcularProgreso(cp) - 0.375) < 1e-6);
   a('progreso sin hitos = 0', calcularProgreso(mkCaso({obra:{hitos:[],cambios:[],adendas:[]}})) === 0);
   a('salud al_dia sin cambios', saludObra(mkCaso({obra:{hitos:[],cambios:[],adendas:[]}}), cfg, hoy()) === 'al_dia');
-  a('salud en_riesgo con cambio registrado', saludObra(mkCaso({obra:{hitos:[],adendas:[],cambios:[{estado:'registrado'}]}}), cfg, hoy()) === 'en_riesgo');
+  a('salud en_riesgo: cambios sin consolidar >7 días', saludObra(mkCaso({obra:{hitos:[],adendas:[],cambios:[{estado:'registrado',fecha:rel(-8)}]}}), cfg, hoy()) === 'en_riesgo');
+  a('salud al_dia: cambio registrado reciente y sin desviación', saludObra(mkCaso({obra:{hitos:[],adendas:[],cambios:[{estado:'registrado',fecha:rel(-1),importe:10}]}}), cfg, hoy()) === 'al_dia');
+  a('salud en_riesgo: hito con fecha prevista pasada y sin hacer', saludObra(mkCaso({obra:{hitos:[{estado:'en_curso',fechaFinPrevista:rel(-2)}],adendas:[],cambios:[]}}), cfg, hoy()) === 'en_riesgo');
+  a('salud en_riesgo: desviación ≥ 80 % del umbral de adenda', (()=>{ const c=mkCaso(); c.aceptacion={versionId:'V1',importe:10000}; c.versiones[0].estado='aceptada'; c.obra={hitos:[],adendas:[],cambios:[{estado:'registrado',fecha:rel(-1),importe:350}]}; return saludObra(c,cfg,hoy())==='en_riesgo'; })());
   a('salud bloqueada con bloqueante >24h', saludObra(mkCaso({obra:{hitos:[],adendas:[],cambios:[{bloqueaObra:true,estado:'registrado',fecha:rel(-2)}]}}), cfg, hoy()) === 'bloqueada');
 
   // ── 11. cobros / saldo / estado económico ──
@@ -1766,7 +2113,7 @@ function closeAllModals(){ document.getElementById('modal-bg').classList.remove(
 function clienteDe(caso){ return DB.clientes.find(c => c.id === caso.clienteId) || {nombre:'(sin cliente)', email:'', tel:''}; }
 function badgeEstado(estado){ return '<span class="badge b-' + estado + '">' + (ESTADO_LABEL[estado]||estado) + '</span>'; }
 function prioChip(nivel){
-  const cls = nivel === 'Atender hoy' ? 'hoy' : nivel === 'Atender pronto' ? 'pronto' : 'espera';
+  const cls = nivel === 'Atender hoy' ? 'hoy' : nivel === 'Pronto' ? 'pronto' : 'espera';
   return '<span class="prio-chip ' + cls + '">' + nivel + '</span>';
 }
 function scoreBar(score){
@@ -1904,7 +2251,7 @@ function cuerpoBandeja(){
   let items = DB.casos.filter(enBandeja).map(c => ({ caso:c, prio:scorePrioridad(c,DB.cfg,hoy()), cal:scoreCalidad(c,DB.cfg) }));
   // filtros
   if (bandejaF.estado) items = items.filter(x=>x.caso.estado===bandejaF.estado);
-  if (bandejaF.zona) items = items.filter(x=>(x.caso.vivienda.zona||zonaDeCp(x.caso.vivienda.cp,DB.cfg))===bandejaF.zona);
+  if (bandejaF.zona) items = items.filter(x=>zonaDeCp(x.caso.vivienda.cp,DB.cfg)===bandejaF.zona);
   if (bandejaF.tipo) items = items.filter(x=>x.caso.solicitud.tipoObra===bandejaF.tipo);
   if (bandejaF.soloFotos) items = items.filter(x=>(x.caso.solicitud.fotosCliente||[]).length>0);
   if (bandejaF.q){ const q=bandejaF.q.toLowerCase(); items = items.filter(x=>{ const cl=clienteDe(x.caso); return (cl.nombre+' '+cl.zona+' '+x.caso.id+' '+(x.caso.vivienda.direccion||'')).toLowerCase().includes(q); }); }
@@ -1948,7 +2295,7 @@ function porqueHtml(caso, cal, prio){
 function botonesTriaje(caso){
   if (caso.estado==='en_visita') return '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px" onclick="event.stopPropagation()"><button class="abtn abtn-sm abtn-primary" onclick="abrirModoVisita(\''+caso.id+'\')">★ '+(caso.visita.estado==='realizada'?'Reabrir Modo visita':'Continuar Modo visita')+'</button><button class="abtn abtn-sm abtn-ghost" onclick="abrirCaso(\''+caso.id+'\');_fichaTab=\'presupuesto\';renderFicha()">Revisar borrador y enviar</button></div>';
   const ac = accionSugerida(caso, DB.cfg);
-  const mapa = { hacer_visita:'proponer', pedir_info_fotos:'pedir', enviar_presupuesto:'presupuesto', revisar_descarte:'descartar' };
+  const mapa = { proponer_visita:'proponer', pedir_info:'pedir', presupuesto_sin_visita:'presupuesto', revisar_descarte:'descartar' };
   const sug = mapa[ac.id] || 'proponer';
   const exits = [['proponer','Proponer visita','exitProponerVisita'],['pedir','Pedir info/fotos','exitPedirInfo'],['presupuesto','Presupuesto sin visita','exitPresupuestoSinVisita'],['descartar','Descartar','exitDescartar']];
   return '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px" onclick="event.stopPropagation()">' +
@@ -2157,7 +2504,7 @@ function abrirCaso(id){ _fichaId = id; _fichaTab = 'resumen'; _fichaDiff = null;
 function renderFicha(){
   const c = DB.casos.find(x=>x.id===_fichaId); if(!c) return;
   const cli = clienteDe(c); const prio = scorePrioridad(c,DB.cfg,hoy()); const eco = estadoEconomico(c,DB.cobros);
-  const ac = accionSugerida(c,DB.cfg);
+  const ac = accionSiguiente(c,DB.cfg);
   const ecoBadge = ['aceptada','en_obra','en_remates','terminada','cerrada'].includes(c.estado) ? ' · <span style="color:' + (eco.saldo>0?'var(--danger)':'var(--ok)') + '">Saldo ' + fmtEur(eco.saldo) + '</span>' : '';
   const tabs = ['resumen','presupuesto','visita','obra','cobros','historial'];
   const tabLbl = {resumen:'Resumen',presupuesto:'Presupuesto',visita:'Visita',obra:'Obra',cobros:'Cobros',historial:'Historial'};
@@ -2197,7 +2544,7 @@ function fichaResumen(c, prio){
   h += '<div class="section-card"><div class="section-card-title">Vivienda (editable)</div>' +
     '<div class="inl-field"><label>Dirección</label>' + inp('vivienda.direccion', c.vivienda.direccion||(cli.zona+' · '+cli.cp)) + '</div>' +
     '<div class="inl-field"><label>Código postal</label>' + inp('vivienda.cp', c.vivienda.cp) + '</div>' +
-    '<div class="inl-field"><label>Zona (derivada)</label><span style="flex:1">' + (c.vivienda.zona||zonaDeCp(c.vivienda.cp,DB.cfg)) + '</span></div>' +
+    '<div class="inl-field"><label>Zona (derivada)</label><span style="flex:1">' + zonaDeCp(c.vivienda.cp,DB.cfg) + '</span></div>' +
     '<div class="inl-field"><label>Tipo / m²</label>' + inp('vivienda.tipo', c.vivienda.tipo) + inp('vivienda.m2', c.vivienda.m2, 'number') + '</div>' +
     '<div class="inl-field"><label>Antigüedad</label>' + selV('vivienda.antiguedad', c.vivienda.antiguedad, [['<1980','<1980'],['1980-2000','1980-2000'],['>2000','>2000'],['desconocida','desconocida']]) + '</div>' +
     '<div class="inl-field"><label>Propietario</label>' + selV('vivienda.propietario', c.vivienda.propietario, [[true,'Sí'],[false,'No']]) + '</div>' +
@@ -2234,7 +2581,6 @@ function editCampo(ruta, val){
   if (val==='true') val=true; else if (val==='false') val=false;
   else if (val!=='' && !isNaN(val) && ['m2','topePresupuesto'].includes(key)) val=Number(val);
   o[key] = val===''?null:val;
-  if (ruta==='vivienda.cp') c.vivienda.zona = zonaDeCp(val, DB.cfg);
   renderFicha();
 }
 
