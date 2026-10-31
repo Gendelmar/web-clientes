@@ -56,7 +56,7 @@ main{padding:14px 14px calc(var(--nav) + 90px);min-width:0}
 /* Fases */
 .stepper{display:flex;gap:0;overflow-x:auto;padding:4px 2px 10px;margin:0 -2px;scrollbar-width:none}
 .stepper::-webkit-scrollbar{display:none}
-.step{flex:1 0 82px;text-align:center;font-size:12px;color:var(--muted);position:relative;padding:0 4px}
+.step{flex:1 0 74px;text-align:center;font-size:12px;color:var(--muted);position:relative;padding:0 4px}
 .step b{display:flex;margin:0 auto 6px;width:34px;height:34px;border-radius:50%;background:var(--stone);align-items:center;justify-content:center;font-size:15px;position:relative;z-index:1}
 .step::before{content:'';position:absolute;top:16px;left:-50%;width:100%;height:3px;background:var(--stone)}
 .step:first-child::before{display:none}
@@ -109,8 +109,8 @@ main{padding:14px 14px calc(var(--nav) + 90px);min-width:0}
 .grab{width:44px;height:5px;background:var(--warm);border-radius:4px;margin:0 auto 12px}
 .toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(var(--nav) + 18px);z-index:70;background:var(--deep);color:#fff;padding:12px 16px;border-radius:14px;box-shadow:0 6px 24px rgba(0,0,0,.35);display:none;max-width:92vw}.toast.on{display:block}
 .viewer{position:fixed;inset:0;z-index:60;background:#000;display:none;flex-direction:column}.viewer.on{display:flex}.viewer img{flex:1;min-height:0;width:100%;object-fit:contain}.viewer .vb{padding:12px;background:#111;display:flex;gap:10px;align-items:center;color:#fff}
-.simbtn{position:fixed;left:10px;bottom:calc(var(--nav) + 12px);z-index:40;background:#2d6a4f;color:#fff;border-radius:24px;min-height:48px;padding:0 16px;font-weight:600;box-shadow:0 4px 14px rgba(0,0,0,.3)}
-@media(min-width:900px){.simbtn{bottom:14px}.toast{bottom:20px}}
+.simbtn{background:#2d6a4f;color:#fff;border-radius:12px;min-width:48px;min-height:48px;font-size:22px;line-height:1}
+@media(min-width:900px){.toast{bottom:20px}}
 .simbox button.btn{margin:0 6px 8px 0}
 .demo-home{max-width:760px;margin:0 auto;padding:20px 14px 60px}
 #print-area{display:none}
@@ -257,7 +257,9 @@ function pendientes(S) {
 }
 const linkPanel = (S, sec) => location.href.split('#')[0] + '#/c/' + S.token + (sec ? '/' + sec : '');
 function fotoSvg(texto, hue) {
-  const svg = "<svg xmlns='http://www.w3.org/2000/svg' width='640' height='480'><defs><linearGradient id='g' x1='0' y1='0' x2='1' y2='1'><stop offset='0' stop-color='hsl(" + hue + ",32%,62%)'/><stop offset='1' stop-color='hsl(" + (hue + 28) + ",38%,36%)'/></linearGradient></defs><rect width='640' height='480' fill='url(#g)'/><rect x='40' y='40' width='560' height='400' fill='none' stroke='white' stroke-opacity='.45' stroke-width='3'/><text x='320' y='250' font-family='sans-serif' font-size='34' fill='white' text-anchor='middle'>" + String(texto).replace(/[<>&']/g, '') + "</text></svg>";
+  const cut = (t, n) => { t = String(t).replace(/[<>&'"]/g, ''); return t.length > n ? t.slice(0, n - 1) + '…' : t; };
+  const partes = String(texto).split(' · '); const l1 = cut(partes[0], 28), l2 = partes[1] ? cut(partes[1], 28) : '';
+  const svg = "<svg xmlns='http://www.w3.org/2000/svg' width='640' height='480'><defs><linearGradient id='g' x1='0' y1='0' x2='1' y2='1'><stop offset='0' stop-color='hsl(" + hue + ",32%,62%)'/><stop offset='1' stop-color='hsl(" + (hue + 28) + ",38%,36%)'/></linearGradient></defs><rect width='640' height='480' fill='url(#g)'/><rect x='40' y='40' width='560' height='400' fill='none' stroke='white' stroke-opacity='.45' stroke-width='3'/><text x='320' y='" + (l2 ? 225 : 250) + "' font-family='sans-serif' font-size='34' font-weight='600' fill='white' text-anchor='middle'>" + l1 + "</text>" + (l2 ? "<text x='320' y='280' font-family='sans-serif' font-size='28' fill='white' fill-opacity='.9' text-anchor='middle'>" + l2 + "</text>" : '') + "</svg>";
   return 'data:image/svg+xml;utf8,' + encodeURIComponent(svg);
 }
 
@@ -284,6 +286,7 @@ function avisoPrimero() {
     { tabla:v.est.map(e => [e.nombre, eur0(totalEstF(e))]), total:'Estimación total: ' + eur0(lo) + ' – ' + eur0(hi) });
 }
 
+function centrarFase() { const n = document.querySelector('.step.now'); if (!n) return; const c = n.parentElement; const k = Math.max(1, Math.floor(c.clientWidth / n.getBoundingClientRect().width) - 2); let ref = n; for (let i = 0; i < k && ref.previousElementSibling; i++) ref = ref.previousElementSibling; c.scrollLeft += ref.getBoundingClientRect().left - c.getBoundingClientRect().left; }
 function parseHash() { const h = (location.hash || '').replace(/^#\/?/, '').split('/'); return { r:h[0] || '', tok:h[1] || '', s:h[2] || '' }; }
 let renderedHash = null;
 function ir(s) { const h = '#/c/' + S.token + '/' + s; if (location.hash !== h) location.hash = h; render(); }
@@ -292,7 +295,7 @@ function render() {
   if (h.r === 'c') {
     if (!S || h.tok !== S.token) { app.innerHTML = vInvalido(); return; }
     sec = h.s || 'inicio'; if (!NAV.find(n => n[0] === sec)) sec = 'inicio';
-    app.innerHTML = vPanel(); S.avisos.length && 0; window.scrollTo(0, 0); return;
+    app.innerHTML = vPanel(); window.scrollTo(0, 0); centrarFase(); return;
   }
   if (h.r === 'correo' && S) { app.innerHTML = vCorreo(); return; }
   app.innerHTML = vDemo();
@@ -350,9 +353,9 @@ function vPanel() {
   const tabs = NAV.map(n => '<button class="tab ' + (sec === n[0] ? 'on' : '') + '" onclick="ir(\'' + n[0] + '\')" ' + (sec === n[0] ? 'aria-current="page"' : '') + '><i>' + n[1] + '</i>' + n[2] + badgeSec(n[0]) + '</button>').join('');
   const mob = ['inicio', 'presupuesto', 'obra', 'cambios'].map(id => NAV.find(n => n[0] === id)).map(n => '<button class="tab ' + (sec === n[0] ? 'on' : '') + '" onclick="ir(\'' + n[0] + '\')"><i>' + n[1] + '</i>' + n[2] + badgeSec(n[0]) + '</button>').join('') +
     '<button class="tab ' + (['visita', 'pagos', 'entrega', 'docs', 'mensajes'].includes(sec) ? 'on' : '') + '" onclick="abrirMas()"><i>☰</i>Más' + (['visita', 'pagos', 'entrega', 'mensajes'].some(s => badgeSec(s)) ? '<span class="badge">!</span>' : '') + '</button>';
-  return '<header class="top"><div class="sp"><span class="logo">' + esc(S.reformista.empresa) + '</span><small>Mi reforma · ' + S.ref + '</small></div><button class="btn sm" style="background:rgba(255,255,255,.12);color:#fff;border:none" onclick="abrirEnlace()">🔗 Mi enlace</button></header>' +
+  return '<header class="top"><div class="sp"><span class="logo">' + esc(S.reformista.empresa) + '</span><small>Mi reforma · ' + S.ref + '</small></div><button class="simbtn" onclick="abrirSim()" aria-label="Abrir simulador del reformista" title="Simulador del reformista">🧪</button><button class="btn sm" style="background:rgba(255,255,255,.12);color:#fff;border:none" onclick="abrirEnlace()">🔗 Mi enlace</button></header>' +
     '<div class="shell"><nav class="side" aria-label="Secciones">' + tabs + '</nav><main id="main">' + main + '</main></div><nav class="tabbar" aria-label="Secciones">' + mob + '</nav>' +
-    '<button class="simbtn" onclick="abrirSim()" aria-label="Abrir simulador del reformista">🧪 Simulador</button>';
+    '';
 }
 function stepper() {
   const i = stepIdx(S.fase);
