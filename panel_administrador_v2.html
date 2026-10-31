@@ -511,7 +511,7 @@ const CFG_DEFAULT = {
   // Zona (prefijos de CP)
   zonaTramos: { dentro:['280'], limite:['281','282'] },
   // Visita
-  visita:{ cobra:true, descontable:true, importePorZona:{ dentro:60, limite:90, fuera:120 }, duracionMin:60, trasladoMin:30, politica:{ reprogramarGratisHoras:24, tardia:'retiene' } },
+  visita:{ cobra:true, descontable:true, descuento:'total', descuentoPct:50, cobroCuando:'en_visita', importePorZona:{ dentro:60, limite:90, fuera:120 }, duracionMin:60, trasladoMin:30, politica:{ reprogramarGratisHoras:24, tardia:'retiene' } },
   // Agenda
   agenda:{ semana:{ 0:[], 1:[['09:00','14:00'],['16:00','19:00']], 2:[['09:00','14:00'],['16:00','19:00']], 3:[['09:00','14:00'],['16:00','19:00']], 4:[['09:00','14:00'],['16:00','19:00']], 5:[['09:00','14:00'],['16:00','19:00']], 6:[] }, bloqueos:[] },
   // Adenda
@@ -2271,7 +2271,7 @@ function aplicarAccionCliente(caso, accionId, datos){
       if (caso.estado === 'propuesta_enviada'){
         const v = caso.versiones.find(x=>x.estado==='vigente');
         let importe = v?.totales?.total || 0;
-        if (caso.visita?.cobro?.estado === 'cobrada' && DB.cfg.visita.descontable){ importe = r(importe - (caso.visita.cobro.importe||0)); }
+        if (caso.visita?.cobro?.estado === 'cobrada' && visitaDescuento(DB.cfg).descontable){ importe = r(importe - (caso.visita.cobro.importe||0)); }
         caso.aceptacion = { versionId:v?.id, fecha:hoy(), metodo:'enlace', importe: v?.totales?.total||0, descontadoVisita: caso.visita?.cobro?.estado==='cobrada'?(caso.visita.cobro.importe||0):0 };
         if (v) v.estado = 'aceptada';
         transitar(caso,'aceptada',{autor:'cliente',texto:'El cliente aceptó la propuesta ' + (v?.id||'')});
@@ -2923,16 +2923,6 @@ function fichaVisita(c){
   return h;
 }
 
-// ── Ficha: Cobros ───────────────────────────────────────
-function fichaCobros(c){
-  const eco=estadoEconomico(c,DB.cobros); const movs=cobrosDeCaso(c,DB.cobros);
-  let h='<div class="section-card"><div class="section-card-title">Estado económico</div>' +
-    '<div style="font-size:13px">Total vigente <b>' + fmtEur(eco.total) + '</b> · Cobrado ' + fmtEur(eco.cobrado) + ' · Saldo <b style="color:' + (eco.saldo>0?'var(--danger)':'var(--ok)') + '">' + fmtEur(eco.saldo) + '</b> · <span class="badge ' + (eco.estado==='cobrado'?'b-ok':eco.estado==='parcial'?'b-warn':'b-err') + '">' + eco.estado + '</span></div></div>';
-  if (movs.length) h+='<div class="section-card"><div class="section-card-title">Movimientos</div>' + movs.map(m=>'<div style="display:flex;justify-content:space-between;font-size:12px;padding:3px 0;border-bottom:1px dashed var(--border)"><span>' + fmtFecha(m.fecha) + ' · ' + escH(m.concepto) + '</span><b>' + fmtEur(m.importe) + '</b></div>').join('') + '</div>';
-  else h+='<div class="section-card" style="color:var(--muted);font-size:12px">Sin cobros registrados. El plan de cobros detallado llega en la Fase E.</div>';
-  return h;
-}
-
 // ── Vista del cliente (simulada) ────────────────────────
 const PASOS_CLIENTE = [
   {k:'recibida', l:'Solicitud recibida', estados:['recibida','en_triaje','esperando_info']},
@@ -3037,25 +3027,6 @@ RENDERERS.clientes = function(){
     '<div class="page-hdr"><div><div class="page-title">Clientes</div><div class="page-sub">' + DB.clientes.length + ' clientes registrados</div></div></div>' +
     '<div class="table-wrap"><table><thead><tr><th>Nombre</th><th>Zona</th><th>Contacto</th><th>Casos</th><th>Estado</th></tr></thead><tbody>' + rows + '</tbody></table></div>' +
     '<div style="font-size:12px;color:var(--muted)">La ficha de cliente con historial completo llega en la Fase F.</div>';
-};
-
-// ═══════════════════════════════════════════════════════
-// SECCIÓN 11: COBROS (vista básica Fase A)
-// ═══════════════════════════════════════════════════════
-RENDERERS.cobros = function(){
-  const conObra = DB.casos.filter(c => ['aceptada','en_obra','en_remates','terminada','cerrada'].includes(c.estado));
-  let totalPorCobrar = 0, totalCobrado = 0;
-  const rows = conObra.map(c => {
-    const eco = estadoEconomico(c, DB.cobros); totalPorCobrar += Math.max(0, eco.saldo); totalCobrado += eco.cobrado;
-    const cli = clienteDe(c);
-    const badge = eco.estado === 'cobrado' ? 'b-ok' : eco.estado === 'parcial' ? 'b-warn' : 'b-err';
-    return '<tr onclick="abrirCaso(\'' + c.id + '\')" style="cursor:pointer"><td><b>' + escH(cli.nombre) + '</b><br><span style="color:var(--muted);font-size:11px">' + c.id + '</span></td><td>' + badgeEstado(c.estado) + '</td><td>' + fmtEur(eco.total) + '</td><td>' + fmtEur(eco.cobrado) + '</td><td><b>' + fmtEur(eco.saldo) + '</b></td><td><span class="badge ' + badge + '">' + eco.estado + '</span></td></tr>';
-  }).join('');
-  document.getElementById('pg-cobros').innerHTML =
-    '<div class="page-hdr"><div><div class="page-title">Cobros</div><div class="page-sub">Seguimiento económico de obras</div></div></div>' +
-    '<div class="stat-grid">' + statCard(fmtEur0(totalCobrado),'Cobrado total','Obras en curso y cerradas','up') + statCard(fmtEur0(totalPorCobrar),'Pendiente de cobro', totalPorCobrar>0?'Saldo abierto':'Al día', totalPorCobrar>0?'dn':'up') + '</div>' +
-    '<div class="table-wrap"><table><thead><tr><th>Cliente</th><th>Estado</th><th>Total vigente</th><th>Cobrado</th><th>Saldo</th><th></th></tr></thead><tbody>' + rows + '</tbody></table></div>' +
-    '<div style="font-size:12px;color:var(--muted)">El plan de cobros detallado y los recibos llegan en la Fase E.</div>';
 };
 
 // ═══════════════════════════════════════════════════════
@@ -3218,7 +3189,7 @@ function registrarCobroVisita(id){
   const c = DB.casos.find(x=>x.id===id); if(!c) return;
   const imp = importeVisita(c, DB.cfg); if (imp<=0){ toast('Esta visita no tiene importe','err'); return; }
   c.visita.cobro = Object.assign({}, c.visita.cobro, { importe:imp, estado:'cobrada', fecha:hoy() });
-  DB.cobros.push({ id:uid('cob'), casoId:c.id, importe:imp, concepto:'Visita técnica', fecha:hoy(), estado:'cobrado', metodo:'efectivo', tipo:'visita', descontable:!!DB.cfg.visita.descontable });
+  DB.cobros.push({ id:uid('cob'), casoId:c.id, importe:imp, concepto:'Visita técnica', fecha:hoy(), estado:'cobrado', metodo:'efectivo', tipo:'visita', descontable:visitaDescuento(DB.cfg).descontable, descontablePct:visitaDescuento(DB.cfg).pct });
   c.eventos.push({ fecha:hoy(), tipo:'cobro', texto:'Cobrada la visita técnica (' + fmtEur(imp) + ')', autor:'reformista' });
   toast('Cobro de visita registrado · ' + fmtEur(imp)); refrescar(); if (_fichaId===id && document.getElementById('modal-bg').classList.contains('open')) renderFicha();
 }
@@ -3820,6 +3791,138 @@ function docActa(c, a){
     '<h2>Documentación adjunta</h2><ul>' + a.documentacion.map(d => '<li>' + escH(d) + '</li>').join('') + '</ul>' +
     '<h2>Garantía</h2><p>Inicio de la garantía: <b>' + fmtFecha(a.garantiaInicio) + '</b>.</p><p>' + escH(a.textoGarantia) + '</p>' +
     '<div class="doc-firmas"><div>Por el reformista</div><div>Por el cliente</div></div></div>';
+}
+
+// ═══════════════════════════════════════════════════════
+// SECCIÓN 12E: COBROS
+// ═══════════════════════════════════════════════════════
+const TIPO_COBRO = { visita:'Visita', senal:'Señal', hito:'Hito', adenda:'Adenda', final:'Final', devolucion:'Devolución' };
+const MEDIO_LBL = { efectivo:'Efectivo', bizum:'Bizum', transferencia:'Transferencia', pasarela:'Pasarela' };
+const AVISO_FACTURAS = 'Las facturas oficiales no se emiten desde este prototipo.';
+let cobrosTab = 'obra', cobrosF = { caso:'', tipo:'', medio:'', desde:'', hasta:'' };
+function casosCobrables(){ return DB.casos.filter(c => c.aceptacion && ESTADOS_OBRA.includes(c.estado)); }
+function visitaDescuento(cfg){ const m = (cfg.visita && cfg.visita.descuento) || 'total'; return { modo:m, descontable: m !== 'no', pct: m === 'parcial' ? (cfg.visita.descuentoPct != null ? cfg.visita.descuentoPct : 50) : (m === 'total' ? 100 : 0) }; }
+function descargar(nombre, contenido, mime){
+  const blob = new Blob([contenido], { type:mime }); const url = URL.createObjectURL(blob); const a = document.createElement('a');
+  a.href = url; a.download = nombre; document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(url); a.remove(); }, 800);
+}
+function exportarCobrosCSV(casoId){ const lista = casoId ? DB.cobros.filter(m => m.casoId === casoId) : DB.cobros; descargar('cobros' + (casoId ? '_' + casoId : '') + '_' + hoy() + '.csv', '﻿' + cobrosCSV(lista), 'text/csv;charset=utf-8'); toast('CSV de cobros exportado (' + lista.length + ' movimientos)'); }
+function exportarResumenJSON(casoId){ const c = DB.casos.find(x => x.id === casoId); if (!c) return; descargar('resumen_' + casoId + '.json', JSON.stringify(resumenObraJSON(c, DB.cobros, clienteDe(c)), null, 2), 'application/json'); toast('Resumen de obra exportado'); }
+function paqueteGestoria(casoId){ exportarCobrosCSV(casoId); setTimeout(() => exportarResumenJSON(casoId), 350); }
+
+RENDERERS.cobros = function(){
+  const cs = casosCobrables(); const info = cs.map(c => ({ c, eco: estadoEconomico(c, DB.cobros), tramo: proximoTramo(c, DB.cfg, DB.cobros) }));
+  const pendiente = info.reduce((s,x) => s + Math.max(0, x.eco.saldo), 0);
+  const mes = hoy().slice(0,7); const cobradoMes = r(DB.cobros.filter(m => m.estado !== 'anulado' && String(m.fecha).slice(0,7) === mes).reduce((s,m) => s + m.importe, 0));
+  const tab = (k,l,n) => '<button class="tab ' + (cobrosTab===k?'active':'') + '" onclick="cobrosTab=\'' + k + '\';RENDERERS.cobros()">' + l + (n!=null?'<span class="tab-n">' + n + '</span>':'') + '</button>';
+  let cuerpo = '';
+  if (cobrosTab === 'obra') cuerpo = cobrosPorObra(info);
+  else if (cobrosTab === 'mov') cuerpo = cobrosMovimientos();
+  else if (cobrosTab === 'proformas') cuerpo = cobrosProformas();
+  else cuerpo = cobrosExportar();
+  document.getElementById('pg-cobros').innerHTML =
+    '<div class="page-hdr"><div><div class="page-title">Cobros</div><div class="page-sub">Seguimiento económico de las obras</div></div><button class="abtn abtn-primary" onclick="cobroModal()">+ Registrar cobro</button></div>' +
+    '<div class="mv-aviso" style="font-size:12px;font-weight:400;padding:8px 12px;margin:0 0 14px">ℹ ' + AVISO_FACTURAS + '</div>' +
+    '<div class="stat-grid">' + statCard(fmtEur0(pendiente), 'Pendiente de cobro', 'Saldo de obras', pendiente > 0 ? 'dn' : 'up') + statCard(fmtEur0(cobradoMes), 'Cobrado este mes', fmtFecha(hoy()).slice(3), 'up') + statCard(info.filter(x => x.eco.saldo > 0.005).length, 'Obras con saldo', 'de ' + info.length + ' obras', 'dn') + '</div>' +
+    '<div class="tabs">' + tab('obra','Por obra',info.length) + tab('mov','Movimientos',DB.cobros.length) + tab('proformas','Proformas',(DB.proformas||[]).length) + tab('exportar','Exportar') + '</div>' + cuerpo;
+};
+function cobrosPorObra(info){
+  if (!info.length) return '<div class="section-card" style="text-align:center;color:var(--muted)">No hay obras aceptadas todavía.</div>';
+  const rows = info.map(x => { const c = x.c, cli = clienteDe(c), eco = x.eco, t = x.tramo; const bad = eco.estado === 'cobrado' ? 'b-ok' : eco.estado === 'parcial' ? 'b-warn' : 'b-err';
+    return '<tr><td><b>' + escH(cli.nombre) + '</b><br><span style="font-size:11px;color:var(--muted)">' + c.id + '</span></td><td>' + badgeEstado(c.estado) + '</td><td>' + fmtEur(eco.total) + '</td><td>' + fmtEur(eco.cobrado) + '</td><td><b style="color:' + (eco.saldo > 0.005 ? 'var(--danger)' : 'var(--ok)') + '">' + fmtEur(eco.saldo) + '</b></td><td><span class="badge ' + bad + '">' + eco.estado + '</span></td>' +
+      '<td style="font-size:12px">' + (t ? escH(t.label) + ' · ' + fmtEur0(t.importe) + '<br><span class="badge ' + (t.estado==='debido'?'b-warn':'b-mute') + '">' + t.estado + '</span>' : '<span style="color:var(--muted)">Plan completo</span>') + '</td>' +
+      '<td style="white-space:nowrap"><button class="abtn abtn-ghost abtn-sm" onclick="planModal(\'' + c.id + '\')">Plan</button> <button class="abtn abtn-ghost abtn-sm" onclick="cobroModal(\'' + c.id + '\')">Cobrar</button> <button class="abtn abtn-ghost abtn-sm" onclick="generarProforma(\'' + c.id + '\')">Proforma</button> <button class="abtn abtn-ghost abtn-sm" onclick="paqueteGestoria(\'' + c.id + '\')">Gestoría</button></td></tr>'; }).join('');
+  return '<div class="table-wrap"><table><thead><tr><th>Obra</th><th>Estado</th><th>Total vigente</th><th>Cobrado</th><th>Saldo</th><th>Económico</th><th>Próximo tramo</th><th></th></tr></thead><tbody>' + rows + '</tbody></table></div>';
+}
+function cobrosMovimientos(){
+  let ms = DB.cobros.filter(m => (!cobrosF.caso || m.casoId === cobrosF.caso) && (!cobrosF.tipo || m.tipo === cobrosF.tipo) && (!cobrosF.medio || m.medio === cobrosF.medio) && (!cobrosF.desde || m.fecha >= cobrosF.desde) && (!cobrosF.hasta || m.fecha <= cobrosF.hasta)).sort((a,b) => String(b.fecha).localeCompare(String(a.fecha)));
+  const sel = (k, lbl, opts) => '<select onchange="cobrosF.' + k + '=this.value;RENDERERS.cobros()"><option value="">' + lbl + '</option>' + opts.map(o => '<option value="' + o[0] + '"' + (cobrosF[k]===o[0]?' selected':'') + '>' + o[1] + '</option>').join('') + '</select>';
+  const total = r(ms.filter(m => m.estado !== 'anulado').reduce((s,m) => s + m.importe, 0));
+  const rows = ms.map(m => { const c = DB.casos.find(x => x.id === m.casoId);
+    return '<tr style="' + (m.estado === 'anulado' ? 'opacity:.5;text-decoration:line-through' : '') + '"><td>' + fmtFecha(m.fecha) + '</td><td>' + (c ? escH(clienteDe(c).nombre) : '—') + '<br><span style="font-size:11px;color:var(--muted)">' + m.casoId + '</span></td><td><span class="badge b-mute">' + (TIPO_COBRO[m.tipo]||m.tipo) + '</span>' + (m.tipo==='visita' && m.descontable !== false ? ' <span class="badge b-info" title="Criterio contable pendiente de confirmar con el gestor">a cuenta</span>' : '') + '</td><td>' + escH(m.concepto) + (m.referencia ? '<br><span style="font-size:11px;color:var(--muted)">' + escH(m.referencia) + '</span>' : '') + '</td><td>' + (MEDIO_LBL[m.medio]||m.medio||'—') + '</td><td style="text-align:right;color:' + (m.importe < 0 ? 'var(--danger)' : 'inherit') + '"><b>' + fmtEur(m.importe) + '</b></td><td>' + (m.estado === 'anulado' ? '<span class="badge b-mute">anulado</span>' : '<button class="abtn abtn-ghost abtn-sm" onclick="cobroAnularAsk(\'' + m.id + '\')">Anular</button>') + '</td></tr>'; }).join('');
+  return '<div class="ctrl-row">' + sel('caso','Todas las obras',DB.casos.filter(c => DB.cobros.some(m => m.casoId === c.id)).map(c => [c.id, c.id + ' · ' + clienteDe(c).nombre])) + sel('tipo','Todo tipo',Object.entries(TIPO_COBRO)) + sel('medio','Todo medio',Object.entries(MEDIO_LBL)) +
+    '<span class="ctrl-lbl">Desde</span><input type="date" class="disp-inp" value="' + cobrosF.desde + '" onchange="cobrosF.desde=this.value;RENDERERS.cobros()"><span class="ctrl-lbl">Hasta</span><input type="date" class="disp-inp" value="' + cobrosF.hasta + '" onchange="cobrosF.hasta=this.value;RENDERERS.cobros()"><button class="abtn abtn-ghost abtn-sm" onclick="cobrosF={caso:\'\',tipo:\'\',medio:\'\',desde:\'\',hasta:\'\'};RENDERERS.cobros()">Limpiar</button><span class="bandeja-count">' + ms.length + ' movimiento(s) · <b>' + fmtEur(total) + '</b></span></div>' +
+    (ms.length ? '<div class="table-wrap"><table><thead><tr><th>Fecha</th><th>Obra</th><th>Tipo</th><th>Concepto</th><th>Medio</th><th style="text-align:right">Importe (IVA incl.)</th><th></th></tr></thead><tbody>' + rows + '</tbody></table></div>' : '<div class="section-card" style="text-align:center;color:var(--muted)">Sin movimientos con estos filtros.</div>') +
+    '<div style="font-size:12px;color:var(--muted)">Las devoluciones se registran con importe negativo. Los pagos de visita descontable cuentan como pago a cuenta (criterio contable pendiente de confirmar con el gestor).</div>';
+}
+function cobroAnularAsk(id){ const m = DB.cobros.find(x => x.id === id); confirmarAccion('Anular cobro', 'Se anulará el movimiento «' + m.concepto + '» (' + fmtEur(m.importe) + '). No se borra: queda marcado como anulado.', () => { m.estado = 'anulado'; const c = DB.casos.find(x => x.id === m.casoId); if (c) c.eventos.push({ fecha:hoy(), tipo:'cobro', texto:'Anulado el cobro «' + m.concepto + '» (' + fmtEur(m.importe) + ')', autor:'reformista' }); closeAllModals(); toast('Cobro anulado'); renderPaginaActual(); }); }
+
+// Registrar cobro
+let _cobro = { casoId:'', tipo:'hito', concepto:'', importe:'' };
+function cobroModal(casoId, pre){
+  _cobro = Object.assign({ casoId:casoId || '', tipo:'hito', concepto:'', importe:'' }, pre || {});
+  const cs = DB.casos.filter(c => c.aceptacion || c.visita?.elegida || c.estado === 'cerrada');
+  const aviso = (() => { const c = DB.casos.find(x => x.id === _cobro.casoId); return c && ['hito','final'].includes(_cobro.tipo) && debeGenerarAdenda(c, DB.cfg, { contexto:'cobro' }).includes('cobro') ? '<div class="mv-aviso" style="font-size:13px;font-weight:400">⚠ <b>Disparador de adenda (cobro):</b> hay cambios sin consolidar. Conviene generar y firmar una adenda antes de cobrar este tramo. <button class="abtn abtn-ghost abtn-sm" onclick="abrirObra(\'' + c.id + '\')">Ir a la obra</button></div>' : ''; })();
+  openModal('<div class="modal-title">Registrar cobro</div>' +
+    '<div class="inl-field"><label>Obra</label><select id="cb-caso" onchange="_cobro.casoId=this.value;cobroModal(this.value,{tipo:_cobro.tipo,concepto:document.getElementById(\'cb-conc\').value,importe:document.getElementById(\'cb-imp\').value})"><option value="">— elige —</option>' + cs.map(c => '<option value="' + c.id + '"' + (c.id===_cobro.casoId?' selected':'') + '>' + c.id + ' · ' + escH(clienteDe(c).nombre) + '</option>').join('') + '</select></div>' +
+    '<div class="inl-field"><label>Tipo</label><select id="cb-tipo" onchange="_cobro.tipo=this.value;cobroModal(_cobro.casoId,{tipo:this.value,concepto:document.getElementById(\'cb-conc\').value,importe:document.getElementById(\'cb-imp\').value})">' + Object.entries(TIPO_COBRO).map(([k,v]) => '<option value="' + k + '"' + (k===_cobro.tipo?' selected':'') + '>' + v + '</option>').join('') + '</select></div>' + aviso +
+    '<div class="inl-field"><label>Concepto</label><input id="cb-conc" value="' + escH(_cobro.concepto) + '"></div>' +
+    '<div class="inl-field"><label>Importe (IVA incl.)</label><input id="cb-imp" type="number" step="0.01" value="' + escH(String(_cobro.importe)) + '"></div>' +
+    '<div class="inl-field"><label>Medio</label><select id="cb-medio">' + Object.entries(MEDIO_LBL).map(([k,v]) => '<option value="' + k + '">' + v + '</option>').join('') + '</select></div>' +
+    '<div class="inl-field"><label>Fecha</label><input id="cb-fecha" type="date" value="' + hoy() + '"></div><div class="inl-field"><label>Referencia</label><input id="cb-ref" placeholder="Nº de transferencia, recibo…"></div>' +
+    (_cobro.tipo === 'devolucion' ? '<p style="font-size:12px;color:var(--muted)">Se registrará con importe negativo.</p>' : '') +
+    '<div style="margin-top:14px;display:flex;gap:8px;justify-content:flex-end"><button class="abtn abtn-ghost" onclick="closeAllModals();_fichaId&&document.getElementById(\'main-modal\').classList.contains(\'modal-lg\')===false&&0">Cancelar</button><button class="abtn abtn-primary" onclick="cobroConfirmar()">Registrar</button></div>');
+}
+function cobroConfirmar(){
+  const v = id => document.getElementById(id).value; const casoId = v('cb-caso'), tipo = v('cb-tipo'); let imp = Number(v('cb-imp'));
+  if (!casoId){ toast('Elige la obra','err'); return; } if (!v('cb-conc').trim()){ toast('Indica el concepto','err'); return; } if (!imp){ toast('Indica un importe','err'); return; }
+  if (tipo === 'devolucion') imp = -Math.abs(imp); else if (imp < 0){ toast('Solo las devoluciones llevan importe negativo','err'); return; }
+  const c = DB.casos.find(x => x.id === casoId); const d = visitaDescuento(DB.cfg);
+  const mov = { id:uid('cob'), casoId, fecha:v('cb-fecha') || hoy(), tipo, concepto:v('cb-conc').trim(), importe:r(imp), medio:v('cb-medio'), registradoPor:'reformista', referencia:v('cb-ref'), estado:'cobrado' };
+  if (tipo === 'visita'){ mov.descontable = d.descontable; mov.descontablePct = d.pct; }
+  DB.cobros.push(mov);
+  c.eventos.push({ fecha:hoy(), tipo:'cobro', texto:(imp < 0 ? 'Devolución registrada' : 'Cobro registrado') + ': ' + mov.concepto + ' (' + fmtEur(mov.importe) + ')', autor:'reformista' });
+  closeAllModals(); toast('Movimiento registrado · saldo ' + fmtEur(estadoEconomico(c, DB.cobros).saldo)); renderPaginaActual();
+}
+function planModal(casoId){
+  const c = DB.casos.find(x => x.id === casoId); const pl = planCobros(c, DB.cfg, DB.cobros); const eco = estadoEconomico(c, DB.cobros);
+  openModal('<div class="modal-title">Plan de cobros · ' + escH(clienteDe(c).nombre) + '</div><p style="font-size:13px;color:var(--muted);margin-bottom:10px">Sobre el importe aceptado ' + fmtEur(c.aceptacion.importe) + '. Cada tramo pasa a «cobrado» al registrar movimientos que lo cubran.</p>' +
+    '<table class="lineas-tbl"><thead><tr><th>Tramo</th><th>%</th><th>Disparador</th><th style="text-align:right">Importe</th><th>Estado</th><th></th></tr></thead><tbody>' + pl.map(t => '<tr><td>' + escH(t.label) + '</td><td>' + t.pct + '</td><td style="font-size:11px">' + escH(t.cuando.replace('hito:','Hito «').replace('aceptacion','Aceptación').replace('entrega','Entrega') + (t.cuando.startsWith('hito:')?'»':'')) + '</td><td style="text-align:right">' + fmtEur(t.importe) + '</td><td><span class="badge ' + (t.estado==='cobrado'?'b-ok':t.estado==='debido'?'b-warn':'b-mute') + '">' + t.estado + '</span></td><td>' + (t.estado !== 'cobrado' ? '<button class="abtn abtn-ghost abtn-sm" onclick="cobroModal(\'' + casoId + '\',{tipo:\'' + (t.cuando==='entrega'?'final':'hito') + '\',concepto:\'' + escH(t.label) + '\',importe:' + t.falta + '})">Cobrar ' + fmtEur0(t.falta) + '</button>' : '') + '</td></tr>').join('') + '</tbody></table>' +
+    '<div class="porque" style="margin-top:10px">Total vigente ' + fmtEur(eco.total) + ' · cobrado ' + fmtEur(eco.cobrado) + ' · saldo <b>' + fmtEur(eco.saldo) + '</b>' + (eco.total > c.aceptacion.importe ? '<br>Incluye ' + fmtEur(r(eco.total - c.aceptacion.importe)) + ' de adendas y cambios fuera del plan.' : '') + '</div><div style="margin-top:12px;text-align:right"><button class="abtn abtn-ghost" onclick="closeAllModals()">Cerrar</button></div>');
+}
+
+// Proformas
+function cobrosProformas(){
+  const pfs = DB.proformas||[]; const cs = casosCobrables();
+  return '<div class="ctrl-row"><select id="pf-caso">' + cs.map(c => '<option value="' + c.id + '">' + c.id + ' · ' + escH(clienteDe(c).nombre) + '</option>').join('') + '</select><button class="abtn abtn-primary abtn-sm" onclick="generarProforma(document.getElementById(\'pf-caso\').value)">Generar proforma</button></div>' +
+    (pfs.length ? '<div class="table-wrap"><table><thead><tr><th>Nº</th><th>Fecha</th><th>Obra</th><th>Firmado</th><th>Provisional</th><th>Total</th><th>Cobrado</th><th>Saldo</th><th></th></tr></thead><tbody>' + pfs.slice().reverse().map(p => { const c = DB.casos.find(x => x.id === p.casoId); return '<tr><td><b>' + p.id + '</b></td><td>' + fmtFecha(p.fecha) + '</td><td>' + (c ? escH(clienteDe(c).nombre) : '') + '<br><span style="font-size:11px;color:var(--muted)">' + p.casoId + '</span></td><td>' + fmtEur(p.firmado) + '</td><td>' + fmtEur(p.provisional) + '</td><td><b>' + fmtEur(p.total) + '</b></td><td>' + fmtEur(p.cobrado) + '</td><td>' + fmtEur(p.saldo) + '</td><td><button class="abtn abtn-ghost abtn-sm" onclick="proformaVer(\'' + p.id + '\')">Ver / imprimir</button></td></tr>'; }).join('') + '</tbody></table></div>' : '<div class="section-card" style="text-align:center;color:var(--muted)">Aún no hay proformas.</div>') +
+    '<div style="font-size:12px;color:var(--muted)">Cada proforma es una copia congelada del total vigente en el momento de generarla, con numeración propia (PF-0001…). No es una factura.</div>';
+}
+function generarProforma(casoId){
+  const c = DB.casos.find(x => x.id === casoId); if (!c || !c.aceptacion){ toast('Solo se pueden generar proformas de obras aceptadas','err'); return; }
+  const pf = crearProforma(c, DB.cobros, (DB.proformas||[]).length + 1, hoy()); (DB.proformas = DB.proformas||[]).push(pf);
+  c.eventos.push({ fecha:hoy(), tipo:'cobro', texto:'Generada la proforma ' + pf.id + ' (total ' + fmtEur(pf.total) + ', saldo ' + fmtEur(pf.saldo) + ')', autor:'reformista' });
+  toast('Proforma ' + pf.id + ' generada'); renderPaginaActual(); proformaVer(pf.id);
+}
+function proformaVer(id){ const pf = DB.proformas.find(p => p.id === id); const html = docProforma(pf); _docHtml = html; openModal('<div class="doc-wrap">' + html + '</div><div style="margin-top:14px;display:flex;gap:8px;justify-content:flex-end"><button class="abtn abtn-ghost" onclick="closeAllModals()">Cerrar</button><button class="abtn abtn-primary" onclick="imprimirDoc(_docHtml)">Imprimir</button></div>', true); }
+function docProforma(p){
+  const c = DB.casos.find(x => x.id === p.casoId); const cli = c ? clienteDe(c) : {}; const fis = p.fiscal || {};
+  const hayVisita = p.movimientos.some(m => m.aCuenta);
+  return '<div class="doc"><h1>Proforma ' + p.id + '</h1><div class="doc-sub">' + escH(DB.cfg.empresa.nombre) + ' · ' + escH(DB.cfg.empresa.cif) + ' · ' + fmtFecha(p.fecha) + '</div><div class="doc-leyenda">' + escH(p.leyenda) + '</div>' +
+    '<table class="doc-t"><tr><td>Cliente</td><td>' + escH(fis.nombre || cli.nombre || '') + (fis.nif ? ' · ' + escH(fis.nif) : '') + '</td></tr><tr><td>Dirección fiscal</td><td>' + escH(fis.direccion || (c ? direccionDe(c) : '')) + '</td></tr><tr><td>Obra</td><td>' + p.casoId + '</td></tr></table>' +
+    '<h2>Importes (copia congelada)</h2><table class="doc-t"><tr><td>Presupuesto aceptado</td><td>' + fmtEur(p.aceptada) + '</td></tr><tr><td>+ Adendas firmadas</td><td>' + fmtEur(p.adendasFirmadas) + '</td></tr><tr><td><b>Firmado</b></td><td><b>' + fmtEur(p.firmado) + '</b></td></tr><tr><td>+ Cambios provisionales (sin firmar)</td><td>' + fmtEur(p.provisional) + '</td></tr>' +
+    '<tr><td><b>Total vigente</b></td><td><b>' + fmtEur(p.total) + '</b> (base ' + fmtEur(p.base) + ' + IVA ' + p.ivaPct + ' % ' + fmtEur(p.iva) + ')</td></tr><tr><td>Cobrado</td><td>' + fmtEur(p.cobrado) + '</td></tr><tr><td><b>Saldo pendiente</b></td><td><b>' + fmtEur(p.saldo) + '</b></td></tr></table>' +
+    '<h2>Cobros registrados</h2><table class="doc-t">' + (p.movimientos.map(m => '<tr><td>' + fmtFecha(m.fecha) + ' · ' + escH(m.concepto) + (m.aCuenta ? ' <i>(pago a cuenta)</i>' : '') + '</td><td>' + fmtEur(m.importe) + '</td></tr>').join('') || '<tr><td colspan="2">Sin cobros</td></tr>') + '</table>' +
+    (hayVisita ? '<p style="font-size:11px;color:var(--muted);margin-top:8px">La visita técnica se trata como pago a cuenta: criterio contable pendiente de confirmar con el gestor.</p>' : '') +
+    '<div class="doc-leyenda">' + escH(p.leyenda) + '</div></div>';
+}
+
+// Exportar
+function cobrosExportar(){
+  const cs = casosCobrables();
+  return '<div class="section-card"><div class="section-card-title">Exportaciones</div><div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center"><button class="abtn abtn-primary" onclick="exportarCobrosCSV()">Exportar cobros (CSV)</button><span style="font-size:12px;color:var(--muted)">' + DB.cobros.length + ' movimientos</span></div>' +
+    '<div class="disp-fr" style="margin-top:14px"><select id="ex-caso" class="disp-inp">' + cs.map(c => '<option value="' + c.id + '">' + c.id + ' · ' + escH(clienteDe(c).nombre) + '</option>').join('') + '</select><button class="abtn abtn-ghost" onclick="exportarResumenJSON(document.getElementById(\'ex-caso\').value)">Exportar resumen de obra (JSON)</button><button class="abtn abtn-ghost" onclick="paqueteGestoria(document.getElementById(\'ex-caso\').value)">Paquete para la gestoría</button></div>' +
+    '<p style="font-size:12px;color:var(--muted);margin-top:10px">El paquete para la gestoría descarga el CSV de cobros y el JSON de resumen de la obra. El formato definitivo se decidirá con la gestoría.</p></div>';
+}
+
+// Pestaña Cobros de la ficha
+function fichaCobros(c){
+  const eco = estadoEconomico(c, DB.cobros); const movs = cobrosDeCaso(c, DB.cobros).sort((a,b) => String(a.fecha).localeCompare(String(b.fecha)));
+  let h = '<div class="section-card"><div class="section-card-title">Estado económico</div><div style="font-size:13px">Total vigente <b>' + fmtEur(eco.total) + '</b> · Cobrado ' + fmtEur(eco.cobrado) + ' · Saldo <b style="color:' + (eco.saldo > 0.005 ? 'var(--danger)' : 'var(--ok)') + '">' + fmtEur(eco.saldo) + '</b> · <span class="badge ' + (eco.estado==='cobrado'?'b-ok':eco.estado==='parcial'?'b-warn':'b-err') + '">' + eco.estado + '</span></div>' +
+    (c.aceptacion ? '<div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap"><button class="abtn abtn-primary abtn-sm" onclick="cobroModal(\'' + c.id + '\')">Registrar cobro</button><button class="abtn abtn-ghost abtn-sm" onclick="planModal(\'' + c.id + '\')">Plan de cobros</button><button class="abtn abtn-ghost abtn-sm" onclick="generarProforma(\'' + c.id + '\')">Generar proforma</button><button class="abtn abtn-ghost abtn-sm" onclick="paqueteGestoria(\'' + c.id + '\')">Paquete gestoría</button></div>' : '') + '</div>';
+  if (c.aceptacion){ const pl = planCobros(c, DB.cfg, DB.cobros); h += '<div class="section-card"><div class="section-card-title">Plan de cobros</div>' + pl.map(t => '<div style="display:flex;justify-content:space-between;font-size:13px;padding:3px 0;border-bottom:1px dashed var(--border)"><span>' + escH(t.label) + ' (' + t.pct + ' %)</span><span>' + fmtEur(t.importe) + ' <span class="badge ' + (t.estado==='cobrado'?'b-ok':t.estado==='debido'?'b-warn':'b-mute') + '">' + t.estado + '</span></span></div>').join('') + '</div>'; }
+  h += movs.length ? '<div class="section-card"><div class="section-card-title">Movimientos</div>' + movs.map(m => '<div style="display:flex;justify-content:space-between;font-size:12px;padding:3px 0;border-bottom:1px dashed var(--border);' + (m.estado==='anulado'?'opacity:.5;text-decoration:line-through':'') + '"><span>' + fmtFecha(m.fecha) + ' · ' + escH(m.concepto) + ' · ' + (MEDIO_LBL[m.medio]||'') + (m.tipo==='visita' && m.descontable !== false ? ' <span class="badge b-info">pago a cuenta</span>' : '') + '</span><b>' + fmtEur(m.importe) + '</b></div>').join('') + (movs.some(m => m.tipo==='visita' && m.descontable !== false) ? '<div style="font-size:11px;color:var(--muted);margin-top:6px">La visita descontable se trata como pago a cuenta: criterio contable pendiente de confirmar con el gestor.</div>' : '') + '</div>' : '<div class="section-card" style="color:var(--muted);font-size:12px">Sin cobros registrados.</div>';
+  return h + '<div style="font-size:11px;color:var(--muted)">' + AVISO_FACTURAS + '</div>';
 }
 
 // ═══════════════════════════════════════════════════════
