@@ -382,6 +382,23 @@ input,select,textarea{font-family:inherit}
   #print-area{display:block!important;padding:18mm;background:#fff;color:#000}
   #print-area .doc-wrap{border:none;max-height:none;overflow:visible;padding:0}
 }
+
+/* ── RESUMEN ─────────────────────────────────────── */
+.urg-box{background:#fff;border:2px solid var(--accent);border-radius:12px;padding:14px 16px;margin-bottom:8px}
+.urg-box.vacio{border-color:var(--ok)}
+.urg-hdr{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px}
+.urg-hdr b{font-family:'Cormorant Garamond',serif;font-size:22px;color:var(--terra)}
+.urg-hdr span{font-size:12px;color:var(--muted)}
+.urg-chips{margin-bottom:8px}
+.urg-item{display:flex;align-items:center;gap:10px;padding:9px 6px;border-top:1px solid var(--border);cursor:pointer;font-size:13px;border-radius:6px}
+.urg-item:hover{background:var(--light)}
+.urg-ic{width:22px;text-align:center}
+.urg-go{color:var(--accent);font-size:18px}
+.obras-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:12px}
+.obra-card{background:#fff;border:1px solid var(--border);border-left:4px solid var(--ok);border-radius:10px;padding:12px 14px;cursor:pointer}
+.obra-card:hover{box-shadow:0 2px 12px rgba(0,0,0,.08)}
+.obra-card.en_riesgo{border-left-color:#e6a100}
+.obra-card.bloqueada{border-left-color:var(--danger)}
 </style>
 </head>
 <body>
@@ -1303,9 +1320,10 @@ function crearDBInicial(){
     const obra = { inicio, hitos:mkHitos(cfg, inicio, ['hecho','hecho','hecho','hecho','en_curso','pendiente','pendiente','pendiente']),
       cambios:[
         {id:'C1', fecha:rel(-10), tipo:'imprevisto', concepto:'Refuerzo de vigueta detectado en demolición', importe:450, estado:'consolidado', bloqueaObra:false, urgente:false, aprobacion:'presencial', adendaId:'A1', avisoCliente:{enviadoAt:rel(-10), desacuerdo:false}},
-        {id:'C2', fecha:rel(-3), tipo:'cliente', concepto:'Cambio de plato de ducha por uno de resina', importe:200, estado:'registrado', bloqueaObra:false, urgente:false, aprobacion:'telefono', avisoCliente:{enviadoAt:rel(-3), desacuerdo:false}},
+        {id:'C2', fecha:rel(-3), tipo:'cliente', concepto:'Cambio de plato de ducha por uno de resina', importe:200, estado:'registrado', adendaId:'A2', bloqueaObra:false, urgente:false, aprobacion:'telefono', avisoCliente:{enviadoAt:rel(-3), desacuerdo:false}},
         {id:'C3', fecha:rel(-1), tipo:'alcance', concepto:'Punto de luz adicional en el pasillo', importe:120, estado:'registrado', bloqueaObra:false, urgente:false, aprobacion:'enlace', avisoCliente:{enviadoAt:rel(-1), desacuerdo:false}}],
-      adendas:[{id:'A1', fecha:rel(-8), delta:450, estado:'firmada', motivo:'tope', cambios:['C1'], concepto:'Adenda nº1 · imprevisto estructural', enviadaAt:rel(-8), firmadaAt:rel(-7)}],
+      adendas:[{id:'A1', fecha:rel(-8), delta:450, estado:'firmada', motivo:'tope', cambios:['C1'], concepto:'Adenda nº1 · imprevisto estructural', enviadaAt:rel(-8), firmadaAt:rel(-7)},
+        {id:'A2', fecha:rel(-1), delta:200, estado:'enviada', motivo:'manual', cambios:['C2'], concepto:'Adenda nº2 · cambio de plato de ducha', enviadaAt:rel(-1), firmadaAt:null}],
       fotos:[{id:'of1',fecha:rel(-15),url:'antes-salon.jpg',momento:'antes',espacioId:'e1'},{id:'of2',fecha:rel(-13),url:'demolicion.jpg',momento:'durante',espacioId:'e2'},{id:'of3',fecha:rel(-6),url:'tabiques.jpg',momento:'durante',espacioId:'e1'},{id:'of4',fecha:rel(-2),url:'alicatado-bano.jpg',momento:'durante',espacioId:'e3'}], solicitudesCambio:[{id:'S1', fecha:rel(-1), texto:'¿Podríamos cambiar el color del alicatado del baño 2?', estado:'abierta'}], remates:[], cierre:null };
     casos.push(base({
       id:'REF-0009', clienteId:'CL-09', creadoAt:rel(-55), estado:'en_obra',
@@ -1574,7 +1592,7 @@ function resolverDesacuerdo(caso, cambioId, accion, nuevoImporte){
   return ch;
 }
 function crearAdenda(caso, cambioIds, motivo){
-  const cambios = (caso.obra.cambios||[]).filter(c => cambioIds.includes(c.id) && c.estado === 'registrado');
+  const cambios = (caso.obra.cambios||[]).filter(c => cambioIds.includes(c.id) && c.estado === 'registrado' && !c.adendaId);
   if (!cambios.length) throw new Error('Selecciona al menos un cambio registrado (los que están en desacuerdo no se pueden incluir)');
   caso.obra.adendas = caso.obra.adendas || [];
   const ad = { id:nuevoIdSeq(caso.obra.adendas,'A'), fecha:hoy(), cambios:cambios.map(c=>c.id), delta:r(cambios.reduce((s,c)=>s+c.importe,0)), estado:'enviada', motivo:motivo||'manual', concepto:'Adenda · ' + cambios.length + ' cambio(s)', enviadaAt:hoy(), firmadaAt:null };
@@ -1585,6 +1603,7 @@ function crearAdenda(caso, cambioIds, motivo){
 function firmarAdenda(caso, adendaId){
   const ad = (caso.obra.adendas||[]).find(a => a.id === adendaId); if (!ad || ad.estado === 'firmada') return null;
   const vivos = ad.cambios.map(id => caso.obra.cambios.find(c => c.id === id)).filter(c => c && c.estado !== 'en_desacuerdo');
+  ad.cambios.forEach(id => { const c = caso.obra.cambios.find(x => x.id === id); if (c && c.estado === 'en_desacuerdo') c.adendaId = null; });
   ad.cambios = vivos.map(c => c.id); ad.delta = r(vivos.reduce((s,c) => s + c.importe, 0));
   vivos.forEach(c => c.estado = 'consolidado');
   ad.estado = 'firmada'; ad.firmadaAt = hoy();
@@ -2339,51 +2358,8 @@ function navegarA(nombre, btn){
 function renderPaginaActual(){ if (RENDERERS[paginaActual]) RENDERERS[paginaActual](); }
 
 // ═══════════════════════════════════════════════════════
-// SECCIÓN 8: RESUMEN
+// SECCIÓN 8: COMPONENTES DE RESUMEN
 // ═══════════════════════════════════════════════════════
-RENDERERS.resumen = function(){
-  const casos = DB.casos;
-  const activos = casos.filter(c => !['cerrada','archivada','descartada','caducada','rechazada'].includes(c.estado));
-  const nuevos = casos.filter(c => ['recibida','en_triaje'].includes(c.estado)).length;
-  const enObra = casos.filter(c => ['en_obra','en_remates'].includes(c.estado)).length;
-  const porCobrar = casos.reduce((s,c) => { const e = estadoEconomico(c, DB.cobros); return s + (e.saldo > 0 && ['en_obra','en_remates','terminada','cerrada'].includes(c.estado) ? e.saldo : 0); }, 0);
-  const pipeline = casos.filter(c => ['propuesta_enviada','aceptada'].includes(c.estado)).reduce((s,c) => s + (c.versiones[0]?.totales?.total||0), 0);
-
-  // Prioridad para bandeja superior
-  const conPrio = activos.map(c => ({ caso:c, prio:scorePrioridad(c, DB.cfg, hoy()) }))
-    .sort((a,b) => b.prio.total - a.prio.total).slice(0, 5);
-
-  // Relojes / avisos
-  const avisos = [];
-  casos.forEach(c => evaluarRelojes(c, DB.cfg, hoy()).forEach(a => avisos.push({caso:c, aviso:a})));
-
-  // Embudo por estado
-  const ordenEmbudo = ['recibida','en_triaje','esperando_info','visita_propuesta','visita_confirmada','propuesta_enviada','aceptada','en_obra','en_remates'];
-  const maxN = Math.max(1, ...ordenEmbudo.map(e => casos.filter(c=>c.estado===e).length));
-
-  document.getElementById('pg-resumen').innerHTML =
-    '<div class="page-hdr"><div><div class="page-title">Resumen</div><div class="page-sub">Vista general del negocio · ' + fmtFecha(hoy()) + '</div></div></div>' +
-    '<div class="stat-grid">' +
-      statCard(nuevos, 'Pedidos nuevos', nuevos > 0 ? 'Requieren triaje' : 'Todo revisado', nuevos>0?'dn':'up') +
-      statCard(enObra, 'Obras en curso', 'En ejecución', 'up') +
-      statCard(fmtEur0(pipeline), 'En negociación', 'Propuestas + aceptadas', 'up') +
-      statCard(fmtEur0(porCobrar), 'Pendiente de cobro', porCobrar>0?'Saldo abierto':'Al día', porCobrar>0?'dn':'up') +
-    '</div>' +
-    (avisos.length ? '<div class="res-section-title">Avisos de hoy</div>' + avisos.slice(0,6).map(x =>
-        '<div class="caso-card" onclick="abrirCaso(\'' + x.caso.id + '\')"><div class="caso-card-top">' +
-        '<span class="etiq-chip etiq-' + (x.aviso.tipo==='pausa'||x.aviso.tipo==='caducidad'?'bad':x.aviso.tipo==='visita_hoy'?'info':'warn') + '">' + x.aviso.tipo.replace(/_/g,' ') + '</span>' +
-        '<span class="caso-nombre">' + escH(clienteDe(x.caso).nombre) + '</span>' +
-        '<span class="caso-tipo">' + escH(x.aviso.texto) + '</span></div></div>').join('') : '') +
-    '<div class="res-section-title">Prioridad: atender primero</div>' +
-    (conPrio.length ? conPrio.map(x => casoCardHtml(x.caso, x.prio)).join('') : '<div class="section-card">Sin casos activos.</div>') +
-    '<div class="res-section-title">Embudo comercial</div>' +
-    '<div class="section-card">' + ordenEmbudo.map(e => {
-        const n = casos.filter(c=>c.estado===e).length;
-        return '<div class="embudo-row"><span class="embudo-estado">' + badgeEstado(e) + '</span>' +
-          '<div class="embudo-bar-wrap"><div class="prog-bar"><div class="prog-fill" style="width:' + (n/maxN*100) + '%"></div></div></div>' +
-          '<span class="embudo-n">' + n + '</span></div>';
-      }).join('') + '</div>';
-};
 function statCard(val, lbl, delta, dir){
   return '<div class="stat-card"><div class="stat-val">' + val + '</div><div class="stat-lbl">' + lbl + '</div>' +
     (delta ? '<div class="stat-delta ' + (dir||'up') + '">' + escH(delta) + '</div>' : '') + '</div>';
@@ -3013,21 +2989,6 @@ function accClienteCambio(id, cambioId){
   marcarDesacuerdo(c, cambioId);
   toast('Desacuerdo registrado · avisado el reformista'); renderPaginaActual(); vistaCliente(id);
 }
-
-// ═══════════════════════════════════════════════════════
-// SECCIÓN 10: CLIENTES (vista básica Fase A)
-// ═══════════════════════════════════════════════════════
-RENDERERS.clientes = function(){
-  const rows = DB.clientes.map(cl => {
-    const casos = DB.casos.filter(c => c.clienteId === cl.id);
-    const activos = casos.filter(c => !['cerrada','archivada','descartada','caducada','rechazada'].includes(c.estado)).length;
-    return '<tr onclick="toast(\'Ficha de cliente llega en Fase F\')" style="cursor:pointer"><td><b>' + escH(cl.nombre) + '</b></td><td>' + escH(cl.zona||'') + ' · ' + escH(cl.cp) + '</td><td>' + escH(cl.email) + '<br><span style="color:var(--muted);font-size:11px">' + escH(cl.tel) + '</span></td><td>' + casos.length + '</td><td>' + (activos ? '<span class="badge b-acc">' + activos + ' activo' + (activos>1?'s':'') + '</span>' : '<span class="badge b-mute">—</span>') + '</td></tr>';
-  }).join('');
-  document.getElementById('pg-clientes').innerHTML =
-    '<div class="page-hdr"><div><div class="page-title">Clientes</div><div class="page-sub">' + DB.clientes.length + ' clientes registrados</div></div></div>' +
-    '<div class="table-wrap"><table><thead><tr><th>Nombre</th><th>Zona</th><th>Contacto</th><th>Casos</th><th>Estado</th></tr></thead><tbody>' + rows + '</tbody></table></div>' +
-    '<div style="font-size:12px;color:var(--muted)">La ficha de cliente con historial completo llega en la Fase F.</div>';
-};
 
 // ═══════════════════════════════════════════════════════
 // SECCIÓN 12: CATÁLOGO
@@ -3704,7 +3665,7 @@ function solicitudRechazar(id){ const c = _fc(); const sc = c.obra.solicitudesCa
 // Adendas
 let _adSel = null;
 function obraAdendas(c, ro){
-  const trig = debeGenerarAdenda(c, DB.cfg, {}); const regs = (c.obra.cambios||[]).filter(x => x.estado === 'registrado'); const des = (c.obra.cambios||[]).filter(x => x.estado === 'en_desacuerdo');
+  const trig = debeGenerarAdenda(c, DB.cfg, {}); const regs = (c.obra.cambios||[]).filter(x => x.estado === 'registrado' && !x.adendaId); const des = (c.obra.cambios||[]).filter(x => x.estado === 'en_desacuerdo');
   if (_adSel == null || _adSel.casoId !== c.id) _adSel = { casoId:c.id, ids:regs.map(x => x.id) };
   _adSel.ids = _adSel.ids.filter(id => regs.some(x => x.id === id));
   const iva = ivaDe(c); const tv = totalVigente(c); const delta = r(regs.filter(x => _adSel.ids.includes(x.id)).reduce((s,x) => s + x.importe, 0)); const dIva = r(delta * (1 + iva/100));
@@ -3764,7 +3725,7 @@ function obraCierre(c){
 }
 function obraTerminar(){ const c = _fc(); const pt = puedeTerminarObra(c); if (!pt.ok){ toast(pt.motivo,'err'); return; }
   c.obra.cierre = Object.assign({ conformidad:null, actaId:null }, c.obra.cierre, { terminadaAt:hoy() }); transitar(c, 'terminada', { autor:'reformista', texto:'Obra terminada' }); toast('Obra terminada'); renderPaginaActual(); renderFicha(); }
-function adendaDeCierre(){ const c = _fc(); const regs = c.obra.cambios.filter(x => x.estado === 'registrado'); _adSel = { casoId:c.id, ids:regs.map(x => x.id) }; adendaEnviar('cierre'); }
+function adendaDeCierre(){ const c = _fc(); const regs = c.obra.cambios.filter(x => x.estado === 'registrado' && !x.adendaId); _adSel = { casoId:c.id, ids:regs.map(x => x.id) }; adendaEnviar('cierre'); }
 function obraAbrirRemates(){ const c = _fc(); transitar(c, 'en_remates', { autor:'reformista', texto:'Fase de remates abierta' }); const msg = fillTpl(PLANTILLAS_MSG.cierre_remates, varsDe(c)); renderPaginaActual();
   openModal('<div class="modal-title">Fase de remates abierta</div><p style="font-size:13px;color:var(--muted)">Avisa al cliente para que liste los remates:</p>' + msgBloque(msg, clienteDe(c).tel) + '<div style="margin-top:14px;text-align:right"><button class="abtn abtn-primary" onclick="renderFicha()">Volver a la obra</button></div>'); }
 function obraConformidad(tipo){
@@ -3923,6 +3884,132 @@ function fichaCobros(c){
   if (c.aceptacion){ const pl = planCobros(c, DB.cfg, DB.cobros); h += '<div class="section-card"><div class="section-card-title">Plan de cobros</div>' + pl.map(t => '<div style="display:flex;justify-content:space-between;font-size:13px;padding:3px 0;border-bottom:1px dashed var(--border)"><span>' + escH(t.label) + ' (' + t.pct + ' %)</span><span>' + fmtEur(t.importe) + ' <span class="badge ' + (t.estado==='cobrado'?'b-ok':t.estado==='debido'?'b-warn':'b-mute') + '">' + t.estado + '</span></span></div>').join('') + '</div>'; }
   h += movs.length ? '<div class="section-card"><div class="section-card-title">Movimientos</div>' + movs.map(m => '<div style="display:flex;justify-content:space-between;font-size:12px;padding:3px 0;border-bottom:1px dashed var(--border);' + (m.estado==='anulado'?'opacity:.5;text-decoration:line-through':'') + '"><span>' + fmtFecha(m.fecha) + ' · ' + escH(m.concepto) + ' · ' + (MEDIO_LBL[m.medio]||'') + (m.tipo==='visita' && m.descontable !== false ? ' <span class="badge b-info">pago a cuenta</span>' : '') + '</span><b>' + fmtEur(m.importe) + '</b></div>').join('') + (movs.some(m => m.tipo==='visita' && m.descontable !== false) ? '<div style="font-size:11px;color:var(--muted);margin-top:6px">La visita descontable se trata como pago a cuenta: criterio contable pendiente de confirmar con el gestor.</div>' : '') + '</div>' : '<div class="section-card" style="color:var(--muted);font-size:12px">Sin cobros registrados.</div>';
   return h + '<div style="font-size:11px;color:var(--muted)">' + AVISO_FACTURAS + '</div>';
+}
+
+// ═══════════════════════════════════════════════════════
+// SECCIÓN 12F: RESUMEN Y CLIENTES
+// ═══════════════════════════════════════════════════════
+function urgenteHoy(db, cfg, ahora){
+  const out = []; const nom = c => (db.clientes.find(x => x.id === c.clienteId) || { nombre:'(sin cliente)' }).nombre;
+  db.casos.forEach(c => {
+    if (c.visita?.estado === 'confirmada' && c.visita.elegida?.fecha === ahora) out.push({ tipo:'visita', casoId:c.id, destino:'visita', texto:'Visita hoy a las ' + c.visita.elegida.franja.split('-')[0] + ' · ' + nom(c) });
+    if (enBandeja(c) && scorePrioridad(c, cfg, ahora).nivel === 'Atender hoy') out.push({ tipo:'atender', casoId:c.id, destino:'caso', texto:'Solicitud para atender hoy · ' + nom(c) });
+    evaluarRelojes(c, cfg, ahora).filter(x => ['recordatorio','recordatorio_visita','aviso_caducidad','remates_plazo'].includes(x.tipo)).forEach(x => out.push({ tipo:'recordatorio', casoId:c.id, destino:['remates_plazo'].includes(x.tipo) ? 'obra' : 'caso', texto:x.texto + ' · ' + nom(c) }));
+    (c.obra?.adendas||[]).filter(a => a.estado === 'enviada').forEach(a => out.push({ tipo:'adenda', casoId:c.id, destino:'obra', texto:'Adenda ' + a.id + ' pendiente de firma · ' + nom(c) }));
+    if (['en_obra','en_remates'].includes(c.estado)) cambiosPendientes(c).filter(ch => ch.bloqueaObra && !ch.resuelto).forEach(ch => out.push({ tipo:'bloqueo', casoId:c.id, destino:'obra', texto:'Cambio ' + ch.id + ' bloquea la obra · ' + nom(c) }));
+    if (c.aceptacion) cobrosPendientesDebidos(c, cfg, db.cobros).forEach(t => out.push({ tipo:'cobro', casoId:c.id, destino:'cobros', texto:'Cobro debido «' + t.label + '» ' + fmtEur0(t.falta) + ' · ' + nom(c) }));
+  });
+  return out;
+}
+function cifrasClave(db, cfg, ahora){
+  const ult = (f, n) => f && diasEntre(f, ahora) >= 0 && diasEntre(f, ahora) <= n;
+  const nuevas30 = db.casos.filter(c => ult(c.creadoAt, 30)).length;
+  const enviadas90 = db.casos.filter(c => (c.versiones||[]).some(v => v.enviadaAt && ult(v.enviadaAt, 90))).length;
+  const aceptadas90 = db.casos.filter(c => c.aceptacion && ult(c.aceptacion.fecha, 90) && (c.versiones||[]).some(v => v.enviadaAt)).length;
+  const propuestas = r(db.casos.filter(c => c.estado === 'propuesta_enviada').reduce((s,c) => s + ((c.versiones||[]).find(v => v.estado === 'vigente')?.totales?.total || 0), 0));
+  const pendientes = r(db.casos.filter(c => c.aceptacion && ESTADOS_OBRA.includes(c.estado)).reduce((s,c) => s + Math.max(0, estadoEconomico(c, db.cobros).saldo), 0));
+  return { nuevas30, enviadas90, aceptadas90, conversion: enviadas90 ? Math.round(aceptadas90 / enviadas90 * 100) : null, propuestas, pendientes };
+}
+function totalAceptadoCliente(db, clienteId){ return r(db.casos.filter(c => c.clienteId === clienteId && c.aceptacion).reduce((s,c) => s + c.aceptacion.importe, 0)); }
+function ultimoContactoCliente(db, cl){ const fs = db.casos.filter(c => c.clienteId === cl.id).flatMap(c => (c.eventos||[]).map(e => e.fecha)); if (cl.rgpd && cl.rgpd.aceptadoAt) fs.push(cl.rgpd.aceptadoAt); return fs.sort().slice(-1)[0] || null; }
+
+// ── RESUMEN ──
+const URG_ICON = { visita:'📅', atender:'📥', recordatorio:'⏰', adenda:'✍', bloqueo:'⛔', cobro:'💶' };
+const URG_LBL = { visita:'Visitas de hoy', atender:'Atender hoy', recordatorio:'Recordatorios', adenda:'Adendas por firmar', bloqueo:'Obras bloqueadas', cobro:'Cobros pendientes' };
+function urgAbrir(casoId, destino){
+  if (destino === 'obra') abrirObra(casoId);
+  else if (destino === 'cobros'){ abrirCaso(casoId); _fichaTab = 'cobros'; renderFicha(); }
+  else if (destino === 'visita'){ abrirCaso(casoId); _fichaTab = 'visita'; renderFicha(); }
+  else abrirCaso(casoId);
+}
+RENDERERS.resumen = function(){
+  const urg = urgenteHoy(DB, DB.cfg, hoy()); const cf = cifrasClave(DB, DB.cfg, hoy());
+  const porTipo = {}; urg.forEach(u => porTipo[u.tipo] = (porTipo[u.tipo]||0) + 1);
+  const activas = DB.casos.filter(c => ['en_obra','en_remates','terminada'].includes(c.estado));
+  const prox = visitasConfirmadas().filter(c => c.visita.elegida.fecha >= hoy()).slice(0,3);
+  const cardObra = c => { const cli = clienteDe(c), prog = calcularProgreso(c), salud = c.obra.hitos?.length ? saludObra(c, DB.cfg, hoy()) : 'al_dia', eco = estadoEconomico(c, DB.cobros), ph = proximoHito(c), uf = ultimaFotoObra(c);
+    return '<div class="obra-card ' + salud + '" onclick="abrirObra(\'' + c.id + '\')"><div style="display:flex;justify-content:space-between;gap:8px"><div><b>' + escH(cli.nombre) + '</b><div style="font-size:11px;color:var(--muted)">' + escH(direccionDe(c)) + '</div></div>' + badgeSalud(salud) + '</div>' +
+      '<div style="font-size:12px;margin:8px 0 4px">' + badgeEstado(c.estado) + ' · ' + Math.round(prog*100) + ' %</div>' + miniBarra(prog*100) +
+      '<div style="font-size:12px;margin-top:8px">Total <b>' + fmtEur0(eco.total) + '</b> · cobrado ' + fmtEur0(eco.cobrado) + miniBarra(eco.total ? eco.cobrado / eco.total * 100 : 0, 'var(--ok)') + '</div>' +
+      '<div style="display:flex;gap:10px;align-items:center;margin-top:8px;font-size:12px">' + (uf ? '<div class="mv-thumb" style="width:56px;height:44px;aspect-ratio:auto;font-size:9px">' + escH(uf.hito || uf.momento || 'foto') + '</div>' : '') + '<div>' + (ph ? 'Próximo: <b>' + escH(ph.nombre) + '</b><br><span style="color:var(--muted)">' + fmtFecha(ph.fechaFinPrevista || ph.fechaPrevista) + '</span>' : '<span style="color:var(--muted)">Sin hitos pendientes</span>') + '</div></div></div>'; };
+  document.getElementById('pg-resumen').innerHTML =
+    '<div class="page-hdr"><div><div class="page-title">Resumen</div><div class="page-sub">' + fmtFecha(hoy()) + ' · ' + escH(DB.cfg.empresa.nombre) + '</div></div></div>' +
+    '<div class="urg-box ' + (urg.length ? '' : 'vacio') + '" id="urgente-hoy"><div class="urg-hdr"><b>Urgente hoy</b><span>' + (urg.length ? urg.length + ' asunto(s)' : 'Todo al día') + '</span></div>' +
+      (urg.length ? '<div class="urg-chips">' + Object.entries(porTipo).map(([k,n]) => '<span class="etiq-chip etiq-warn">' + URG_ICON[k] + ' ' + URG_LBL[k] + ': ' + n + '</span>').join('') + '</div>' + urg.map(u => '<div class="urg-item" onclick="urgAbrir(\'' + u.casoId + '\',\'' + u.destino + '\')"><span class="urg-ic">' + URG_ICON[u.tipo] + '</span><span style="flex:1">' + escH(u.texto) + '</span><span class="urg-go">›</span></div>').join('') : '<div style="font-size:13px;color:var(--muted);padding:6px 0">No hay nada urgente. 🎉</div>') + '</div>' +
+    '<div class="res-section-title">Obras activas</div>' + (activas.length ? '<div class="obras-grid">' + activas.map(cardObra).join('') + '</div>' : '<div class="section-card" style="text-align:center;color:var(--muted)">No hay obras en curso.</div>') +
+    '<div class="res-section-title">Cifras clave</div><div class="stat-grid">' +
+      statCard(cf.nuevas30, 'Solicitudes nuevas', 'últimos 30 días', 'up') + statCard(cf.conversion == null ? '—' : cf.conversion + ' %', 'Conversión', cf.aceptadas90 + ' aceptadas de ' + cf.enviadas90 + ' enviadas (90 días)', 'up') +
+      statCard(fmtEur0(cf.propuestas), 'En propuestas vigentes', 'pendientes de respuesta', 'up') + statCard(fmtEur0(cf.pendientes), 'Cobros pendientes', 'saldo de obras', cf.pendientes > 0 ? 'dn' : 'up') + '</div>' +
+    '<div class="res-section-title">Próximas visitas</div>' + (prox.length ? prox.map(c => { const el = c.visita.elegida; return '<div class="caso-card" onclick="abrirCaso(\'' + c.id + '\');_fichaTab=\'visita\';renderFicha()"><div class="caso-card-top"><span class="ruta-hora" style="font-size:18px">' + (el.fecha === hoy() ? 'Hoy' : fmtFechaCorta(el.fecha)) + ' ' + el.franja.split('-')[0] + '</span><b class="caso-nombre">' + escH(clienteDe(c).nombre) + '</b><span class="caso-tipo">' + escH(direccionDe(c)) + '</span></div></div>'; }).join('') : '<div class="section-card" style="text-align:center;color:var(--muted)">Sin visitas próximas confirmadas.</div>');
+};
+
+// ── CLIENTES ──
+let clientesQ = '', clientesSort = 'nombre';
+function clienteFilas(){
+  let ls = DB.clientes.map(cl => ({ cl, casos:DB.casos.filter(c => c.clienteId === cl.id), total:totalAceptadoCliente(DB, cl.id), ult:ultimoContactoCliente(DB, cl) }));
+  const q = clientesQ.toLowerCase(); if (q) ls = ls.filter(x => (x.cl.nombre + ' ' + x.cl.email + ' ' + x.cl.tel).toLowerCase().includes(q));
+  const ord = { nombre:(a,b) => a.cl.nombre.localeCompare(b.cl.nombre), casos:(a,b) => b.casos.length - a.casos.length, total:(a,b) => b.total - a.total, contacto:(a,b) => String(b.ult).localeCompare(String(a.ult)) };
+  return ls.sort(ord[clientesSort] || ord.nombre);
+}
+RENDERERS.clientes = function(){
+  const ls = clienteFilas(); const dups = detectarDuplicados(DB.clientes);
+  const rows = ls.map(x => { const cl = x.cl; const esDup = dups.some(p => p.includes(cl.id));
+    return '<tr onclick="clienteFicha(\'' + cl.id + '\')" style="cursor:pointer"><td><b>' + escH(cl.nombre) + '</b>' + (esDup ? ' <span class="badge b-warn">posible duplicado</span>' : '') + '</td><td style="font-size:12px">' + escH(cl.email) + '<br><span style="color:var(--muted)">' + escH(cl.tel) + '</span></td><td>' + x.casos.length + '</td><td>' + (x.total ? fmtEur0(x.total) : '—') + '</td><td style="font-size:12px">' + (x.ult ? fmtFecha(x.ult) : '—') + '</td></tr>'; }).join('');
+  const sel = '<select onchange="clientesSort=this.value;RENDERERS.clientes()">' + [['nombre','Nombre'],['casos','Nº de casos'],['total','Total aceptado'],['contacto','Último contacto']].map(o => '<option value="' + o[0] + '"' + (clientesSort===o[0]?' selected':'') + '>' + o[1] + '</option>').join('') + '</select>';
+  document.getElementById('pg-clientes').innerHTML =
+    '<div class="page-hdr"><div><div class="page-title">Clientes</div><div class="page-sub">' + DB.clientes.length + ' clientes registrados</div></div><div style="display:flex;gap:8px"><button class="abtn abtn-ghost" title="Demo: llega un pedido de alguien que ya es cliente" onclick="simularPedidoEntrante()">Simular pedido entrante</button><button class="abtn abtn-primary" onclick="clienteNuevoModal()">+ Nuevo cliente</button></div></div>' +
+    (dups.length ? '<div class="mv-aviso" style="font-size:13px;font-weight:400">⚠ <b>Posibles duplicados detectados</b> (mismo email o teléfono): ' + dups.map(p => { const a = DB.clientes.find(x => x.id === p[0]), b = DB.clientes.find(x => x.id === p[1]); return '<span style="white-space:nowrap">' + escH(a.nombre) + ' ↔ ' + escH(b.nombre) + ' <button class="abtn abtn-primary abtn-sm" onclick="clienteUnirModal(\'' + p[0] + '\',\'' + p[1] + '\')">Unir</button></span>'; }).join(' · ') + '</div>' : '') +
+    '<div class="ctrl-row"><input type="text" placeholder="Buscar por nombre, email o teléfono…" value="' + escH(clientesQ) + '" oninput="clientesQ=this.value;clearTimeout(window._cq);window._cq=setTimeout(RENDERERS.clientes,200)" style="min-width:260px"><span class="ctrl-lbl">Ordenar</span>' + sel + '<span class="bandeja-count">' + ls.length + ' resultado(s)</span></div>' +
+    (ls.length ? '<div class="table-wrap"><table><thead><tr><th>Nombre</th><th>Contacto</th><th>Casos</th><th>Total aceptado</th><th>Último contacto</th></tr></thead><tbody>' + rows + '</tbody></table></div>' : '<div class="section-card" style="text-align:center;color:var(--muted)">Ningún cliente coincide con la búsqueda.</div>');
+};
+let _clienteId = null;
+function clienteFicha(id){
+  _clienteId = id; const cl = DB.clientes.find(x => x.id === id); if (!cl) return; const casos = DB.casos.filter(c => c.clienteId === id);
+  const dup = buscarDuplicado(DB.clientes, cl, id);
+  const inp = (k, lbl, tipo) => '<div class="inl-field"><label>' + lbl + '</label><input type="' + (tipo||'text') + '" value="' + escH(cl[k] || '') + '" onchange="clienteEdit(\'' + k + '\',this.value)"></div>';
+  openModal('<div class="modal-title">' + escH(cl.nombre) + ' <span style="font-size:13px;color:var(--muted)">· ' + cl.id + '</span></div>' +
+    (dup ? '<div class="mv-aviso" style="font-size:13px;font-weight:400">⚠ Coincide con <b>' + escH(dup.nombre) + '</b> (' + dup.id + ') por email o teléfono. <button class="abtn abtn-primary abtn-sm" onclick="clienteUnirModal(\'' + dup.id + '\',\'' + id + '\')">Unir clientes</button></div>' : '') +
+    '<div class="section-card"><div class="section-card-title">Contacto (editable)</div>' + inp('nombre','Nombre') + inp('email','Email','email') + inp('tel','Teléfono','tel') +
+      '<div class="inl-field"><label>Canal preferido</label><select onchange="clienteEdit(\'canal\',this.value)">' + ['email','whatsapp','telefono'].map(c => '<option value="' + c + '"' + (cl.canal===c?' selected':'') + '>' + c + '</option>').join('') + '</select></div>' +
+      '<div class="inl-field"><label>Horario</label><select onchange="clienteEdit(\'horario\',this.value)">' + ['cualquiera','mañanas','tardes'].map(c => '<option value="' + c + '"' + (cl.horario===c?' selected':'') + '>' + c + '</option>').join('') + '</select></div></div>' +
+    '<div class="section-card"><div class="section-card-title">Consentimientos</div><div class="kv"><span class="k">Política de privacidad</span>' + (cl.rgpd && cl.rgpd.aceptadoAt ? '<span class="badge b-ok">aceptada el ' + fmtFecha(cl.rgpd.aceptadoAt) + '</span>' : '<span class="badge b-err">sin aceptar</span>') + '</div>' +
+      '<label class="check-q"><input type="checkbox" ' + (cl.whatsappOk?'checked':'') + ' onchange="clienteEdit(\'whatsappOk\',this.checked)"> Permiso para contactar por WhatsApp</label></div>' +
+    '<div class="section-card"><div class="section-card-title">Notas</div><textarea style="width:100%;min-height:60px;padding:8px;border:1px solid var(--border);border-radius:8px;font-family:inherit" onchange="clienteEdit(\'notas\',this.value)">' + escH(cl.notas||'') + '</textarea></div>' +
+    '<div class="section-card"><div class="section-card-title">Casos (' + casos.length + ')</div>' + (casos.map(c => '<div class="kan-card" style="display:flex;gap:10px;align-items:center" onclick="abrirCaso(\'' + c.id + '\')"><b>' + c.id + '</b>' + badgeEstado(c.estado) + '<span style="flex:1;color:var(--muted)">' + nombreTipoObra(c.solicitud.tipoObra) + '</span><b>' + fmtEur0(c.aceptacion ? c.aceptacion.importe : (versionVigente(c)?.totales?.total||0)) + '</b></div>').join('') || '<div style="font-size:12px;color:var(--muted)">Sin casos.</div>') + '</div>' +
+    '<div style="text-align:right"><button class="abtn abtn-ghost" onclick="closeAllModals();RENDERERS.clientes()">Cerrar</button></div>');
+}
+function clienteEdit(k, val){
+  const cl = DB.clientes.find(x => x.id === _clienteId); if (!cl) return; cl[k] = val;
+  if (['email','tel'].includes(k)){ const d = buscarDuplicado(DB.clientes, cl, cl.id); if (d) toast('Ojo: coincide con ' + d.nombre + ' (' + d.id + ')'); }
+  clienteFicha(_clienteId);
+}
+let _cn = { dup:null };
+function clienteNuevoModal(){
+  _cn = { dup:null };
+  openModal('<div class="modal-title">Nuevo cliente</div><div class="inl-field"><label>Nombre</label><input id="cn-nombre"></div><div class="inl-field"><label>Email</label><input id="cn-email" type="email"></div><div class="inl-field"><label>Teléfono</label><input id="cn-tel" type="tel"></div>' +
+    '<div class="inl-field"><label>Canal</label><select id="cn-canal"><option>email</option><option>whatsapp</option><option>telefono</option></select></div><div id="cn-aviso"></div>' +
+    '<div style="margin-top:14px;display:flex;gap:8px;justify-content:flex-end"><button class="abtn abtn-ghost" onclick="closeAllModals()">Cancelar</button><button class="abtn abtn-primary" id="cn-ok" onclick="clienteCrear()">Crear cliente</button></div>');
+}
+function clienteCrear(){
+  const v = id => document.getElementById(id).value.trim(); const datos = { nombre:v('cn-nombre'), email:v('cn-email'), tel:v('cn-tel'), canal:document.getElementById('cn-canal').value };
+  if (!datos.nombre){ toast('Indica el nombre','err'); return; } if (!datos.email && !datos.tel){ toast('Indica email o teléfono','err'); return; }
+  const dup = buscarDuplicado(DB.clientes, datos);
+  if (dup && !_cn.dup){ _cn.dup = dup.id; document.getElementById('cn-aviso').innerHTML = '<div class="mv-aviso" style="font-size:13px;font-weight:400">⚠ Ya existe <b>' + escH(dup.nombre) + '</b> (' + dup.id + ') con el mismo ' + (normEmail(dup.email) === normEmail(datos.email) ? 'email' : 'teléfono') + '. <button class="abtn abtn-primary abtn-sm" onclick="clienteFicha(\'' + dup.id + '\')">Usar el existente</button></div>'; document.getElementById('cn-ok').textContent = 'Crear de todos modos'; return; }
+  const cl = Object.assign({ id:'CL-' + String(DB.clientes.length + 1).padStart(2,'0'), horario:'cualquiera', cp:'', zona:'', rgpd:{ aceptadoAt:hoy() }, whatsappOk:datos.canal === 'whatsapp', notas:'' }, datos); DB.clientes.push(cl);
+  closeAllModals(); toast('Cliente creado' + (dup ? ' (posible duplicado de ' + dup.id + ')' : '')); RENDERERS.clientes();
+}
+function clienteUnirModal(idMantener, idEliminar){
+  const k = DB.clientes.find(x => x.id === idMantener), d = DB.clientes.find(x => x.id === idEliminar); if (!k || !d) return;
+  const nk = DB.casos.filter(c => c.clienteId === idMantener).length, nd = DB.casos.filter(c => c.clienteId === idEliminar).length;
+  openModal('<div class="modal-title">Unir clientes</div><p style="font-size:13px;margin-bottom:10px">Se conserva <b>' + escH(k.nombre) + '</b> (' + k.id + ', ' + nk + ' caso(s)) y se absorbe <b>' + escH(d.nombre) + '</b> (' + d.id + ', ' + nd + ' caso(s)). Sus casos y notas pasan al cliente conservado.</p><div style="display:flex;gap:8px;justify-content:flex-end"><button class="abtn abtn-ghost" onclick="closeAllModals()">Cancelar</button><button class="abtn abtn-ghost" onclick="clienteUnirModal(\'' + idEliminar + '\',\'' + idMantener + '\')">Conservar el otro</button><button class="abtn abtn-primary" onclick="clienteUnirOk(\'' + idMantener + '\',\'' + idEliminar + '\')">Unir</button></div>');
+}
+function clienteUnirOk(a, b){ unirClientes(DB, a, b); closeAllModals(); toast('Clientes unidos'); renderPaginaActual(); }
+function simularPedidoEntrante(){
+  const origen = DB.clientes.find(c => c.id === 'CL-05') || DB.clientes[0]; const nuevo = { id:'CL-' + String(DB.clientes.length + 1).padStart(2,'0'), nombre:origen.nombre.split(' ')[0] + ' F.', email:origen.email.toUpperCase(), tel:origen.tel.replace(/\s/g,''), canal:'email', horario:'cualquiera', cp:origen.cp, zona:origen.zona, rgpd:{ aceptadoAt:hoy() }, whatsappOk:false, notas:'' };
+  DB.clientes.push(nuevo); const esp = [{ id:'e1', tipo:'bano', m2:6, trabajos:TRB.banoSimple }]; const n = DB.casos.length + 1;
+  DB.casos.push({ id:'REF-' + String(n).padStart(4,'0'), clienteId:nuevo.id, creadoAt:hoy(), estado:'recibida', estadoPrevio:null, vivienda:{ cp:origen.cp, tipo:'piso', m2:60, plantas:1, antiguedad:'1980-2000', humedades:false, propietario:true, comunidad:'no_aplica', topePresupuesto:6000, fechaInicioDeseada:rel(40) }, solicitud:{ calidad:'media', tipoObra:'reforma_bano', notasCliente:'Otro baño más en la misma vivienda.', fotosCliente:['a.jpg','b.jpg'], espacios:esp },
+    interno:{ etiquetas:[], nota:'', proximaAccion:'', motivoDescarte:null }, versiones:[mkVersion({ id:'V1', espacios:esp, calidad:'media', nivel:'media', creadaAt:hoy() })], aceptacion:null, visita:{ estado:'pendiente', franjasOfrecidas:[], elegida:null, cobro:{ estado:'no_aplica' }, checks:{}, medidas:{}, fotos:[], notas:[] }, obra:{ inicio:null, hitos:[], cambios:[], adendas:[], fotos:[], solicitudesCambio:[], remates:[], cierre:null }, recordatorios:[], eventos:[{ fecha:hoy(), tipo:'sistema', texto:'Pedido recibido desde el configurador web', autor:'sistema' }], enlace:{ token:uid('tok') } });
+  toast('Pedido entrante de ' + nuevo.nombre + ': el email ya existe, posible duplicado'); navegarA('clientes', document.getElementById('nb-clientes'));
 }
 
 // ═══════════════════════════════════════════════════════
