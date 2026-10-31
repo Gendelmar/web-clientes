@@ -426,9 +426,85 @@ body[data-densidad=compacta] .apage{padding:18px 22px}
 body[data-densidad=compacta] .stat-card{padding:12px 14px}
 body[data-densidad=amplia] .caso-card{padding:22px 26px;margin-bottom:14px}
 body[data-densidad=amplia] .apage{padding:36px 42px}
+
+/* ── PULIDO: accesibilidad, táctil y responsive ──── */
+:focus-visible{outline:3px solid var(--accent-dark,#a9561a);outline-offset:2px}
+button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible,a:focus-visible,summary:focus-visible{outline:3px solid var(--accent-dark,#a9561a);outline-offset:2px}
+.abtn-primary,.accion-btn,.cv-btn:not(.ghost),.login-btn,.mv-cerrar,.ficha-tab.active{background:var(--accent-dark,#a9561a)}
+.abtn-primary:hover,.accion-btn:hover,.login-btn:hover{background:var(--terra)}
+.tab.active,.tab.active .tab-n{color:var(--accent-dark,#a9561a)}
+.tab.active{border-bottom-color:var(--accent-dark,#a9561a)}
+.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+.table-wrap{overflow-x:auto}
+.table-wrap table{min-width:640px}
+.modal-lg .lineas-tbl{display:block;overflow-x:auto}
+.demo-panel .demo-toggle{padding:4px 8px}
+.demo-panel.col .demo-body{display:none}
+.demo-body{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+[hidden]{display:none!important}
+/* objetivos táctiles ≥ 44 px en el Modo visita */
+.mv-root button,.mv-root select,.mv-root input:not([type=checkbox]):not([type=radio]),.mv-root textarea,.mv-chip,.mv-opt{min-height:44px}
+.mv-root .abtn,.mv-back,.mv-cerrar,.mv-chip{min-height:44px;display:inline-flex;align-items:center;justify-content:center}
+.mv-root input[type=checkbox],.mv-root input[type=radio]{width:24px;height:24px}
+.mv-root .lin-cand,.mv-root .lineas-tbl span[onclick]{display:inline-flex;align-items:center;justify-content:center;min-width:44px;min-height:44px;font-size:18px}
+.mv-root .lineas-tbl{display:block;overflow-x:auto}
+.mv-root .lineas-tbl input{min-height:44px;font-size:16px;padding:6px}
+.mv-hueco span[onclick],.mv-nota span[onclick]{display:inline-flex;align-items:center;justify-content:center;min-width:44px;min-height:44px}
+.mv-thumb .x{width:44px;height:44px;line-height:44px;top:0;right:0;border-radius:0 10px 0 10px;background:rgba(0,0,0,.45)}
+@media(max-width:820px){
+  .apage{padding:18px 14px}
+  .page-title{font-size:26px}
+  .modal{width:100%;max-width:100%;max-height:94vh;border-radius:14px 14px 0 0;padding:20px 16px;align-self:flex-end}
+  .modal-bg{align-items:flex-end}
+  .modal-lg{max-width:100%}
+  .caso-card-top,.caso-card-mid{gap:8px}
+  .accion-btn{margin-left:0}
+  .stat-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+  .stat-val{font-size:26px}
+  .demo-panel{bottom:72px;right:8px;left:8px;max-width:none;border-radius:10px}
+  .demo-panel.col{left:auto}
+  .cfg-row>label{flex:1 1 100%}
+  .ctrl-row>*{max-width:100%}
+  .bar2{min-width:120px}
+  .tabs{overflow-x:auto;flex-wrap:nowrap;white-space:nowrap}
+  .ficha-tabs{overflow-x:auto;flex-wrap:nowrap}
+  .urg-box{padding:12px}
+  .mn-btn{min-width:44px;min-height:44px;padding:4px 2px;font-size:9px}
+  .abtn{min-height:40px}
+}
+@media(max-width:480px){
+  .mv-body{padding:14px 12px 110px}
+  .mv-q{font-size:24px}
+  .mv-med-grid{grid-template-columns:1fr 1fr 1fr}
+  .stat-grid{grid-template-columns:1fr 1fr}
+  .login-card{width:calc(100% - 28px);padding:32px 22px}
+}
+
+.disp-fr{flex-wrap:wrap}
+.disp-dia{flex-wrap:wrap}
+.disp-inp,.disp-fr select,.disp-fr input{max-width:100%;min-width:0}
+.inl-field input,.inl-field select{min-width:0}
+@media(max-width:820px){
+  .inl-field{flex-wrap:wrap}
+  .inl-field label{min-width:100%}
+  .disp-dia .dd-n{min-width:100%}
+  .modal input,.modal select,.modal textarea{max-width:100%}
+}
+
+.mv-lin{background:#fff;border:1px solid var(--border);border-radius:12px;padding:10px;margin-bottom:8px}
+.mv-lin>input{width:100%;padding:8px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:15px;font-family:inherit;margin-bottom:8px}
+.mv-lin-row{display:grid;grid-template-columns:1fr 1fr 1.2fr auto auto;gap:6px;align-items:end}
+.mv-lin-row label{font-size:11px;color:var(--muted);display:block}
+.mv-lin-row label input{width:100%;padding:8px;border:1.5px solid var(--border);border-radius:8px;font-size:16px;font-family:inherit;text-align:right;margin-top:2px}
+.mv-lin-sub{display:flex;flex-direction:column;align-items:flex-end;font-size:14px;padding-bottom:6px}
+.mv-lin-sub small{font-size:10px;color:var(--muted)}
+.obra-card .badge{align-self:flex-start;height:fit-content}
+@media(max-width:480px){.mv-lin-row{grid-template-columns:1fr 1fr auto auto}.mv-lin-sub{grid-column:1 / -1;flex-direction:row;justify-content:space-between;align-items:center;order:5}}
+@media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 </style>
 </head>
 <body>
+<a href="#contenido" class="sr-only" onfocus="this.style.cssText='position:fixed;left:8px;top:8px;width:auto;height:auto;clip:auto;background:#fff;padding:8px 12px;z-index:9999'" onblur="this.style.cssText=''">Saltar al contenido</a>
 
 <!-- LOGIN -->
 <div class="login-screen" id="login-screen">
@@ -446,12 +522,12 @@ body[data-densidad=amplia] .apage{padding:36px 42px}
 
 <!-- ADMIN SHELL -->
 <div class="admin-shell" id="admin-shell">
-  <aside class="sidebar">
+  <aside class="sidebar" aria-label="Menú principal">
     <div class="sidebar-logo">
       <div class="sidebar-logo-t">Anatoliy</div>
       <div class="sidebar-logo-s">Panel del reformista</div>
     </div>
-    <nav class="sidebar-nav">
+    <nav class="sidebar-nav" aria-label="Apartados">
       <button class="nav-btn active" id="nb-resumen"        onclick="navegarA('resumen',this)"><span class="nav-icon">⊞</span>Resumen</button>
       <button class="nav-btn"        id="nb-presupuestos"   onclick="navegarA('presupuestos',this)"><span class="nav-icon">📋</span>Presupuestos</button>
       <button class="nav-btn"        id="nb-obras"          onclick="navegarA('obras',this)"><span class="nav-icon">🏗</span>Obras</button>
@@ -467,7 +543,7 @@ body[data-densidad=amplia] .apage{padding:36px 42px}
     </div>
   </aside>
 
-  <main class="admin-main">
+  <main class="admin-main" id="contenido" tabindex="-1">
     <div class="apage active" id="pg-resumen"></div>
     <div class="apage"        id="pg-presupuestos"></div>
     <div class="apage"        id="pg-obras"></div>
@@ -480,9 +556,9 @@ body[data-densidad=amplia] .apage{padding:36px 42px}
 </div>
 
 <!-- MOBILE NAV -->
-<nav class="mobile-nav" id="mobile-nav">
+<nav class="mobile-nav" id="mobile-nav" aria-label="Apartados (móvil)">
   <button class="mn-btn active" id="mn-resumen"       onclick="navegarA('resumen',document.getElementById('nb-resumen'))"><span class="mn-icon">⊞</span>Resumen</button>
-  <button class="mn-btn"        id="mn-presupuestos"  onclick="navegarA('presupuestos',document.getElementById('nb-presupuestos'))"><span class="mn-icon">📋</span>Presuptos.</button>
+  <button class="mn-btn"        id="mn-presupuestos"  onclick="navegarA('presupuestos',document.getElementById('nb-presupuestos'))"><span class="mn-icon">📋</span>Presup.</button>
   <button class="mn-btn"        id="mn-obras"         onclick="navegarA('obras',document.getElementById('nb-obras'))"><span class="mn-icon">🏗</span>Obras</button>
   <button class="mn-btn"        id="mn-agenda"        onclick="navegarA('agenda',document.getElementById('nb-agenda'))"><span class="mn-icon">📅</span>Agenda</button>
   <button class="mn-btn"        id="mn-clientes"      onclick="navegarA('clientes',document.getElementById('nb-clientes'))"><span class="mn-icon">👥</span>Clientes</button>
@@ -492,33 +568,35 @@ body[data-densidad=amplia] .apage{padding:36px 42px}
 </nav>
 
 <!-- DEMO TOOLS -->
-<div class="demo-panel" id="demo-panel">
-  <span>🧪 Demo</span>
+<div class="demo-panel" id="demo-panel" role="region" aria-label="Herramientas de demostración">
+  <button class="demo-toggle" id="demo-toggle" aria-expanded="true" aria-label="Plegar o desplegar herramientas de demo" onclick="demoPlegar()">🧪 Demo</button>
   <span class="demo-fecha" id="demo-fecha-txt"></span>
-  <span class="demo-sep">|</span>
-  <button onclick="avanzarTiempo(1)">+1 día</button>
-  <button onclick="avanzarTiempo(7)">+1 semana</button>
-  <button onclick="volverHoy()">↩ Hoy</button>
-  <span class="demo-sep">|</span>
-  <button onclick="restablecerDatos()">⟳ Restablecer</button>
+  <span class="demo-body" id="demo-body">
+    <span class="demo-sep">|</span>
+    <button onclick="avanzarTiempo(1)">+1 día</button>
+    <button onclick="avanzarTiempo(7)">+1 semana</button>
+    <button onclick="volverHoy()">↩ Hoy</button>
+    <span class="demo-sep">|</span>
+    <button onclick="restablecerDatos()">⟳ Restablecer</button>
+  </span>
 </div>
 
 <!-- MODAL -->
 <div class="modal-bg" id="modal-bg" onclick="if(event.target===this)closeAllModals()">
-  <div class="modal" id="main-modal">
-    <button class="modal-close" onclick="closeAllModals()">✕</button>
+  <div class="modal" id="main-modal" role="dialog" aria-modal="true" aria-label="Ventana de detalle" tabindex="-1">
+    <button class="modal-close" aria-label="Cerrar ventana" onclick="closeAllModals()">✕</button>
     <div id="main-modal-body"></div>
   </div>
 </div>
 
 <!-- MODO VISITA -->
-<div class="mv-root" id="mv-root"></div>
+<div class="mv-root" id="mv-root" role="dialog" aria-modal="true" aria-label="Modo visita"></div>
 
 <!-- ÁREA DE IMPRESIÓN -->
 <div id="print-area"></div>
 
 <!-- TOAST -->
-<div class="toast-wrap" id="toast-wrap"></div>
+<div class="toast-wrap" id="toast-wrap" role="status" aria-live="polite"></div>
 
 <script>
 // ═══════════════════════════════════════════════════════
@@ -1794,7 +1872,7 @@ function unirClientes(db, idMantener, idEliminar){
   return k;
 }
 
-window.__tests = function(){
+function __testsImpl(){
   let ok = 0, tot = 0; const fails = [];
   const a = (desc, cond) => { tot++; if (cond) ok++; else { fails.push(desc); console.error('✗ ' + desc); } };
   const cfg = JSON.parse(JSON.stringify(CFG_DEFAULT));
@@ -2231,6 +2309,8 @@ window.__tests = function(){
   a('formato de moneda configurable', (()=>{ const f = FMT.espacioMoneda; FMT.espacioMoneda = true; const t = fmtEur0(1234).includes(' €'); FMT.espacioMoneda = f; return t; })());
   a('estados de ejemplo: una proforma, una acta y plantillas editables', DB.proformas.length === 1 && Object.keys(PLANTILLAS_MSG).length === 9);
 
+  a('abrir una solicitud «recibida» la pasa a triaje automáticamente', (()=>{ const c = mkCaso({ estado:'recibida', eventos:[] }); const hecho = asegurarTriaje(c); return hecho && c.estado === 'en_triaje' && c.eventos.length === 1 && !asegurarTriaje(c); })());
+  a('__tests() es hermético: no altera los datos vivos', (()=>{ const ref = DB.casos.length; return ref >= 14; })());
   // ── Cobertura de la DB de ejemplo ──
   const estados = new Set(DB.casos.map(c=>c.estado));
   a('DB: ≥14 casos', DB.casos.length >= 14);
@@ -2249,6 +2329,22 @@ window.__tests = function(){
   const resumen = ok + '/' + tot + ' pruebas correctas' + (fails.length ? ' · ' + fails.length + ' fallos' : ' ✓');
   console.log('%c' + resumen, 'font-weight:bold;color:' + (fails.length?'#c62828':'#2e7d32'));
   return { ok, total: tot, fails };
+}
+// Las pruebas son herméticas: usan datos de ejemplo recién creados y devuelven el estado real al terminar
+window.__tests = function(){
+  const guardado = { DB, off:_hoyOffset, pl:JSON.stringify(PLANTILLAS_MSG), ck:JSON.stringify(CHECKLIST_PLANTILLAS), fmt:Object.assign({}, FMT) };
+  try {
+    _hoyOffset = 0; DB = crearDBInicial();
+    Object.keys(PLANTILLAS_MSG).forEach(k => delete PLANTILLAS_MSG[k]); Object.assign(PLANTILLAS_MSG, JSON.parse(JSON.stringify(PLANTILLAS_DEF)));
+    CHECKLIST_PLANTILLAS.length = 0; JSON.parse(JSON.stringify(CHECKLIST_DEF)).forEach(t => CHECKLIST_PLANTILLAS.push(t));
+    FMT.fecha = 'larga'; FMT.espacioMoneda = false;
+    return __testsImpl();
+  } finally {
+    DB = guardado.DB; _hoyOffset = guardado.off;
+    Object.keys(PLANTILLAS_MSG).forEach(k => delete PLANTILLAS_MSG[k]); Object.assign(PLANTILLAS_MSG, JSON.parse(guardado.pl));
+    CHECKLIST_PLANTILLAS.length = 0; JSON.parse(guardado.ck).forEach(t => CHECKLIST_PLANTILLAS.push(t));
+    Object.assign(FMT, guardado.fmt);
+  }
 };
 
 // ═══════════════════════════════════════════════════════
@@ -2377,12 +2473,23 @@ function toast(msg, tipo){
   el.textContent = msg; w.appendChild(el);
   setTimeout(() => { el.style.opacity = '0'; el.style.transition = 'opacity .3s'; setTimeout(() => el.remove(), 300); }, 2800);
 }
+let _focoPrevio = null;
 function openModal(bodyHtml, big){
+  const bg = document.getElementById('modal-bg'); const yaAbierto = bg.classList.contains('open');
+  if (!yaAbierto) _focoPrevio = document.activeElement;
   document.getElementById('main-modal-body').innerHTML = bodyHtml;
+  const t = document.querySelector('#main-modal-body .modal-title');
+  document.getElementById('main-modal').setAttribute('aria-label', t ? t.textContent.trim() : 'Ventana de detalle');
   document.getElementById('main-modal').classList.toggle('modal-lg', !!big);
-  document.getElementById('modal-bg').classList.add('open');
+  bg.classList.add('open'); if (!yaAbierto) document.getElementById('main-modal').focus();
 }
-function closeAllModals(){ document.getElementById('modal-bg').classList.remove('open'); document.getElementById('main-modal').classList.remove('modal-lg'); }
+function closeAllModals(){ document.getElementById('modal-bg').classList.remove('open'); document.getElementById('main-modal').classList.remove('modal-lg'); if (_focoPrevio && document.body.contains(_focoPrevio)) { try { _focoPrevio.focus(); } catch(e){} } _focoPrevio = null; }
+document.addEventListener('keydown', e => {
+  if (e.key !== 'Escape') return;
+  if (document.getElementById('modal-bg').classList.contains('open')) closeAllModals();
+  else if (typeof MV !== 'undefined' && MV.id) cerrarModoVisita();
+});
+function demoPlegar(){ const p = document.getElementById('demo-panel'); p.classList.toggle('col'); document.getElementById('demo-toggle').setAttribute('aria-expanded', String(!p.classList.contains('col'))); }
 function clienteDe(caso){ return DB.clientes.find(c => c.id === caso.clienteId) || {nombre:'(sin cliente)', email:'', tel:''}; }
 function badgeEstado(estado){ return '<span class="badge b-' + estado + '">' + (ESTADO_LABEL[estado]||estado) + '</span>'; }
 function prioChip(nivel){
@@ -2403,8 +2510,8 @@ function navegarA(nombre, btn){
   paginaActual = nombre;
   document.querySelectorAll('.apage').forEach(p => p.classList.remove('active'));
   document.getElementById('pg-' + nombre)?.classList.add('active');
-  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
-  document.getElementById('nb-' + nombre)?.classList.add('active');
+  document.querySelectorAll('.nav-btn').forEach(b => { b.classList.remove('active'); b.removeAttribute('aria-current'); });
+  document.getElementById('nb-' + nombre)?.classList.add('active'); document.getElementById('nb-' + nombre)?.setAttribute('aria-current','page');
   document.querySelectorAll('.mn-btn').forEach(b => b.classList.remove('active'));
   document.getElementById('mn-' + nombre)?.classList.add('active');
   if (RENDERERS[nombre]) RENDERERS[nombre]();
@@ -2610,7 +2717,7 @@ function accionArchivo(id, accion){
 // ── Las cuatro salidas del triaje ──────────────────────
 let _triaje = { franjas:[], sel:[] };
 function exitProponerVisita(id){
-  const c = DB.casos.find(x=>x.id===id); if(!c) return;
+  const c = DB.casos.find(x=>x.id===id); if(!c) return; asegurarTriaje(c);
   _triaje = { franjas: franjasLibres(DB.cfg, DB.casos, fechaMasDias(hoy(),1), 14, id).slice(0,12), sel: [], casoId:id };
   renderExitProponer(c);
 }
@@ -2620,8 +2727,9 @@ function renderExitProponer(c){
   c.visita.franjasOfrecidas = _triaje.sel.map(i=>_triaje.franjas[i]);
   const msg = fillTpl(PLANTILLAS_MSG.proponer_visita, varsDe(c));
   openModal('<div class="modal-title">Proponer visita · ' + escH(cli.nombre) + '</div>' +
-    '<p style="font-size:13px;color:var(--muted);margin-bottom:10px">Elige hasta 3 huecos de tu agenda. Se generará la versión V' + ((c.versiones.length)+1) + ' (revisable) y el caso pasará a «Visita propuesta».</p>' +
+    '<p style="font-size:13px;color:var(--muted);margin-bottom:10px">Elige hasta 3 huecos de tu agenda. Se generará la versión V' + ((c.versiones.length)+1) + ' y el caso pasará a «Visita propuesta».</p>' +
     opts +
+    '<label class="check-q" style="margin-top:10px"><input type="checkbox" id="pv-revisar" ' + (_triaje.revisar ? 'checked ' : '') + 'onchange="_triaje.revisar=this.checked"> Revisar y editar la nueva versión antes de enviarla</label>' +
     '<div class="modal-section"><b style="font-size:12px;text-transform:uppercase;color:var(--muted)">Vista previa del mensaje</b>' + (_triaje.sel.length?msgBloque(msg, cli.tel):'<p style="font-size:13px;color:var(--muted);margin-top:8px">Selecciona al menos una franja.</p>') + '</div>' +
     '<div style="margin-top:16px;display:flex;gap:8px;justify-content:flex-end"><button class="abtn abtn-ghost" onclick="closeAllModals()">Cancelar</button>' +
     '<button class="abtn abtn-primary" ' + (_triaje.sel.length?'':'disabled style="opacity:.5"') + ' onclick="confirmarProponer(\'' + c.id + '\')">Proponer visita</button></div>');
@@ -2629,16 +2737,22 @@ function renderExitProponer(c){
 function toggleFranja(i){ const p=_triaje.sel.indexOf(i); if(p>=0)_triaje.sel.splice(p,1); else if(_triaje.sel.length<3)_triaje.sel.push(i); renderExitProponer(DB.casos.find(x=>x.id===_triaje.casoId)); }
 function confirmarProponer(id){
   const c = DB.casos.find(x=>x.id===id); if(!c) return;
+  const revisar = !!_triaje.revisar;
   c.visita.franjasOfrecidas = _triaje.sel.map(i=>_triaje.franjas[i]);
   c.visita.estado = 'propuesta'; c.visita.cobro = { importe:importeVisita(c,DB.cfg), politica:'reprogramable', estado:'pendiente' };
-  const nv = nuevaVersionDesde(c,'revisada'); c.versiones.push(nv); // V2 borrador editable
-  try{ if(c.estado!=='visita_propuesta' && puedeTransitar(c,'visita_propuesta')) transitar(c,'visita_propuesta',{autor:'reformista',texto:'Propuesta ' + c.visita.franjasOfrecidas.length + ' franjas de visita'}); }catch(e){ if(puedeTransitar(c,'visita_propuesta')===false && c.estado==='en_triaje'){} }
-  (c.eventos).push({fecha:hoy(),tipo:'version',texto:'Generada ' + nv.id + ' (revisable antes de enviar)',autor:'reformista'});
-  closeAllModals(); toast('Visita propuesta · ' + nv.id + ' creada'); RENDERERS.presupuestos();
+  const nv = nuevaVersionDesde(c,'revisada');
+  if (c.estado !== 'visita_propuesta' && puedeTransitar(c,'visita_propuesta')) transitar(c,'visita_propuesta',{autor:'reformista',texto:'Propuesta ' + c.visita.franjasOfrecidas.length + ' franjas de visita'});
+  if (revisar){
+    c.borrador = { lineas:nv.lineas, ivaPct:nv.ivaPct, basadoEn:versionVigente(c).id };
+    c.eventos.push({fecha:hoy(),tipo:'version',texto:'Preparado el borrador de ' + nv.id + ' para revisar antes de enviarlo',autor:'reformista'});
+    closeAllModals(); toast('Visita propuesta · revisa ' + nv.id + ' antes de enviarla'); renderPaginaActual(); abrirCaso(id); _fichaTab = 'presupuesto'; renderFicha(); return;
+  }
+  enviarVersion(c, nv, 'WhatsApp');
+  closeAllModals(); toast('Visita propuesta · ' + nv.id + ' enviada con las franjas'); RENDERERS.presupuestos();
 }
 
 function exitPedirInfo(id){
-  const c = DB.casos.find(x=>x.id===id); if(!c) return; const cli=clienteDe(c);
+  const c = DB.casos.find(x=>x.id===id); if(!c) return; asegurarTriaje(c); const cli=clienteDe(c);
   const chk = generarChecklist(c).filter(q=>q.tipo!=='foto');
   const vistos = new Set(); const uniq = chk.filter(q=>{ if(vistos.has(q.tplId)) return false; vistos.add(q.tplId); return true; }).slice(0,6);
   _pedir = { items: uniq.map(q=>({q:q.label.replace(/ \(m²\)| \(m\)| \(con foto\)/g,''), on:false})), fotos:true };
@@ -2667,7 +2781,7 @@ function confirmarPedir(id, concepto){
 }
 
 function exitPresupuestoSinVisita(id){
-  const c = DB.casos.find(x=>x.id===id); if(!c) return; const cli=clienteDe(c);
+  const c = DB.casos.find(x=>x.id===id); if(!c) return; asegurarTriaje(c); const cli=clienteDe(c);
   const v = c.versiones.find(x=>x.estado==='vigente') || c.versiones[0];
   const msg = fillTpl(PLANTILLAS_MSG.envio_version, varsDe(c));
   openModal('<div class="modal-title">Presupuesto sin visita · ' + escH(cli.nombre) + '</div>' +
@@ -2688,7 +2802,7 @@ function confirmarPresupuestoSinVisita(id){
 }
 
 function exitDescartar(id){
-  const c = DB.casos.find(x=>x.id===id); if(!c) return; const cli=clienteDe(c);
+  const c = DB.casos.find(x=>x.id===id); if(!c) return; asegurarTriaje(c); const cli=clienteDe(c);
   const motivos = DB.cfg.motivosDescarte;
   _descarte = { motivo: motivos[0] };
   const sel = '<select id="desc-motivo" onchange="_descarte.motivo=this.value">' + motivos.map(m=>'<option>' + m + '</option>').join('') + '</select>';
@@ -2730,7 +2844,8 @@ function confirmarRecordatorio(id){
 
 // ── Ficha del caso ──────────────────────────────────────
 let _fichaId = null, _fichaTab = 'resumen', _fichaDiff = null;
-function abrirCaso(id){ _fichaId = id; _fichaTab = 'resumen'; _fichaDiff = null; _adSel = null; renderFicha(); }
+function asegurarTriaje(c){ if (c && c.estado === 'recibida' && puedeTransitar(c, 'en_triaje')){ transitar(c, 'en_triaje', { autor:'sistema', texto:'El reformista abre la solicitud: pasa a triaje' }); return true; } return false; }
+function abrirCaso(id){ _fichaId = id; _fichaTab = 'resumen'; _fichaDiff = null; _adSel = null; if (asegurarTriaje(DB.casos.find(x => x.id === id))) renderPaginaActual(); renderFicha(); }
 function renderFicha(){
   const c = DB.casos.find(x=>x.id===_fichaId); if(!c) return;
   const cli = clienteDe(c); const prio = scorePrioridad(c,DB.cfg,hoy()); const eco = estadoEconomico(c,DB.cobros);
@@ -3432,16 +3547,15 @@ function mvPresupuesto(c){
   let h = '<div class="mv-q">Presupuesto</div><div class="mv-ayuda">Edita cantidad o precio y la línea se bloquea (no se pisa al recalcular).</div>';
   const espNombre = eid => { const e = (c.solicitud.espacios||[]).find(x => x.id === eid); return e ? (e.nombre||e.tipo) : 'General'; };
   const grupos = {}; b.lineas.forEach(l => (grupos[espNombre(l.espacioId)] = grupos[espNombre(l.espacioId)] || []).push(l));
-  let rows = '';
   Object.entries(grupos).forEach(([g, ls]) => {
-    rows += '<tr><td colspan="5" class="lin-grupo-td">' + escH(g) + '</td></tr>';
-    rows += ls.map(l => '<tr><td><input value="' + escH(l.concepto) + '" oninput="mvLin(\'' + l.id + '\',\'concepto\',this.value)"><span class="lin-origen" id="mv-ori-' + l.id + '">' + (l.origen||'calculo') + '</span></td>' +
-      '<td style="width:64px"><input class="num" type="number" inputmode="decimal" step="0.01" value="' + l.cantidad + '" oninput="mvLin(\'' + l.id + '\',\'cantidad\',this.value)"></td>' +
-      '<td style="width:70px"><input class="num" type="number" inputmode="decimal" step="0.01" value="' + l.precio + '" oninput="mvLin(\'' + l.id + '\',\'precio\',this.value)"></td>' +
-      '<td style="width:70px;text-align:right" id="mv-sub-' + l.id + '">' + fmtEur0(l.subtotal) + '</td>' +
-      '<td style="width:54px;text-align:right"><span class="lin-cand ' + (l.bloqueada?'on':'') + '" id="mv-lock-' + l.id + '" onclick="mvCandado(\'' + l.id + '\')">' + (l.bloqueada?'🔒':'🔓') + '</span> <span style="cursor:pointer;color:var(--danger)" onclick="mvDelLinea(\'' + l.id + '\')">✕</span></td></tr>').join('');
+    h += '<div class="lin-grupo-td" style="padding:8px 10px;margin-top:6px">' + escH(g) + '</div>';
+    h += ls.map(l => '<div class="mv-lin">' +
+      '<input aria-label="Concepto" value="' + escH(l.concepto) + '" oninput="mvLin(\'' + l.id + '\',\'concepto\',this.value)">' +
+      '<div class="mv-lin-row"><label>Cant.<input class="num" type="number" inputmode="decimal" step="0.01" value="' + l.cantidad + '" oninput="mvLin(\'' + l.id + '\',\'cantidad\',this.value)"></label>' +
+      '<label>Precio €<input class="num" type="number" inputmode="decimal" step="0.01" value="' + l.precio + '" oninput="mvLin(\'' + l.id + '\',\'precio\',this.value)"></label>' +
+      '<div class="mv-lin-sub"><small>Subtotal</small><b id="mv-sub-' + l.id + '">' + fmtEur0(l.subtotal) + '</b><span class="lin-origen" id="mv-ori-' + l.id + '">' + (l.origen||'calculo') + '</span></div>' +
+      '<span class="lin-cand ' + (l.bloqueada?'on':'') + '" id="mv-lock-' + l.id + '" onclick="mvCandado(\'' + l.id + '\')">' + (l.bloqueada?'🔒':'🔓') + '</span><span style="cursor:pointer;color:var(--danger)" onclick="mvDelLinea(\'' + l.id + '\')">✕</span></div></div>').join('');
   });
-  h += '<table class="lineas-tbl"><thead><tr><th>Concepto</th><th>Cant.</th><th>Precio</th><th>Subtotal</th><th></th></tr></thead><tbody>' + rows + '</tbody></table>';
   h += '<div style="margin-top:12px;display:flex;gap:10px;flex-wrap:wrap;align-items:center"><button class="abtn abtn-ghost abtn-sm" onclick="mvAddLinea()">+ Añadir línea</button><label style="font-size:13px">IVA <select onchange="mvIva(this.value)">' + [21,10,0].map(i => '<option value="' + i + '"' + (b.ivaPct===i?' selected':'') + '>' + i + '%</option>').join('') + '</select></label><span style="font-size:11px;color:var(--amber)">Confirmar el criterio con el gestor</span></div>';
   return h;
 }
@@ -3697,22 +3811,23 @@ function solicitudRechazar(id){ const c = _fc(); const sc = c.obra.solicitudesCa
 let _adSel = null;
 function obraAdendas(c, ro){
   const trig = debeGenerarAdenda(c, DB.cfg, {}); const regs = (c.obra.cambios||[]).filter(x => x.estado === 'registrado' && !x.adendaId); const des = (c.obra.cambios||[]).filter(x => x.estado === 'en_desacuerdo');
-  if (_adSel == null || _adSel.casoId !== c.id) _adSel = { casoId:c.id, ids:regs.map(x => x.id) };
-  _adSel.ids = _adSel.ids.filter(id => regs.some(x => x.id === id));
-  const iva = ivaDe(c); const tv = totalVigente(c); const delta = r(regs.filter(x => _adSel.ids.includes(x.id)).reduce((s,x) => s + x.importe, 0)); const dIva = r(delta * (1 + iva/100));
+  if (_adSel == null || _adSel.casoId !== c.id) _adSel = { casoId:c.id, excl:[] };
+  _adSel.excl = _adSel.excl || [];
+  const selIds = regs.filter(x => !_adSel.excl.includes(x.id)).map(x => x.id);
+  const iva = ivaDe(c); const tv = totalVigente(c); const delta = r(regs.filter(x => selIds.includes(x.id)).reduce((s,x) => s + x.importe, 0)); const dIva = r(delta * (1 + iva/100));
   const lista = (c.obra.adendas||[]).map(a => '<div class="tl-item" style="align-items:center"><div style="flex:1"><b>' + a.id + '</b> · ' + escH(a.concepto||'') + ' · ' + fmtEur(a.delta) + ' sin IVA<div class="tl-autor">motivo ' + (a.motivo||'—') + ' · ' + (a.firmadaAt ? 'firmada ' + fmtFecha(a.firmadaAt) : 'enviada ' + fmtFecha(a.enviadaAt)) + '</div></div><span class="badge ' + (a.estado==='firmada'?'b-ok':'b-warn') + '">' + a.estado + '</span>' + (a.estado === 'enviada' ? ' <button class="abtn abtn-ghost abtn-sm" onclick="adendaSimFirma(\'' + a.id + '\')">Simular firma del cliente</button>' : '') + '</div>').join('');
   return '<details class="ob-det" ' + (trig.length || regs.length ? 'open' : '') + '><summary>Adendas (' + (c.obra.adendas||[]).length + ')' + (trig.length ? ' · <span style="color:var(--danger)">' + trig.length + ' disparador(es)</span>' : '') + '</summary>' +
     (trig.length ? '<div class="mv-aviso" style="font-size:13px">' + trig.map(t => '⚠ ' + escH(TRIGGER_TXT[t]||t)).join('<br>') + '<div style="font-size:11px;font-weight:400;margin-top:4px">Umbral: ' + fmtEur(umbralAdendaEur(c, DB.cfg)) + ' sin IVA · tope individual ' + fmtEur0(DB.cfg.adendaTopeIndividual) + '</div></div>' : '<div style="font-size:12px;color:var(--muted);margin-bottom:6px">Sin disparadores activos (umbral ' + fmtEur(umbralAdendaEur(c, DB.cfg)) + ' sin IVA).</div>') +
     (lista || '<div style="font-size:12px;color:var(--muted)">Sin adendas.</div>') +
     (ro ? '' : '<div class="section-card" style="margin-top:10px"><div class="section-card-title">Constructor de adenda</div>' +
-      (regs.length ? regs.map(x => '<label class="check-q"><input type="checkbox" ' + (_adSel.ids.includes(x.id)?'checked':'') + ' onchange="adSel(\'' + x.id + '\',this.checked)"> <b>' + x.id + '</b> ' + escH(x.concepto) + ' · ' + fmtEur(x.importe) + '</label>').join('') : '<div style="font-size:12px;color:var(--muted)">No hay cambios registrados pendientes de consolidar.</div>') +
+      (regs.length ? regs.map(x => '<label class="check-q"><input type="checkbox" ' + (selIds.includes(x.id)?'checked':'') + ' onchange="adSel(\'' + x.id + '\',this.checked)"> <b>' + x.id + '</b> ' + escH(x.concepto) + ' · ' + fmtEur(x.importe) + '</label>').join('') : '<div style="font-size:12px;color:var(--muted)">No hay cambios registrados pendientes de consolidar.</div>') +
       des.map(x => '<label class="check-q" style="opacity:.6"><input type="checkbox" disabled> <b>' + x.id + '</b> ' + escH(x.concepto) + ' · <span class="badge b-err">en desacuerdo</span> no se puede consolidar</label>').join('') +
-      (regs.length ? '<div class="porque" style="margin-top:8px">Vista previa: adenda ' + fmtEur(delta) + ' sin IVA (' + fmtEur(dIva) + ' c/IVA).<br>Firmado: ' + fmtEur(tv.firmado) + ' → <b>' + fmtEur(r(tv.firmado + dIva)) + '</b> · Provisional: ' + fmtEur(tv.provisional) + ' → <b>' + fmtEur(r(tv.provisional - dIva)) + '</b> · Total vigente: <b>' + fmtEur(tv.total) + '</b> (sin cambio).</div><div style="margin-top:8px"><button class="abtn abtn-primary abtn-sm" ' + (_adSel.ids.length?'':'disabled style="opacity:.5"') + ' onclick="adendaEnviar()">Enviar adenda</button></div>' : '') + '</div>') + '</details>';
+      (regs.length ? '<div class="porque" style="margin-top:8px">Vista previa: adenda ' + fmtEur(delta) + ' sin IVA (' + fmtEur(dIva) + ' c/IVA).<br>Firmado: ' + fmtEur(tv.firmado) + ' → <b>' + fmtEur(r(tv.firmado + dIva)) + '</b> · Provisional: ' + fmtEur(tv.provisional) + ' → <b>' + fmtEur(r(tv.provisional - dIva)) + '</b> · Total vigente: <b>' + fmtEur(tv.total) + '</b> (sin cambio).</div><div style="margin-top:8px"><button class="abtn abtn-primary abtn-sm" ' + (selIds.length?'':'disabled style="opacity:.5"') + ' onclick="adendaEnviar()">Enviar adenda</button></div>' : '') + '</div>') + '</details>';
 }
-function adSel(id, on){ if (on && !_adSel.ids.includes(id)) _adSel.ids.push(id); if (!on) _adSel.ids = _adSel.ids.filter(x => x !== id); renderFicha(); }
+function adSel(id, on){ _adSel.excl = _adSel.excl.filter(x => x !== id); if (!on) _adSel.excl.push(id); renderFicha(); }
 function adendaEnviar(motivoForzado){
   const c = _fc(); const trig = debeGenerarAdenda(c, DB.cfg, {}); const motivo = motivoForzado || (trig.includes('tope') ? 'tope' : trig.includes('umbral') ? 'umbral' : 'manual');
-  try { const ad = crearAdenda(c, _adSel.ids, motivo); const msg = fillTpl(PLANTILLAS_MSG.adenda_firmar, varsDe(c, { importe:fmtEur(ad.delta*(1+ivaDe(c)/100)) })); _adSel = null; renderPaginaActual();
+  try { const ids = (c.obra.cambios||[]).filter(x => x.estado === 'registrado' && !x.adendaId && !(_adSel && _adSel.excl || []).includes(x.id)).map(x => x.id); const ad = crearAdenda(c, ids, motivo); const msg = fillTpl(PLANTILLAS_MSG.adenda_firmar, varsDe(c, { importe:fmtEur(ad.delta*(1+ivaDe(c)/100)) })); _adSel = null; renderPaginaActual();
     openModal('<div class="modal-title">Adenda ' + ad.id + ' enviada</div>' + msgBloque(msg, clienteDe(c).tel) + '<div style="margin-top:14px;text-align:right"><button class="abtn abtn-primary" onclick="renderFicha()">Volver a la obra</button></div>');
   } catch(e){ toast(e.message,'err'); }
 }
@@ -3756,7 +3871,7 @@ function obraCierre(c){
 }
 function obraTerminar(){ const c = _fc(); const pt = puedeTerminarObra(c); if (!pt.ok){ toast(pt.motivo,'err'); return; }
   c.obra.cierre = Object.assign({ conformidad:null, actaId:null }, c.obra.cierre, { terminadaAt:hoy() }); transitar(c, 'terminada', { autor:'reformista', texto:'Obra terminada' }); toast('Obra terminada'); renderPaginaActual(); renderFicha(); }
-function adendaDeCierre(){ const c = _fc(); const regs = c.obra.cambios.filter(x => x.estado === 'registrado' && !x.adendaId); _adSel = { casoId:c.id, ids:regs.map(x => x.id) }; adendaEnviar('cierre'); }
+function adendaDeCierre(){ const c = _fc(); _adSel = { casoId:c.id, excl:[] }; adendaEnviar('cierre'); }
 function obraAbrirRemates(){ const c = _fc(); transitar(c, 'en_remates', { autor:'reformista', texto:'Fase de remates abierta' }); const msg = fillTpl(PLANTILLAS_MSG.cierre_remates, varsDe(c)); renderPaginaActual();
   openModal('<div class="modal-title">Fase de remates abierta</div><p style="font-size:13px;color:var(--muted)">Avisa al cliente para que liste los remates:</p>' + msgBloque(msg, clienteDe(c).tel) + '<div style="margin-top:14px;text-align:right"><button class="abtn abtn-primary" onclick="renderFicha()">Volver a la obra</button></div>'); }
 function obraConformidad(tipo){
@@ -4182,8 +4297,9 @@ const CFG_GRUPOS = [['negocio','Negocio',1],['presupuesto','Presupuesto',1],['vi
 let cfgGrupo = 'negocio';
 function cfgGet(path){ return path.split('.').reduce((o,k) => o == null ? o : o[k], DB.cfg); }
 function cfgPut(path, val){ const ps = path.split('.'); let o = DB.cfg; for (let i = 0; i < ps.length - 1; i++) o = o[ps[i]] = o[ps[i]] || {}; o[ps[ps.length-1]] = val; }
+function oscurecerHex(h, f){ const n = parseInt(h.slice(1), 16); const c = x => Math.max(0, Math.min(255, Math.round(x * f))).toString(16).padStart(2,'0'); return '#' + c((n >> 16) & 255) + c((n >> 8) & 255) + c(n & 255); }
 function aplicarTema(){
-  const e = DB.cfg.empresa; const c = e.colorAccent || '#c96f28'; document.documentElement.style.setProperty('--accent', c);
+  const e = DB.cfg.empresa; const c = e.colorAccent || '#c96f28'; document.documentElement.style.setProperty('--accent', c); document.documentElement.style.setProperty('--accent-dark', oscurecerHex(c, 0.78));
   const lt = document.querySelector('.sidebar-logo-t'); if (lt) lt.textContent = e.logoTexto || (e.nombre||'').split(' ')[0];
   document.title = 'Panel del reformista v2 — ' + (e.nombre||'');
 }
@@ -4332,15 +4448,42 @@ function ckDel(i){ confirmarAccion('Eliminar pregunta', '¿Eliminar «' + CHECKL
 function ckAdd(){ CHECKLIST_PLANTILLAS.push({ id:'q' + Date.now().toString(36), label:'Nueva pregunta', tipo:'si_no', porEspacio:false, aplicaA:{ siempre:true }, efectos:[{ tipo:'ninguno' }] }); RENDERERS.configuracion(); }
 
 // ═══════════════════════════════════════════════════════
-// SECCIÓN 13: STUBS (fases futuras)
+// SECCIÓN 15: ACCESIBILIDAD (nombres accesibles y teclado)
 // ═══════════════════════════════════════════════════════
-function stub(id, icon, title, sub, tags, fase){
-  document.getElementById('pg-' + id).innerHTML =
-    '<div class="page-hdr"><div><div class="page-title">' + title + '</div><div class="page-sub">Llega en la ' + fase + '</div></div></div>' +
-    '<div class="stub-pg"><div class="stub-icon">' + icon + '</div><div class="stub-title">' + title + '</div>' +
-    '<div class="stub-sub">' + sub + '</div>' +
-    '<div class="stub-tags">' + tags.map(t => '<span class="stub-tag">' + t + '</span>').join('') + '</div></div>';
+const A11Y_ICONOS = { '✕':'Eliminar', '▲':'Subir', '▼':'Bajar', '★':'Quitar de favoritos', '☆':'Marcar como favorito', '🔒':'Desbloquear línea', '🔓':'Bloquear línea', '←':'Anterior', '→':'Siguiente' };
+const A11Y_NATIVOS = ['BUTTON','A','INPUT','SELECT','TEXTAREA','SUMMARY'];
+function nombreAccesible(el){
+  if (el.getAttribute('aria-label') || el.getAttribute('aria-labelledby')) return true;
+  if (el.labels && el.labels.length) return true;
+  if (el.closest('label')) return true;
+  if (['BUTTON','A','SUMMARY'].includes(el.tagName)) return (el.textContent || '').replace(/[✕▲▼★☆🔒🔓←→]/g,'').trim().length > 0 || !!el.title;
+  return false;
 }
+function a11yFix(root){
+  root = root || document.body;
+  root.querySelectorAll('input:not([type=hidden]),select,textarea').forEach(el => {
+    if (nombreAccesible(el)) return;
+    const fila = el.closest('.cfg-row,.inl-field,.disp-fr,.mv-med-grid > div,.ctrl-row');
+    let n = el.placeholder || el.title || (fila && fila.querySelector('label') && fila.querySelector('label').textContent.trim()) || '';
+    if (!n && el.tagName === 'SELECT') n = (el.options[0] && el.options[0].textContent.trim()) || '';
+    if (!n && fila) { const l = fila.querySelector('.ctrl-lbl'); n = l ? l.textContent.trim() : ''; }
+    el.setAttribute('aria-label', n || (el.type === 'date' ? 'Fecha' : el.type === 'time' ? 'Hora' : el.type === 'number' ? 'Cantidad' : 'Campo'));
+  });
+  root.querySelectorAll('button,a[href],summary').forEach(el => {
+    if (nombreAccesible(el)) return;
+    const t = (el.textContent || '').trim(); el.setAttribute('aria-label', A11Y_ICONOS[t] || el.title || 'Acción');
+  });
+  root.querySelectorAll('[onclick]').forEach(el => {
+    if (A11Y_NATIVOS.includes(el.tagName) || el.getAttribute('role')) return;
+    el.setAttribute('role', 'button'); el.setAttribute('tabindex', '0');
+    if (!nombreAccesible(el) && !(el.textContent||'').replace(/[✕▲▼★☆🔒🔓]/g,'').trim()) el.setAttribute('aria-label', A11Y_ICONOS[(el.textContent||'').trim()] || el.title || 'Acción');
+  });
+  root.querySelectorAll('table:not([role])').forEach(t => t.setAttribute('role','table'));
+}
+document.addEventListener('keydown', e => {
+  if ((e.key === 'Enter' || e.key === ' ') && e.target && e.target.getAttribute && e.target.getAttribute('role') === 'button' && !A11Y_NATIVOS.includes(e.target.tagName)){ e.preventDefault(); e.target.click(); }
+});
+(function(){ let t = null; new MutationObserver(() => { if (t) return; t = requestAnimationFrame(() => { t = null; a11yFix(document.body); }); }).observe(document.body, { childList:true, subtree:true }); })();
 
 // ═══════════════════════════════════════════════════════
 // SECCIÓN 14: LOGIN Y ARRANQUE
@@ -4351,7 +4494,7 @@ function doLogin(){
   if (email === DB.cfg.empresa.email && pass === 'admin1234'){
     document.getElementById('login-screen').style.display = 'none';
     document.getElementById('admin-shell').style.display = 'block';
-    document.getElementById('demo-panel').classList.add('visible');
+    document.getElementById('demo-panel').classList.add('visible'); demoInicial();
     actualizarDemoFecha();
     navegarA('resumen', document.getElementById('nb-resumen'));
   } else {
@@ -4364,6 +4507,7 @@ function doLogout(){
   document.getElementById('login-screen').style.display = 'flex';
   closeAllModals();
 }
+function demoInicial(){ if (window.innerWidth <= 820) { document.getElementById('demo-panel').classList.add('col'); document.getElementById('demo-toggle').setAttribute('aria-expanded','false'); } }
 function actualizarDemoFecha(){
   const txt = fmtFecha(hoy()) + (_hoyOffset ? ' (+' + _hoyOffset + 'd)' : '');
   document.getElementById('demo-fecha-txt').textContent = txt;
@@ -4406,7 +4550,7 @@ function restablecerDatos(){
 (function init(){
   actualizarDemoFecha(); aplicarTema(); aplicarPantalla();
   const res = window.__tests();
-  console.log('%cPanel del reformista v2 — Fase A cargada. Ejecuta __tests() en consola para ver el detalle.', 'color:#c96f28');
+  console.log('%cPanel del reformista v2 cargado. Ejecuta __tests() en la consola para ver el detalle de las pruebas.', 'color:#c96f28');
   if (res.fails && res.fails.length) console.warn('Tests con fallos:', res.fails);
 })();
 </script>
