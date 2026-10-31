@@ -290,6 +290,72 @@ input,select,textarea{font-family:inherit}
 .cv-action{background:#fff;border:2px solid var(--accent);border-radius:10px;padding:16px;margin:14px 0}
 .cv-btn{display:block;width:100%;padding:11px;background:var(--accent);color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:600;margin-top:8px}
 .cv-btn.ghost{background:#fff;color:var(--ink);border:1.5px solid var(--border)}
+
+/* ── AGENDA ──────────────────────────────────────── */
+.ag-nav{display:flex;align-items:center;gap:10px;margin-bottom:12px}
+.ag-week{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:8px}
+@media(max-width:900px){.ag-week{grid-template-columns:1fr}}
+.ag-day{background:#fff;border:1px solid var(--border);border-radius:10px;padding:8px;min-height:130px}
+.ag-day.hoy{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent)}
+.ag-day.bloq{background:repeating-linear-gradient(45deg,#f6f1e8,#f6f1e8 6px,#ece4d6 6px,#ece4d6 12px)}
+.ag-day.cerrado{background:var(--light);opacity:.75}
+.ag-day-h{font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);margin-bottom:6px;display:flex;justify-content:space-between;gap:4px}
+.ag-ev{font-size:11px;border-radius:6px;padding:4px 6px;margin-bottom:4px;cursor:pointer;border-left:3px solid var(--accent);background:rgba(201,111,40,.12);line-height:1.3}
+.ag-ev.prop{background:transparent;border:1px dashed var(--warm);border-left:3px dashed var(--warm)}
+.ag-ev.hito{border-left-color:#7b1fa2;background:#f3e5f5}
+.ag-ev.alerta{border-left-color:var(--danger);background:#ffebee}
+.ag-leyenda{display:flex;gap:14px;font-size:11px;color:var(--muted);margin-top:10px;flex-wrap:wrap}
+.ruta-item{background:#fff;border:1px solid var(--border);border-radius:var(--r);padding:14px 16px;margin-bottom:6px}
+.ruta-hora{font-family:'Cormorant Garamond',serif;font-size:22px;color:var(--terra)}
+.ruta-tras{font-size:12px;color:var(--muted);padding:2px 0 8px 16px;border-left:2px dashed var(--warm);margin:0 0 6px 20px}
+.disp-dia{display:flex;align-items:flex-start;gap:12px;padding:8px 0;border-bottom:1px dashed var(--border);font-size:13px}
+.disp-dia .dd-n{min-width:84px;font-weight:600}
+.disp-fr{display:flex;align-items:center;gap:6px;margin-bottom:4px}
+.disp-fr input[type=time],.disp-inp{padding:3px 6px;border:1px solid var(--border);border-radius:5px;font-size:12px;background:#fff;font-family:inherit}
+
+/* ── MODO VISITA ─────────────────────────────────── */
+.mv-root{position:fixed;inset:0;background:var(--cream);z-index:400;display:none;flex-direction:column}
+.mv-head{background:var(--deep);color:var(--cream);padding:10px 16px;display:flex;align-items:center;gap:12px}
+.mv-head .mv-back{background:rgba(255,255,255,.12);color:#fff;border:none;border-radius:8px;padding:8px 12px;font-size:13px}
+.mv-head-t{flex:1;min-width:0}
+.mv-head-t b{display:block;font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mv-head-t span{font-size:11px;color:var(--warm)}
+.mv-prog{height:4px;background:rgba(255,255,255,.15)}
+.mv-prog>div{height:100%;background:var(--accent);transition:width .25s}
+.mv-body{flex:1;overflow-y:auto;padding:18px 16px 110px;max-width:760px;width:100%;margin:0 auto}
+.mv-step{font-size:11px;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);margin-bottom:6px}
+.mv-q{font-family:'Cormorant Garamond',serif;font-size:28px;line-height:1.15;color:var(--deep);margin-bottom:6px}
+.mv-ayuda{font-size:13px;color:var(--muted);margin-bottom:16px}
+.mv-opts{display:flex;flex-direction:column;gap:10px;margin:12px 0}
+.mv-opt{padding:18px;font-size:17px;font-weight:600;border:2px solid var(--border);border-radius:14px;background:#fff;color:var(--ink);text-align:left}
+.mv-opt.sel{border-color:var(--accent);background:rgba(201,111,40,.1);color:var(--terra)}
+.mv-big{width:100%;padding:16px;font-size:22px;border:2px solid var(--border);border-radius:14px;background:#fff;color:var(--ink);font-family:inherit}
+.mv-big:focus{border-color:var(--accent);outline:none}
+.mv-aviso{background:#fff3e0;border:2px solid var(--accent);border-radius:12px;padding:12px 14px;font-size:14px;color:#7a3a00;margin:12px 0;font-weight:500}
+.mv-nav{display:flex;gap:10px;margin-top:22px}
+.mv-nav button{flex:1;padding:14px;font-size:15px;font-weight:600;border-radius:12px;border:2px solid var(--border);background:#fff;color:var(--ink)}
+.mv-nav button.pri{background:var(--accent);border-color:var(--accent);color:#fff}
+.mv-foot{position:absolute;left:0;right:0;bottom:0;background:var(--deep);color:var(--cream);padding:10px 16px;display:flex;align-items:center;gap:14px}
+.mv-foot-tot{flex:1}
+.mv-foot-tot small{display:block;font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--warm)}
+.mv-foot-tot b{font-family:'Cormorant Garamond',serif;font-size:26px;color:#fff;font-weight:600}
+.mv-saved{font-size:11px;color:#9ad1a8;min-width:70px;transition:opacity .4s}
+.mv-cerrar{background:var(--accent);color:#fff;border:none;border-radius:10px;padding:12px 18px;font-size:14px;font-weight:600}
+.mv-thumbs{display:grid;grid-template-columns:repeat(auto-fill,minmax(96px,1fr));gap:8px;margin-top:10px}
+.mv-thumb{position:relative;aspect-ratio:1;border-radius:10px;background:linear-gradient(135deg,#d9cdb8,#b9a888);color:#fff;font-size:10px;display:flex;align-items:flex-end;padding:6px}
+.mv-thumb .x{position:absolute;top:4px;right:6px;background:rgba(0,0,0,.45);border-radius:50%;width:20px;height:20px;text-align:center;line-height:20px;cursor:pointer}
+.mv-chip{display:inline-block;padding:7px 12px;border:1.5px solid var(--border);border-radius:20px;font-size:13px;margin:0 6px 6px 0;background:#fff;cursor:pointer}
+.mv-chip.sel{border-color:var(--accent);background:rgba(201,111,40,.12);color:var(--terra);font-weight:600}
+.mv-med{background:#fff;border:1px solid var(--border);border-radius:12px;padding:14px;margin-bottom:12px}
+.mv-med-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.mv-med-grid label{font-size:11px;color:var(--muted);display:block;margin-bottom:2px}
+.mv-med-grid input,.mv-hueco input,.mv-hueco select{width:100%;padding:10px;font-size:16px;border:1.5px solid var(--border);border-radius:8px;background:#fff;font-family:inherit}
+.mv-hueco{display:grid;grid-template-columns:1fr 1fr 1fr 28px;gap:6px;margin-top:6px;align-items:center}
+.mv-res{font-size:12px;color:var(--terra);margin-top:8px}
+.mv-rec{display:flex;align-items:center;gap:10px;padding:12px;border-radius:12px;background:#ffebee;color:var(--danger);font-weight:600;margin:10px 0}
+.mv-rec i{width:10px;height:10px;border-radius:50%;background:var(--danger);animation:mvpulse 1s infinite}
+@keyframes mvpulse{50%{opacity:.25}}
+.mv-nota{background:#fff;border:1px solid var(--border);border-radius:10px;padding:10px 12px;margin-top:8px;font-size:13px}
 </style>
 </head>
 <body>
@@ -375,6 +441,9 @@ input,select,textarea{font-family:inherit}
   </div>
 </div>
 
+<!-- MODO VISITA -->
+<div class="mv-root" id="mv-root"></div>
+
 <!-- TOAST -->
 <div class="toast-wrap" id="toast-wrap"></div>
 
@@ -409,9 +478,9 @@ const CFG_DEFAULT = {
   // Zona (prefijos de CP)
   zonaTramos: { dentro:['280'], limite:['281','282'] },
   // Visita
-  visita:{ cobra:true, descontable:true, importePorZona:{ dentro:60, limite:90, fuera:120 }, duracionMin:60, trasladoMin:30 },
+  visita:{ cobra:true, descontable:true, importePorZona:{ dentro:60, limite:90, fuera:120 }, duracionMin:60, trasladoMin:30, politica:{ reprogramarGratisHoras:24, tardia:'retiene' } },
   // Agenda
-  agenda:{ dias:[1,2,3,4,5], franjas:[['09:00','14:00'],['16:00','19:00']] },
+  agenda:{ semana:{ 0:[], 1:[['09:00','14:00'],['16:00','19:00']], 2:[['09:00','14:00'],['16:00','19:00']], 3:[['09:00','14:00'],['16:00','19:00']], 4:[['09:00','14:00'],['16:00','19:00']], 5:[['09:00','14:00'],['16:00','19:00']], 6:[] }, bloqueos:[] },
   // Adenda
   adendaUmbral: 5, adendaTopeIndividual: 1000,
   // Plan de cobros (% y disparador)
@@ -452,14 +521,27 @@ const TRABAJOS_CAT = [
 const TRAB = Object.fromEntries(TRABAJOS_CAT.map(t => [t.key, t]));
 const CAL_COEF = { basica:0.85, media:1.0, premium:1.35 };
 
-// Plantillas de checklist de visita
-const CHECKLIST_PLANTILLAS = {
-  general:['¿El cliente es el propietario?','¿Hay autorización de la comunidad si procede?','¿Acceso para materiales y escombro?','¿Suministros de agua y luz operativos?','Confirmar medidas reales de cada estancia'],
-  reforma_bano:['Estado de bajantes y desagües','¿Hay humedades en paredes/techo?','Ubicación de llaves de corte','¿Cambio de bañera por plato de ducha?'],
-  reforma_cocina:['Ubicación de toma de gas','Potencia eléctrica disponible','Salida de humos','Medidas para muebles a medida'],
-  reforma_integral:['Estado de la instalación eléctrica','Estado de fontanería general','¿Elementos estructurales afectados?','Necesidad de licencia de obra'],
-  reforma_parcial:['Alcance exacto de lo reformado','Protección de zonas no reformadas'],
-};
+// Plantillas de checklist de visita (apéndice A.2)
+const CHECKLIST_PLANTILLAS = [
+  { id:'sup_real', label:'Superficie real del espacio (m²)', ayuda:'Mide el suelo útil', tipo:'numero', porEspacio:true, obligatoria:true, aplicaA:{siempre:true},
+    efectos:[{ tipo:'set_cantidad', base:'m2_suelo' }] },
+  { id:'altura', label:'Altura de techo (m)', ayuda:'Si supera 2,8 m la mano de obra de pintura/techo sube', tipo:'numero', porEspacio:true, aplicaA:{trabajos:['pintar_paredes','pintar_techo','falso_techo']},
+    efectos:[{ tipo:'multiplicador', cuando:{op:'gt',valor:2.8}, aplicaA:['mo'], factor:1.08 }] },
+  { id:'fontaneria', label:'Estado de la fontanería existente', tipo:'opcion', opciones:['correcta','galvanizado','plomo'], porEspacio:true, aplicaA:{espacios:['bano','cocina']},
+    efectos:[{ tipo:'add_linea', cuando:{op:'eq',valor:'plomo'}, concepto:'Sustitución de tuberías y bajantes', unidad:'fijo', cantidad:1, precio:650, tipo_linea:'mo' }] },
+  { id:'humedades', label:'¿Humedades visibles? (con foto)', tipo:'si_no', porEspacio:true, aplicaA:{siempre:true},
+    efectos:[{ tipo:'add_linea', cuando:{op:'true'}, concepto:'Tratamiento de humedades', unidad:'fijo', cantidad:1, precio:380, tipo_linea:'mo' },
+             { tipo:'aviso', cuando:{op:'true'}, texto:'Humedades declaradas: hacer foto y localizar el origen antes de presupuestar.' }] },
+  { id:'suelo_estado', label:'Estado del suelo actual', tipo:'opcion', opciones:['nivelado','necesita recrecido'], porEspacio:true, aplicaA:{trabajos:['cambiar_suelo']},
+    efectos:[{ tipo:'add_linea', cuando:{op:'eq',valor:'necesita recrecido'}, concepto:'Recrecido autonivelante', unidad:'m²', cantidad:'m2_espacio', precio:14, tipo_linea:'mo' }] },
+  { id:'muro_carga', label:'¿Posible muro de carga?', tipo:'si_no', porEspacio:false, aplicaA:{trabajos:['demolicion']},
+    efectos:[{ tipo:'aviso', cuando:{op:'true'}, texto:'Consultar a un técnico antes de actuar (posible muro de carga).' }] },
+  { id:'acceso', label:'Acceso a la vivienda', tipo:'opcion', opciones:['ascensor','escaleras','planta baja'], porEspacio:false, aplicaA:{siempre:true},
+    efectos:[{ tipo:'multiplicador', cuando:{op:'eq',valor:'escaleras'}, aplicaA:['mo'], factor:1.07 }] },
+  { id:'electrica', label:'Estado de la instalación eléctrica', tipo:'opcion', opciones:['correcta','obsoleta'], porEspacio:false, aplicaA:{trabajos:['electricidad_vivienda']},
+    efectos:[{ tipo:'add_linea', cuando:{op:'eq',valor:'obsoleta'}, concepto:'Renovación de cuadro y líneas', unidad:'fijo', cantidad:1, precio:1250, tipo_linea:'mo' }] },
+  { id:'fotos_gen', label:'Fotos generales de la estancia', tipo:'foto', porEspacio:true, aplicaA:{siempre:true}, efectos:[{ tipo:'ninguno' }] },
+];
 
 // Etiquetas y tonos de estado
 const ESTADO_LABEL = {
@@ -732,33 +814,93 @@ function cantidadEstimada(base, m2, medidas){
   return r(m2);
 }
 
-// 4.14 — Generar checklist de visita
+// 4.14 — Generar checklist de visita (una pregunta por espacio cuando porEspacio)
 function generarChecklist(caso, plantillas){
   plantillas = plantillas || CHECKLIST_PLANTILLAS;
-  const tipo = caso.solicitud?.tipoObra || 'general';
-  const base = plantillas.general || [];
-  const extra = plantillas[tipo] || [];
-  return [...base, ...extra].map((q,i) => ({ id:'chk_'+i, pregunta:q, respuesta:null }));
+  const espacios = caso.solicitud?.espacios || [];
+  const trabajosDe = e => (e.trabajos||[]).map(t => t.key||t);
+  const todos = espacios.flatMap(trabajosDe);
+  const out = [];
+  plantillas.forEach(t => {
+    const ap = t.aplicaA || {siempre:true};
+    const aplica = e => ap.siempre || (ap.espacios && (!e || ap.espacios.includes(e.tipo))) || (ap.trabajos && ap.trabajos.some(k => e ? trabajosDe(e).includes(k) : todos.includes(k)));
+    if (t.porEspacio){
+      espacios.forEach(e => { if (aplica(e)) out.push(Object.assign({}, t, { id:t.id+'@'+e.id, tplId:t.id, espacioId:e.id, espacioNombre:e.nombre||e.tipo })); });
+    } else if (aplica(null)) out.push(Object.assign({}, t, { id:t.id, tplId:t.id, espacioId:null, espacioNombre:null }));
+  });
+  return out;
 }
 
-// 4.15 — Recalcular borrador respetando líneas bloqueadas/manuales
+// condición de un efecto sobre el valor de la respuesta
+function cumpleCondicion(cuando, valor){
+  if (!cuando) return valor != null && valor !== '' && valor !== false;
+  if (valor == null || valor === '') return false;
+  if (cuando.op === 'eq') return String(valor) === String(cuando.valor);
+  if (cuando.op === 'true') return valor === true || valor === 'si' || valor === 'true';
+  if (cuando.op === 'gt') return Number(valor) > Number(cuando.valor);
+  if (cuando.op === 'lt') return Number(valor) < Number(cuando.valor);
+  return false;
+}
+
+// 4.15 — Recalcular borrador: medidas + efectos del checklist, respetando líneas bloqueadas/manuales
 function recalcularBorrador(caso, cfg){
+  const vig = (caso.versiones||[]).find(v => v.estado === 'vigente') || (caso.versiones||[]).slice(-1)[0] || {};
+  let lineas = ((caso.borrador && caso.borrador.lineas) || vig.lineas || []).map(l => Object.assign({}, l));
+  const ivaPct = (caso.borrador && caso.borrador.ivaPct) || vig.ivaPct || cfg.iva;
+  const protegida = l => l.bloqueada || l.origen === 'manual';
+  const espacios = caso.solicitud?.espacios || [];
+  const checks = caso.visita?.checks || {};
   const medidas = caso.visita?.medidas || {};
-  const orig = (caso.versiones||[])[0]?.lineas || [];
-  const lineas = orig.map(l => {
-    if (l.bloqueada || l.origen === 'manual') return {...l};
-    const m = medidas[l.espacioId];
-    if (!m) return {...l};
-    const med = calcularMedidas(m);
-    const cantidad = cantidadEstimada(l.base, l.cantidad, med);
-    return {...l, cantidad, subtotal: r(cantidad * l.precio)};
+  const avisos = [];
+
+  // 1. las líneas de checklist se regeneran en cada pasada (salvo las bloqueadas)
+  lineas = lineas.filter(l => !(l.origen === 'checklist' && !l.bloqueada));
+
+  // 2. medidas por espacio
+  lineas.forEach(l => {
+    if (protegida(l)) return;
+    const m = medidas[l.espacioId]; if (!m || m.aplicada === false) return;
+    l.cantidad = cantidadEstimada(l.base, l.cantidad, calcularMedidas(m));
+    l.subtotal = r(l.cantidad * l.precio);
   });
-  const ivaPct = (caso.versiones||[])[0]?.ivaPct || cfg.iva;
+
+  // 3. efectos del checklist
+  const factores = { mo:1, mat:1, extra:1 };
+  const items = generarChecklist(caso);
+  items.forEach(it => {
+    const ck = checks[it.id]; if (!ck) return;
+    (it.efectos||[]).forEach(ef => {
+      const ok = ef.tipo === 'set_cantidad' ? (ck.valor !== '' && ck.valor != null) : cumpleCondicion(ef.cuando, ck.valor);
+      if (!ok) return;
+      const esp = espacios.find(e => e.id === it.espacioId);
+      if (ef.tipo === 'set_cantidad'){
+        const cant = Number(ck.valor); if (!(cant > 0)) return;
+        lineas.forEach(l => { if (protegida(l) || l.espacioId !== it.espacioId || l.base !== ef.base) return; l.cantidad = r(cant); l.subtotal = r(l.cantidad * l.precio); });
+      } else if (ef.tipo === 'multiplicador'){
+        (ef.aplicaA||['mo']).forEach(t => { factores[t] = r((factores[t]||1) * ef.factor); });
+      } else if (ef.tipo === 'add_linea'){
+        if (lineas.some(l => l.checkId === it.id && l.key === 'chk_' + it.tplId)) return;
+        const cant = ef.cantidad === 'm2_espacio' ? (esp ? esp.m2 : 1) : ef.cantidad;
+        lineas.push({ id:uid('L'), key:'chk_'+it.tplId, concepto:ef.concepto + (esp ? ' · ' + (esp.nombre||esp.tipo) : ''), espacioId:it.espacioId, unidad:ef.unidad||'ud', base:'fijo', cantidad:cant, precio:ef.precio, subtotal:r(cant*ef.precio), tipo:ef.tipo_linea||'extra', origen:'checklist', bloqueada:false, checkId:it.id });
+      } else if (ef.tipo === 'aviso'){
+        avisos.push({ texto:ef.texto, checkId:it.id, espacio:it.espacioNombre });
+      }
+    });
+  });
+
+  // 4. multiplicadores sobre el precio base (no se acumulan entre pasadas)
+  lineas.forEach(l => {
+    if (protegida(l) || l.origen === 'checklist') return;
+    const f = factores[l.tipo] || 1;
+    if (f !== 1 && l.precioBase == null) l.precioBase = l.precio;
+    if (l.precioBase != null){ l.precio = r(l.precioBase * f); l.subtotal = r(l.cantidad * l.precio); if (f === 1) delete l.precioBase; }
+  });
+
   const totales = calcularTotales(lineas, ivaPct, cfg.margen, cfg.minimo);
   const inc = calcularIncertidumbre(caso);
   const hq = calcularHorquilla(totales.total, inc.nivel);
   totales.lo = hq.lo; totales.hi = hq.hi;
-  return { lineas, totales };
+  return { lineas, totales, avisos, ivaPct };
 }
 
 // 4.16 — Disparadores de adenda
@@ -805,7 +947,7 @@ function saludObra(caso, cfg, ahora){
 
 // 4.19 — Cobros / saldo / estado económico
 function cobrosDeCaso(caso, cobros){ return (cobros||[]).filter(c => c.casoId === caso.id); }
-function calcularCobrado(caso, cobros){ return r(cobrosDeCaso(caso, cobros).filter(c => c.estado !== 'anulado').reduce((s,c) => s + (c.importe||0), 0)); }
+function calcularCobrado(caso, cobros){ return r(cobrosDeCaso(caso, cobros).filter(c => c.estado !== 'anulado' && !(c.tipo === 'visita' && c.descontable === false)).reduce((s,c) => s + (c.importe||0), 0)); }
 function estadoEconomico(caso, cobros){
   const tv = totalVigente(caso);
   const cobrado = calcularCobrado(caso, cobros);
@@ -1018,7 +1160,7 @@ function crearDBInicial(){
     solicitud:{calidad:'premium', tipoObra:'reforma_integral', notasCliente:'Reforma completa de piso en el centro.', fotosCliente:['f1.jpg','f2.jpg','f3.jpg'],
       espacios:[{id:'e1',tipo:'salon',m2:30,trabajos:TRB.salon},{id:'e2',tipo:'cocina',m2:12,trabajos:TRB.cocinaFull},{id:'e3',tipo:'bano',m2:8,trabajos:TRB.banoFull},{id:'e4',tipo:'hab',m2:15,trabajos:TRB.hab}]},
     versiones:[mkVersion({id:'V1', espacios:[{id:'e1',tipo:'salon',m2:30,trabajos:TRB.salon},{id:'e2',tipo:'cocina',m2:12,trabajos:TRB.cocinaFull},{id:'e3',tipo:'bano',m2:8,trabajos:TRB.banoFull},{id:'e4',tipo:'hab',m2:15,trabajos:TRB.hab}], calidad:'premium', nivel:'alta', creadaAt:rel(-8)})],
-    visita:{estado:'confirmada', franjasOfrecidas:[{fecha:rel(0),franja:'11:00-12:00'}], elegida:{fecha:rel(0),franja:'11:00-12:00'}, cobro:{estado:'cobrado', importe:60, fecha:rel(-2)}, checks:{}, medidas:{}, fotos:[], notas:[]},
+    visita:{estado:'confirmada', franjasOfrecidas:[{fecha:rel(0),franja:'11:00-12:00'}], elegida:{fecha:rel(0),franja:'11:00-12:00'}, cobro:{estado:'cobrada', importe:60, fecha:rel(-2)}, checks:{}, medidas:{}, fotos:[], notas:[]},
     eventos:[{fecha:rel(-8),tipo:'sistema',texto:'Pedido recibido',autor:'sistema'},{fecha:rel(-5),tipo:'transicion',texto:'Estado → Visita propuesta',autor:'reformista'},{fecha:rel(-2),tipo:'transicion',texto:'Estado → Visita confirmada',autor:'cliente'}],
     interno:{etiquetas:['prioritario'], nota:'Visita hoy a las 11h.', proximaAccion:'Hacer visita', motivoDescarte:null},
   }));
@@ -1170,7 +1312,7 @@ function crearDBInicial(){
   }));
 
   // COBROS (según plan 30/30/40 sobre importe aceptado)
-  const cobros = [];
+  const cobros = [{id:uid('cob'), casoId:'REF-0006', importe:60, concepto:'Visita técnica', fecha:rel(-2), estado:'cobrado', metodo:'bizum', tipo:'visita', descontable:true}];
   const addCobro = (casoId, importe, concepto, fecha, estado) => cobros.push({id:uid('cob'), casoId, importe:r(importe), concepto, fecha, estado:estado||'cobrado', metodo:'transferencia'});
   (function(){
     const c8  = casos.find(c=>c.id==='REF-0008'); addCobro('REF-0008', c8.aceptacion.importe*0.30, 'Señal 30% al aceptar', c8.aceptacion.fecha);
@@ -1187,6 +1329,59 @@ let DB = crearDBInicial();
 // ═══════════════════════════════════════════════════════
 // SECCIÓN 6: TESTS
 // ═══════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════
+// SECCIÓN 4B: AGENDA (funciones puras)
+// ═══════════════════════════════════════════════════════
+function minDeHora(h){ const p = String(h).split(':'); return (+p[0])*60 + (+p[1]||0); }
+function horaDeMin(m){ return String(Math.floor(m/60)).padStart(2,'0') + ':' + String(m%60).padStart(2,'0'); }
+function franjaIni(f){ return minDeHora(String(f.franja).split('-')[0]); }
+function franjaFin(f){ return minDeHora(String(f.franja).split('-')[1]); }
+function fechaMasDias(ds, n){ const d = new Date(ds + 'T12:00:00'); d.setDate(d.getDate() + n); return d.toISOString().split('T')[0]; }
+function diaSemana(ds){ return new Date(ds + 'T12:00:00').getDay(); }
+function diaBloqueado(ds, cfg){ return ((cfg.agenda && cfg.agenda.bloqueos) || []).find(b => ds >= b.desde && ds <= (b.hasta || b.desde)) || null; }
+
+// visitas confirmadas que ocupan agenda
+function visitasOcupadas(casos, excluirId){
+  return (casos||[]).filter(c => c.id !== excluirId && c.visita && c.visita.estado === 'confirmada' && c.visita.elegida)
+    .map(c => ({ casoId:c.id, fecha:c.visita.elegida.fecha, ini:franjaIni(c.visita.elegida), fin:franjaFin(c.visita.elegida) }));
+}
+
+// huecos libres de los próximos nDias según disponibilidad, duración, traslado y visitas ocupadas
+function franjasLibres(cfg, casos, desde, nDias, excluirId){
+  const dur = cfg.visita.duracionMin, tras = cfg.visita.trasladoMin;
+  const ocup = visitasOcupadas(casos, excluirId);
+  const out = [];
+  for (let i = 0; i < (nDias||14); i++){
+    const ds = fechaMasDias(desde, i);
+    if (diaBloqueado(ds, cfg)) continue;
+    const ventanas = (cfg.agenda.semana && cfg.agenda.semana[diaSemana(ds)]) || [];
+    const delDia = ocup.filter(o => o.fecha === ds);
+    ventanas.forEach(v => {
+      const ini = minDeHora(v[0]), fin = minDeHora(v[1]);
+      for (let s = ini; s + dur <= fin; s += dur + tras){
+        const choca = delDia.some(o => !(s >= o.fin + tras || s + dur + tras <= o.ini));
+        if (!choca) out.push({ fecha:ds, franja:horaDeMin(s) + '-' + horaDeMin(s + dur) });
+      }
+    });
+  }
+  return out;
+}
+
+// política de reprogramación/cancelación
+function politicaReprogramar(caso, cfg, ahora){
+  const el = caso.visita && caso.visita.elegida; if (!el) return null;
+  const inicio = new Date(el.fecha + 'T' + horaDeMin(franjaIni(el)) + ':00');
+  const horas = (inicio - ahora) / 3600000;
+  const pol = cfg.visita.politica || { reprogramarGratisHoras:24, tardia:'retiene' };
+  const gratis = horas >= pol.reprogramarGratisHoras;
+  const pagada = caso.visita.cobro && caso.visita.cobro.estado === 'cobrada';
+  let efecto;
+  if (gratis) efecto = pagada ? 'Sin coste: se conserva (o reembolsa) el cobro de la visita.' : 'Sin coste para el cliente.';
+  else if (pol.tardia === 'retiene') efecto = pagada ? 'Tardía: se retiene el cobro ya hecho y se cobrará de nuevo la nueva visita.' : 'Tardía: se cobrará la visita.';
+  else efecto = 'Tardía, pero sin cargo adicional (política flexible).';
+  return { gratis, horas: Math.round(horas*10)/10, limite: pol.reprogramarGratisHoras, tardia: pol.tardia, pagada, efecto };
+}
+
 window.__tests = function(){
   let ok = 0, tot = 0; const fails = [];
   const a = (desc, cond) => { tot++; if (cond) ok++; else { fails.push(desc); console.error('✗ ' + desc); } };
@@ -1350,6 +1545,88 @@ window.__tests = function(){
   const imp = impactoCambioPrecio({casos:[{id:'X', versiones:[{id:'V1', lineas:[{id:'L',productoId:'p1',tipo:'mat',precio:18.90,cantidad:10}]}]}]}, 'p1', 20.90);
   a('impacto precio: delta agregado = (20.90-18.90)×10', imp.deltaAgregado === r(2*10));
 
+  // ── 16. Agenda: franjas libres ──
+  const cfgA = JSON.parse(JSON.stringify(CFG_DEFAULT));
+  const lunes = '2026-11-02'; // lunes
+  const libres0 = franjasLibres(cfgA, [], lunes, 14);
+  a('franjas: solo L-V (ningún sábado/domingo)', libres0.every(f => { const d = diaSemana(f.fecha); return d>=1 && d<=5; }));
+  a('franjas: lunes 09:00-10:00 disponible sin ocupación', libres0.some(f => f.fecha===lunes && f.franja==='09:00-10:00'));
+  const ocupado = [{ id:'X', visita:{ estado:'confirmada', elegida:{ fecha:lunes, franja:'10:00-11:00' } } }];
+  const libres1 = franjasLibres(cfgA, ocupado, lunes, 14);
+  const solapa = f => f.fecha===lunes && !(franjaIni(f) >= 11*60+30 || franjaFin(f) + 30 <= 10*60);
+  a('franjas: no solapan con visita existente (con traslado)', !libres1.some(solapa));
+  a('franjas: el día ocupado sigue ofreciendo huecos válidos', libres1.some(f => f.fecha===lunes && franjaIni(f) >= 11*60+30));
+  const cfgB = JSON.parse(JSON.stringify(cfgA)); cfgB.agenda.bloqueos = [{ desde:'2026-11-03', hasta:'2026-11-04', motivo:'Vacaciones' }];
+  a('franjas: respeta bloqueos por fechas', !franjasLibres(cfgB, [], lunes, 14).some(f => f.fecha==='2026-11-03' || f.fecha==='2026-11-04'));
+  const cfgC = JSON.parse(JSON.stringify(cfgA)); cfgC.agenda.semana[1] = [['09:00','10:00']];
+  a('franjas: lunes editado a una sola ventana de 1h = 1 hueco', franjasLibres(cfgC, [], lunes, 1).length === 1);
+  const cfgD = JSON.parse(JSON.stringify(cfgA)); cfgD.visita.duracionMin = 120;
+  a('franjas: usa la duración configurada', franjasLibres(cfgD, [], lunes, 1).every(f => franjaFin(f)-franjaIni(f) === 120));
+  a('franjas: excluirId permite reprogramar sobre el propio hueco', franjasLibres(cfgA, [{ id:'X', visita:ocupado[0].visita }], lunes, 1, 'X').some(f => f.franja==='09:00-10:00' || f.franja==='10:30-11:30'));
+  a('franjas: DB demo ofrece huecos en 14 días', franjasLibres(DB.cfg, DB.casos, rel(1), 14).length > 10);
+
+  // ── 17. Política de reprogramación ──
+  const cvis = mkCaso({ visita:{ estado:'confirmada', elegida:{ fecha:'2026-11-10', franja:'10:00-11:00' }, cobro:{ estado:'cobrada', importe:60 } } });
+  const pGratis = politicaReprogramar(cvis, cfgA, new Date('2026-11-05T12:00:00'));
+  a('política: >24h antes es gratis', pGratis.gratis === true);
+  const pTarde = politicaReprogramar(cvis, cfgA, new Date('2026-11-10T00:00:00'));
+  a('política: <24h es tardía y retiene el cobro', pTarde.gratis === false && /retiene/.test(pTarde.efecto));
+  a('política: exactamente 24h cuenta como gratis', politicaReprogramar(cvis, cfgA, new Date('2026-11-09T10:00:00')).gratis === true);
+  const cfgE = JSON.parse(JSON.stringify(cfgA)); cfgE.visita.politica.tardia = 'sin_cargo';
+  a('política flexible: tardía sin cargo', /sin cargo/i.test(politicaReprogramar(cvis, cfgE, new Date('2026-11-10T00:00:00')).efecto));
+
+  // ── 18. Checklist: generación y efectos ──
+  const cck = mkCaso({ solicitud:{ calidad:'media', tipoObra:'reforma_bano', fotosCliente:['a'], espacios:[{ id:'e1', tipo:'bano', m2:8, trabajos:['cambiar_suelo','demolicion','pintar_techo'] }, { id:'e2', tipo:'salon', m2:20, trabajos:['pintar_paredes'] }] } });
+  const lst = generarChecklist(cck);
+  a('checklist: superficie real por espacio (una por espacio)', lst.filter(q => q.tplId==='sup_real').length === 2);
+  a('checklist: fontanería solo en baño/cocina', lst.filter(q => q.tplId==='fontaneria').length === 1);
+  a('checklist: muro de carga solo si hay demolición', lst.some(q => q.tplId==='muro_carga'));
+  a('checklist: altura solo en espacios con pintura', lst.filter(q => q.tplId==='altura').length === 2);
+  a('checklist: acceso global (no por espacio)', lst.filter(q => q.tplId==='acceso').length === 1);
+  a('checklist: condiciones eq/true/gt/lt', cumpleCondicion({op:'eq',valor:'plomo'},'plomo') && cumpleCondicion({op:'true'},true) && cumpleCondicion({op:'gt',valor:2.8},3) && !cumpleCondicion({op:'lt',valor:2},3));
+
+  const base = mkCaso(); base.id='CK'; base.solicitud = cck.solicitud;
+  base.versiones[0].lineas = [
+    { id:'A', key:'cambiar_suelo', concepto:'Suelo MO', espacioId:'e1', unidad:'m²', base:'m2_suelo', cantidad:8, precio:22, subtotal:176, tipo:'mo', origen:'calculo', bloqueada:false },
+    { id:'B', key:'pintar_techo', concepto:'Techo MO', espacioId:'e1', unidad:'m²', base:'m2_techo', cantidad:8, precio:7, subtotal:56, tipo:'mo', origen:'calculo', bloqueada:false },
+    { id:'C', key:'cambiar_suelo', concepto:'Suelo bloqueado', espacioId:'e1', unidad:'m²', base:'m2_suelo', cantidad:8, precio:28, subtotal:224, tipo:'mat', origen:'manual', bloqueada:true },
+  ];
+  base.visita = { checks:{}, medidas:{} };
+  base.visita.checks['sup_real@e1'] = { valor:'10' };
+  let rb = recalcularBorrador(base, cfgA);
+  a('efecto set_cantidad actualiza cantidad de la línea con esa base', rb.lineas.find(l=>l.id==='A').cantidad === 10);
+  a('efecto set_cantidad no toca líneas bloqueadas', rb.lineas.find(l=>l.id==='C').cantidad === 8 && rb.lineas.find(l=>l.id==='C').subtotal === 224);
+  base.visita.checks['humedades@e1'] = { valor:true };
+  rb = recalcularBorrador(base, cfgA);
+  const lh = rb.lineas.find(l => l.origen==='checklist' && /humedades/i.test(l.concepto));
+  a('efecto add_linea crea línea con origen checklist', !!lh && lh.precio === 380);
+  a('efecto aviso devuelve el aviso de humedades', rb.avisos.some(x => /Humedades/i.test(x.texto)));
+  base.borrador = { lineas: rb.lineas, ivaPct:21, basadoEn:'V1' };
+  const rb2 = recalcularBorrador(base, cfgA);
+  a('add_linea no se duplica al recalcular de nuevo', rb2.lineas.filter(l => l.origen==='checklist' && /humedades/i.test(l.concepto)).length === 1);
+  base.visita.checks['humedades@e1'] = { valor:false };
+  a('quitar la respuesta retira la línea de checklist', !recalcularBorrador(base, cfgA).lineas.some(l => l.origen==='checklist'));
+  base.visita.checks['acceso'] = { valor:'escaleras' };
+  const precioMO = recalcularBorrador(base, cfgA).lineas.find(l=>l.id==='A').precio;
+  a('multiplicador escaleras ×1,07 sobre la mano de obra', precioMO === r(22*1.07));
+  base.borrador = { lineas: recalcularBorrador(base, cfgA).lineas, ivaPct:21, basadoEn:'V1' };
+  a('multiplicador no se acumula entre recálculos', recalcularBorrador(base, cfgA).lineas.find(l=>l.id==='A').precio === r(22*1.07));
+  base.visita.checks['acceso'] = { valor:'ascensor' };
+  a('quitar el multiplicador restaura el precio original', recalcularBorrador(base, cfgA).lineas.find(l=>l.id==='A').precio === 22);
+  base.visita.checks['acceso'] = { valor:'escaleras' };
+  a('multiplicador no afecta líneas bloqueadas/manuales', recalcularBorrador(base, cfgA).lineas.find(l=>l.id==='C').precio === 28);
+  base.visita.checks['suelo_estado@e1'] = { valor:'necesita recrecido' };
+  a('add_linea con cantidad m2_espacio usa los m² del espacio', recalcularBorrador(base, cfgA).lineas.find(l=>/Recrecido/.test(l.concepto)).cantidad === 8);
+  const bm = mkCaso(); bm.versiones[0].lineas = base.versiones[0].lineas.map(l=>({...l})); bm.solicitud = cck.solicitud;
+  bm.visita = { checks:{}, medidas:{ e1:{ largo:5, ancho:2, alto:2.5, huecos:[], aplicada:false } } };
+  a('medidas no aplicadas no modifican cantidades', recalcularBorrador(bm, cfgA).lineas.find(l=>l.id==='A').cantidad === 8);
+  bm.visita.medidas.e1.aplicada = true;
+  a('medidas aplicadas actualizan cantidades (5×2=10 m²)', recalcularBorrador(bm, cfgA).lineas.find(l=>l.id==='A').cantidad === 10);
+
+  // ── 19. Cobro de la visita ──
+  a('cobro visita: económico no cuenta visita no descontable', calcularCobrado({id:'Z'}, [{casoId:'Z', importe:60, estado:'cobrado', tipo:'visita', descontable:false},{casoId:'Z', importe:100, estado:'cobrado'}]) === 100);
+  a('cobro visita: descontable sí cuenta', calcularCobrado({id:'Z'}, [{casoId:'Z', importe:60, estado:'cobrado', tipo:'visita', descontable:true}]) === 60);
+
   // ── Cobertura de la DB de ejemplo ──
   const estados = new Set(DB.casos.map(c=>c.estado));
   a('DB: ≥14 casos', DB.casos.length >= 14);
@@ -1440,12 +1717,16 @@ function aplicarAccionCliente(caso, accionId, datos){
       caso.visita.estado = 'confirmada';
       if (puedeTransitar(caso,'visita_confirmada')) transitar(caso,'visita_confirmada',{autor:'cliente',texto:'El cliente eligió franja de visita'});
       ev('El cliente confirmó la visita: ' + fmtFecha(caso.visita.elegida.fecha) + ' ' + caso.visita.elegida.franja); break;
+    case 'confirmar_visita':
+      caso.visita.confirmadaCliente = true; ev('El cliente confirma que estará en la visita'); break;
+    case 'reprogramar':
+      if (datos.franja){ const pol = reprogramarVisita(caso, datos.franja, 'cliente'); ev('El cliente reprograma la visita' + (pol && !pol.gratis ? ' (tardía)' : '')); } break;
     case 'aceptar':
       if (caso.estado === 'propuesta_enviada'){
         const v = caso.versiones.find(x=>x.estado==='vigente');
         let importe = v?.totales?.total || 0;
-        if (caso.visita?.cobro?.estado === 'cobrado' && DB.cfg.visita.descontable){ importe = r(importe - (caso.visita.cobro.importe||0)); }
-        caso.aceptacion = { versionId:v?.id, fecha:hoy(), metodo:'enlace', importe: v?.totales?.total||0, descontadoVisita: caso.visita?.cobro?.estado==='cobrado'?(caso.visita.cobro.importe||0):0 };
+        if (caso.visita?.cobro?.estado === 'cobrada' && DB.cfg.visita.descontable){ importe = r(importe - (caso.visita.cobro.importe||0)); }
+        caso.aceptacion = { versionId:v?.id, fecha:hoy(), metodo:'enlace', importe: v?.totales?.total||0, descontadoVisita: caso.visita?.cobro?.estado==='cobrada'?(caso.visita.cobro.importe||0):0 };
         if (v) v.estado = 'aceptada';
         transitar(caso,'aceptada',{autor:'cliente',texto:'El cliente aceptó la propuesta ' + (v?.id||'')});
         ev('¡Propuesta aceptada! Importe ' + fmtEur(v?.totales?.total||0));
@@ -1599,7 +1880,7 @@ function esperaConRespuesta(caso){
   const desde = ultTrans?.fecha || caso.creadoAt;
   return (caso.eventos||[]).some(e => e.autor==='cliente' && new Date(e.fecha) >= new Date(desde));
 }
-function enBandeja(caso){ return ['recibida','en_triaje'].includes(caso.estado) || esperaConRespuesta(caso); }
+function enBandeja(caso){ return ['recibida','en_triaje','en_visita'].includes(caso.estado) || esperaConRespuesta(caso); }
 function enSeguimiento(caso){ return ['esperando_info','visita_propuesta','visita_confirmada','propuesta_enviada'].includes(caso.estado) && !esperaConRespuesta(caso); }
 function enArchivo(caso){ return ['descartada','rechazada','caducada','en_pausa','archivada'].includes(caso.estado); }
 
@@ -1633,7 +1914,7 @@ function cuerpoBandeja(){
   const porRevisar = DB.casos.filter(c=>['recibida'].includes(c.estado)).length;
 
   const selSort = '<select onchange="bandejaSort=this.value;RENDERERS.presupuestos()">' + [['prioridad','Prioridad'],['calidad','Calidad'],['espera','Espera'],['importe','Importe']].map(o=>'<option value="'+o[0]+'"'+(bandejaSort===o[0]?' selected':'')+'>'+o[1]+'</option>').join('') + '</select>';
-  const selEstado = '<select onchange="bandejaF.estado=this.value;RENDERERS.presupuestos()"><option value="">Todos los estados</option>' + ['recibida','en_triaje','esperando_info'].map(e=>'<option value="'+e+'"'+(bandejaF.estado===e?' selected':'')+'>'+ESTADO_LABEL[e]+'</option>').join('') + '</select>';
+  const selEstado = '<select onchange="bandejaF.estado=this.value;RENDERERS.presupuestos()"><option value="">Todos los estados</option>' + ['recibida','en_triaje','esperando_info','en_visita'].map(e=>'<option value="'+e+'"'+(bandejaF.estado===e?' selected':'')+'>'+ESTADO_LABEL[e]+'</option>').join('') + '</select>';
   const selZona = '<select onchange="bandejaF.zona=this.value;RENDERERS.presupuestos()"><option value="">Toda zona</option>' + ['dentro','limite','fuera'].map(z=>'<option value="'+z+'"'+(bandejaF.zona===z?' selected':'')+'>'+z+'</option>').join('') + '</select>';
   const selTipo = '<select onchange="bandejaF.tipo=this.value;RENDERERS.presupuestos()"><option value="">Todo tipo</option>' + ['reforma_integral','reforma_bano','reforma_cocina','reforma_parcial'].map(t=>'<option value="'+t+'"'+(bandejaF.tipo===t?' selected':'')+'>'+nombreTipoObra(t)+'</option>').join('') + '</select>';
 
@@ -1665,6 +1946,7 @@ function porqueHtml(caso, cal, prio){
   '</div></div>';
 }
 function botonesTriaje(caso){
+  if (caso.estado==='en_visita') return '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px" onclick="event.stopPropagation()"><button class="abtn abtn-sm abtn-primary" onclick="abrirModoVisita(\''+caso.id+'\')">★ '+(caso.visita.estado==='realizada'?'Reabrir Modo visita':'Continuar Modo visita')+'</button><button class="abtn abtn-sm abtn-ghost" onclick="abrirCaso(\''+caso.id+'\');_fichaTab=\'presupuesto\';renderFicha()">Revisar borrador y enviar</button></div>';
   const ac = accionSugerida(caso, DB.cfg);
   const mapa = { hacer_visita:'proponer', pedir_info_fotos:'pedir', enviar_presupuesto:'presupuesto', revisar_descarte:'descartar' };
   const sug = mapa[ac.id] || 'proponer';
@@ -1750,16 +2032,9 @@ function accionArchivo(id, accion){
 
 // ── Las cuatro salidas del triaje ──────────────────────
 let _triaje = { franjas:[], sel:[] };
-function franjasLibresSimples(n){
-  const out=[]; const horas=['10:00-11:00','12:00-13:00','17:00-18:00']; let d=1;
-  while(out.length<n){ const f=new Date(_hoyDate()); f.setDate(f.getDate()+d); const dow=f.getDay();
-    if (DB.cfg.agenda.dias.includes(dow)){ horas.forEach(h=>{ if(out.length<n) out.push({fecha:f.toISOString().split('T')[0], franja:h}); }); }
-    d++; if(d>21) break; }
-  return out;
-}
 function exitProponerVisita(id){
   const c = DB.casos.find(x=>x.id===id); if(!c) return;
-  _triaje = { franjas: franjasLibresSimples(6), sel: [], casoId:id };
+  _triaje = { franjas: franjasLibres(DB.cfg, DB.casos, fechaMasDias(hoy(),1), 14, id).slice(0,12), sel: [], casoId:id };
   renderExitProponer(c);
 }
 function renderExitProponer(c){
@@ -1787,8 +2062,9 @@ function confirmarProponer(id){
 
 function exitPedirInfo(id){
   const c = DB.casos.find(x=>x.id===id); if(!c) return; const cli=clienteDe(c);
-  const chk = generarChecklist(c, CHECKLIST_PLANTILLAS).slice(0,6);
-  _pedir = { items: chk.map(q=>({q:q.pregunta, on:false})), fotos:true };
+  const chk = generarChecklist(c).filter(q=>q.tipo!=='foto');
+  const vistos = new Set(); const uniq = chk.filter(q=>{ if(vistos.has(q.tplId)) return false; vistos.add(q.tplId); return true; }).slice(0,6);
+  _pedir = { items: uniq.map(q=>({q:q.label.replace(/ \(m²\)| \(m\)| \(con foto\)/g,''), on:false})), fotos:true };
   renderPedir(c);
 }
 let _pedir = {items:[],fotos:true};
@@ -2059,31 +2335,46 @@ function c_delLinea(lid){ const c=_fc(); const b=asegurarBorrador(c); b.lineas=b
 function c_addLinea(){ const c=_fc(); const b=asegurarBorrador(c); const esp=(c.solicitud.espacios||[])[0];
   b.lineas.push({id:uid('L'),key:'manual',concepto:'Nueva partida',espacioId:esp?.id||null,unidad:'ud',base:'fijo',cantidad:1,precio:0,subtotal:0,tipo:'extra',origen:'manual',bloqueada:true}); renderFicha(); }
 function c_setIva(val){ const c=_fc(); const b=asegurarBorrador(c); b.ivaPct=Number(val); renderFicha(); }
-function c_recalcular(){ const c=_fc(); const b=asegurarBorrador(c); const medidas=c.visita?.medidas||{};
-  b.lineas.forEach(l=>{ if(l.bloqueada||l.origen==='manual')return; const m=medidas[l.espacioId]; if(!m)return; const med=calcularMedidas(m); l.cantidad=cantidadEstimada(l.base,l.cantidad,med); l.subtotal=r(l.cantidad*l.precio); });
-  toast('Recalculado (líneas bloqueadas intactas)'); renderFicha(); }
+function c_recalcular(){ const c=_fc(); recalcularYGuardar(c); toast('Recalculado (líneas bloqueadas y manuales intactas)'); renderFicha(); }
 function c_descartarBorrador(){ const c=_fc(); c.borrador=null; renderFicha(); }
 function c_enviarVersion(){ const c=_fc(); const b=c.borrador; if(!b)return;
   const tot=totalesBorrador(c); const inc=calcularIncertidumbre(c); const hq=calcularHorquilla(tot.total,inc.nivel); tot.lo=hq.lo; tot.hi=hq.hi;
   const nv={ id:siguienteVersionId(c), tipo:'revisada', creadaAt:hoy(), enviadaAt:null, ivaPct:b.ivaPct, lineas:b.lineas, totales:tot, cambiosRespectoAnterior:null, estado:'borrador' };
   enviarVersion(c, nv, 'WhatsApp'); c.borrador=null; _fichaDiff=nv.id;
-  if (c.estado==='en_triaje' && puedeTransitar(c,'propuesta_enviada')){ try{transitar(c,'propuesta_enviada',{autor:'reformista',texto:'Presupuesto enviado'});}catch(e){} }
+  if (['en_triaje','en_visita'].includes(c.estado) && puedeTransitar(c,'propuesta_enviada')){ try{transitar(c,'propuesta_enviada',{autor:'reformista',texto:'Presupuesto enviado'});}catch(e){} }
   toast('Versión ' + nv.id + ' enviada'); renderFicha(); }
 
 // ── Ficha: Visita ───────────────────────────────────────
 function fichaVisita(c){
   const vis = c.visita||{};
-  if (vis.estado==='pendiente' && !vis.franjasOfrecidas?.length) return '<div class="section-card" style="color:var(--muted)">Aún no se ha propuesto visita. Usa «Proponer visita» desde la bandeja.</div>';
-  let h='<div class="section-card"><div class="section-card-title">Estado de la visita</div>' +
+  const cb = vis.cobro || {}; 
+  if ((vis.estado==='pendiente' || !vis.estado) && !(vis.franjasOfrecidas||[]).length && !vis.elegida) return '<div class="section-card" style="color:var(--muted)">Aún no se ha propuesto visita. Usa «Proponer visita» desde la bandeja.</div>';
+  let h = '<div class="section-card"><div class="section-card-title">Estado de la visita</div>' +
     '<div class="kv"><span class="k">Estado</span>' + escH(vis.estado) + '</div>';
-  if (vis.franjasOfrecidas?.length) h+='<div class="kv"><span class="k">Franjas ofrecidas</span>' + vis.franjasOfrecidas.map(f=>fmtFechaCorta(f.fecha)+' '+f.franja).join(' · ') + '</div>';
-  if (vis.elegida) h+='<div class="kv"><span class="k">Elegida</span>' + fmtFecha(vis.elegida.fecha) + ' · ' + vis.elegida.franja + '</div>';
-  if (vis.cobro) h+='<div class="kv"><span class="k">Cobro de visita</span>' + fmtEur(vis.cobro.importe||0) + ' · ' + (vis.cobro.estado||'') + (DB.cfg.visita.descontable?' (descontable al aceptar)':'') + '</div>';
-  h+='</div>';
-  const chk = generarChecklist(c, CHECKLIST_PLANTILLAS);
-  h+='<div class="section-card"><div class="section-card-title">Checklist de visita (' + chk.length + ')</div>' +
-    chk.slice(0,8).map(q=>'<div class="check-q">☐ ' + escH(q.pregunta) + '</div>').join('') +
-    '<div style="font-size:12px;color:var(--muted);margin-top:8px">La toma de medidas y fotos en vivo (Modo visita) llega en la Fase C.</div></div>';
+  if ((vis.franjasOfrecidas||[]).length) h += '<div class="kv"><span class="k">Franjas ofrecidas</span>' + vis.franjasOfrecidas.map(f=>fmtFechaCorta(f.fecha)+' '+f.franja).join(' · ') + '</div>';
+  if (vis.elegida){
+    h += '<div class="kv"><span class="k">Elegida</span><b>' + fmtFecha(vis.elegida.fecha) + ' · ' + vis.elegida.franja + '</b>' + (vis.confirmadaCliente?' <span class="badge b-ok">confirmada por el cliente</span>':'') + '</div>';
+    h += '<div class="kv"><span class="k">Dirección</span>' + escH(direccionDe(c)) + ' · <a href="' + mapaLink(c) + '" target="_blank" rel="noopener">mapa</a></div>';
+  }
+  h += '<div class="kv"><span class="k">Cobro de visita</span><span>' + cobroVisitaHtml(c) + '</span></div>';
+  h += '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px">';
+  if (vis.estado==='confirmada' && vis.elegida){
+    h += '<button class="abtn abtn-primary abtn-sm" onclick="abrirModoVisita(\'' + c.id + '\')">' + (c.estado==='en_visita'?'Continuar Modo visita':'Iniciar visita (Modo visita)') + '</button>' +
+         '<button class="abtn abtn-ghost abtn-sm" onclick="reprogramarModal(\'' + c.id + '\')">Reprogramar</button><button class="abtn abtn-ghost abtn-sm" onclick="cancelarVisitaModal(\'' + c.id + '\')">Cancelar visita</button>';
+  } else if (c.estado==='en_visita') h += '<button class="abtn abtn-ghost abtn-sm" onclick="abrirModoVisita(\'' + c.id + '\')">Reabrir Modo visita</button>';
+  h += '</div></div>';
+
+  const checks = vis.checks||{}; const items = generarChecklist(c);
+  const respondidas = items.filter(it => checks[it.id] && checks[it.id].valor != null && checks[it.id].valor !== '');
+  h += '<div class="section-card"><div class="section-card-title">Checklist (' + respondidas.length + '/' + items.length + ' respondidas)</div>' +
+    items.map(it => { const ck = checks[it.id]; const v = ck && ck.valor; const txt = (v==null||v==='') ? '<span style="color:var(--muted)">—</span>' : (v===true?'Sí':v===false?'No':escH(String(v)));
+      return '<div class="check-q" style="justify-content:space-between"><span>' + (v==null||v===''?'☐':'☑') + ' ' + escH(it.label) + (it.espacioNombre?' <span style="color:var(--muted)">· ' + escH(it.espacioNombre) + '</span>':'') + '</span><b>' + txt + '</b></div>'; }).join('') + '</div>';
+
+  const med = Object.entries(vis.medidas||{});
+  if (med.length) h += '<div class="section-card"><div class="section-card-title">Medidas</div>' + med.map(([eid,m]) => { const e=(c.solicitud.espacios||[]).find(x=>x.id===eid); const mm=calcularMedidas(m); return '<div class="kv"><span class="k">' + escH(e?(e.nombre||e.tipo):eid) + '</span>' + m.largo + '×' + m.ancho + '×' + m.alto + ' m → ' + mm.m2_suelo + ' m² suelo · ' + mm.m2_pared + ' m² pared · ' + mm.ml_rodapie + ' ml rodapié' + (m.aplicada?' <span class="badge b-ok">aplicado</span>':'') + '</div>'; }).join('') + '</div>';
+  if ((vis.fotos||[]).length) h += '<div class="section-card"><div class="section-card-title">Fotos (' + vis.fotos.length + ')</div><div class="mv-thumbs">' + vis.fotos.map(f=>'<div class="mv-thumb">' + escH(f.etiqueta||'Foto') + (f.espacioNombre?' · ' + escH(f.espacioNombre):'') + '</div>').join('') + '</div></div>';
+  if ((vis.notas||[]).length) h += '<div class="section-card"><div class="section-card-title">Notas</div>' + vis.notas.map(n=>'<div class="mv-nota"><div style="font-size:11px;color:var(--muted)">' + escH(n.espacioNombre||'General') + ' · ' + fmtFecha(n.fecha) + (n.audioUrl?' · 🎙':'') + '</div>' + (n.audioUrl?'<i>' + escH(n.transcripcion) + '</i>':escH(n.texto)) + '</div>').join('') + '</div>';
+  if (c.fiscal && (c.fiscal.nif || c.fiscal.nombre)) h += '<div class="section-card"><div class="section-card-title">Datos fiscales</div><div class="kv"><span class="k">Nombre</span>' + escH(c.fiscal.nombre) + '</div><div class="kv"><span class="k">NIF</span>' + escH(c.fiscal.nif) + '</div><div class="kv"><span class="k">Dirección</span>' + escH(c.fiscal.direccion) + '</div></div>';
   return h;
 }
 
@@ -2144,6 +2435,13 @@ function vistaCliente(id){
       '<button class="cv-btn" onclick="accCliente(\'' + id + '\',\'aceptar\')">Aceptar presupuesto</button>' +
       '<button class="cv-btn ghost" onclick="accCliente(\'' + id + '\',\'pedir_cambios\')">Pedir cambios</button>' +
       '<button class="cv-btn ghost" onclick="accCliente(\'' + id + '\',\'rechazar\')">No me interesa</button></div>';
+  else if (c.estado==='visita_confirmada' && c.visita.elegida){
+    const pol = politicaReprogramar(c, DB.cfg, _hoyDate()); const alt = franjasLibres(DB.cfg, DB.casos, fechaMasDias(hoy(),1), 14, id).slice(0,3);
+    accionHtml = '<div class="cv-action"><b>Visita confirmada</b><p style="font-size:14px;margin:6px 0">' + fmtFecha(c.visita.elegida.fecha) + ' · ' + c.visita.elegida.franja + '</p>' +
+      (c.visita.confirmadaCliente ? '<div style="color:var(--ok);font-size:13px">✓ Has confirmado tu asistencia</div>' : '<button class="cv-btn" onclick="accCliente(\'' + id + '\',\'confirmar_visita\')">Confirmo que estaré</button>') +
+      '<p style="font-size:12px;color:var(--muted);margin:10px 0 2px">' + (pol.gratis ? 'Puedes cambiar la hora sin coste hasta ' + pol.limite + ' h antes.' : '⚠ Faltan menos de ' + pol.limite + ' h: cambiarla tiene coste.') + '</p>' +
+      alt.map((f,i)=>'<button class="cv-btn ghost" onclick="accCliente(\'' + id + '\',\'reprogramar\',' + i + ')">Cambiar a ' + fmtFecha(f.fecha) + ' · ' + f.franja + '</button>').join('') + '</div>';
+  }
   else if (c.estado==='en_pausa') accionHtml = '<div class="cv-action"><b>Caso en pausa</b><button class="cv-btn" onclick="accCliente(\'' + id + '\',\'reactivar\')">Reactivar mi solicitud</button></div>';
   else if (c.estado==='caducada') accionHtml = '<div class="cv-action"><b>Tu presupuesto ha caducado</b><button class="cv-btn" onclick="accCliente(\'' + id + '\',\'renovar\')">Pedir presupuesto actualizado</button></div>';
   else if (c.estado==='en_obra') {
@@ -2169,6 +2467,7 @@ function accCliente(id, accion, franjaIdx){
   const c = DB.casos.find(x=>x.id===id); if(!c) return;
   const datos = {};
   if (accion==='elegir_franja' && franjaIdx!=null) datos.franja = c.visita.franjasOfrecidas[franjaIdx];
+  if (accion==='reprogramar' && franjaIdx!=null) datos.franja = franjasLibres(DB.cfg, DB.casos, fechaMasDias(hoy(),1), 14, id)[franjaIdx];
   if (accion==='pedir_cambios') datos.texto = 'Me gustaría revisar algún acabado';
   if (accion==='rechazar') datos.motivo = 'Encontré otra oferta';
   try{ aplicarAccionCliente(c, accion, datos); }catch(e){ toast(e.message,'err'); return; }
@@ -2242,6 +2541,460 @@ RENDERERS.catalogo = function(){
 };
 
 // ═══════════════════════════════════════════════════════
+// SECCIÓN 12B: AGENDA
+// ═══════════════════════════════════════════════════════
+let agendaTab = 'semana', agendaSemOff = 0, agendaRutaFecha = null;
+const DIAS_LBL = {1:'Lunes',2:'Martes',3:'Miércoles',4:'Jueves',5:'Viernes',6:'Sábado',0:'Domingo'};
+const DIAS_CORTO = {1:'Lun',2:'Mar',3:'Mié',4:'Jue',5:'Vie',6:'Sáb',0:'Dom'};
+const ORDEN_DIAS = [1,2,3,4,5,6,0];
+
+function direccionDe(c){ return c.vivienda.direccion || ((clienteDe(c).zona||'Madrid') + ', ' + c.vivienda.cp + ' Madrid'); }
+function mapaLink(c){ return 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(direccionDe(c)); }
+function visitasConfirmadas(){ return DB.casos.filter(c => c.visita && c.visita.estado==='confirmada' && c.visita.elegida).sort((a,b)=> (a.visita.elegida.fecha+a.visita.elegida.franja).localeCompare(b.visita.elegida.fecha+b.visita.elegida.franja)); }
+function visitasPropuestas(){ return DB.casos.filter(c => c.estado==='visita_propuesta' && (c.visita.franjasOfrecidas||[]).length); }
+
+function eventosDelDia(ds){
+  const ev = [];
+  visitasConfirmadas().forEach(c => { if (c.visita.elegida.fecha===ds) ev.push({ tipo:'visita', hora:c.visita.elegida.franja, caso:c, texto:escH(clienteDe(c).nombre) }); });
+  visitasPropuestas().forEach(c => c.visita.franjasOfrecidas.forEach(f => { if (f.fecha===ds) ev.push({ tipo:'prop', hora:f.franja, caso:c, texto:escH(clienteDe(c).nombre) + ' (propuesta)' }); }));
+  DB.casos.filter(c => ['en_obra','en_remates'].includes(c.estado)).forEach(c => {
+    (c.obra.hitos||[]).filter(h => h.estado!=='hecho' && h.fechaInicioPrevista<=ds && ds<=h.fechaFinPrevista).forEach(h => ev.push({ tipo:'hito', hora:'', caso:c, texto:'🏗 ' + escH(h.nombre) + ' · ' + escH(clienteDe(c).nombre) }));
+    if (ds===hoy() && saludObra(c, DB.cfg, hoy())==='bloqueada') ev.push({ tipo:'alerta', hora:'', caso:c, texto:'⛔ Obra bloqueada · ' + escH(clienteDe(c).nombre) });
+  });
+  return ev.sort((a,b)=> String(a.hora).localeCompare(String(b.hora)));
+}
+
+RENDERERS.agenda = function(){
+  const nConf = visitasConfirmadas().length, nProp = visitasPropuestas().length;
+  const tab = (k,l,n) => '<button class="tab ' + (agendaTab===k?'active':'') + '" onclick="agendaTab=\'' + k + '\';RENDERERS.agenda()">' + l + (n!=null?'<span class="tab-n">' + n + '</span>':'') + '</button>';
+  let cuerpo = '';
+  if (agendaTab==='semana') cuerpo = agSemana();
+  else if (agendaTab==='lista') cuerpo = agLista();
+  else if (agendaTab==='ruta') cuerpo = agRuta();
+  else cuerpo = agDisponibilidad();
+  document.getElementById('pg-agenda').innerHTML =
+    '<div class="page-hdr"><div><div class="page-title">Agenda</div><div class="page-sub">' + nConf + ' visita' + (nConf!==1?'s':'') + ' confirmada' + (nConf!==1?'s':'') + ' · ' + nProp + ' pendiente' + (nProp!==1?'s':'') + ' de elegir franja</div></div></div>' +
+    '<div class="tabs">' + tab('semana','Semana') + tab('lista','Lista',nConf+nProp) + tab('ruta','Ruta del día') + tab('disp','Disponibilidad') + '</div>' + cuerpo;
+};
+
+function agSemana(){
+  const dow = diaSemana(hoy());
+  const lunes = fechaMasDias(hoy(), -((dow+6)%7) + 7*agendaSemOff);
+  let cols = '';
+  for (let i=0;i<7;i++){
+    const ds = fechaMasDias(lunes, i), d = diaSemana(ds);
+    const bq = diaBloqueado(ds, DB.cfg), cerrado = !(DB.cfg.agenda.semana[d]||[]).length;
+    const evs = eventosDelDia(ds).map(e => '<div class="ag-ev ' + e.tipo + '" onclick="abrirCaso(\'' + e.caso.id + '\')">' + (e.hora?'<b>' + e.hora.split('-')[0] + '</b> ':'') + e.texto + '</div>').join('');
+    cols += '<div class="ag-day ' + (ds===hoy()?'hoy ':'') + (bq?'bloq ':'') + (cerrado&&!bq?'cerrado':'') + '"><div class="ag-day-h"><span>' + DIAS_CORTO[d] + ' ' + ds.slice(8) + '/' + ds.slice(5,7) + '</span>' + (bq?'<span title="' + escH(bq.motivo||'') + '">🚫</span>':'') + '</div>' +
+      (bq?'<div style="font-size:11px;color:var(--muted)">' + escH(bq.motivo||'Bloqueado') + '</div>':'') + (evs || (bq||cerrado?'':'<div style="font-size:11px;color:var(--muted)">Libre</div>')) + '</div>';
+  }
+  return '<div class="ag-nav"><button class="abtn abtn-ghost abtn-sm" onclick="agendaSemOff--;RENDERERS.agenda()">←</button><b style="font-size:13px">Semana del ' + fmtFecha(lunes) + '</b><button class="abtn abtn-ghost abtn-sm" onclick="agendaSemOff++;RENDERERS.agenda()">→</button><button class="abtn abtn-ghost abtn-sm" onclick="agendaSemOff=0;RENDERERS.agenda()">Hoy</button></div>' +
+    '<div class="ag-week">' + cols + '</div>' +
+    '<div class="ag-leyenda"><span><span class="etiq-chip etiq-warn">■</span> Visita confirmada</span><span>┄ Franja propuesta</span><span><span class="etiq-chip" style="background:#f3e5f5;color:#7b1fa2">■</span> Hito de obra</span><span><span class="etiq-chip etiq-bad">■</span> Bloqueo</span></div>';
+}
+
+function cobroVisitaHtml(c){
+  const cb = c.visita.cobro || {estado:'no_aplica'};
+  const imp = cb.importe != null ? cb.importe : importeVisita(c, DB.cfg);
+  if (!DB.cfg.visita.cobra) return '<span class="badge b-mute">sin cobro</span>';
+  const badge = cb.estado==='cobrada'?'b-ok':cb.estado==='eximida'?'b-info':'b-warn';
+  const lbl = cb.estado==='cobrada'?'cobrada':cb.estado==='eximida'?'eximida':'pendiente';
+  const btns = cb.estado==='pendiente' ? ' <button class="abtn abtn-ghost abtn-sm" onclick="event.stopPropagation();registrarCobroVisita(\'' + c.id + '\')">Registrar cobro</button> <button class="abtn abtn-ghost abtn-sm" onclick="event.stopPropagation();eximirVisitaModal(\'' + c.id + '\')">Eximir</button>' : '';
+  return '<span class="badge ' + badge + '">' + fmtEur0(imp) + ' · ' + lbl + '</span>' + btns;
+}
+
+function agLista(){
+  const filas = [];
+  visitasConfirmadas().forEach(c => filas.push({ c, tipo:'conf', fecha:c.visita.elegida.fecha, franja:c.visita.elegida.franja }));
+  visitasPropuestas().forEach(c => filas.push({ c, tipo:'prop', fecha:c.visita.franjasOfrecidas[0].fecha, franja:c.visita.franjasOfrecidas.map(f=>fmtFechaCorta(f.fecha)+' '+f.franja.split('-')[0]).join(' · ') }));
+  if (!filas.length) return '<div class="section-card" style="text-align:center;color:var(--muted)">No hay visitas en agenda.</div>';
+  filas.sort((a,b)=> a.fecha.localeCompare(b.fecha));
+  const rows = filas.map(f => {
+    const c = f.c, cli = clienteDe(c);
+    let rec = '<span style="color:var(--muted);font-size:12px">—</span>', acc = '';
+    if (f.tipo==='conf'){
+      const d = diasEntre(hoy(), f.fecha);
+      if (d>=0 && d<=1){ const msg = fillTpl(PLANTILLAS_MSG.confirmacion_visita, varsDe(c)); rec = '<span class="badge b-warn">24 h</span> <a class="abtn abtn-ghost abtn-sm" href="' + waLink(cli.tel,msg) + '" target="_blank" rel="noopener" onclick="event.stopPropagation()">WhatsApp</a>'; }
+      acc = '<button class="abtn abtn-primary abtn-sm" onclick="event.stopPropagation();abrirModoVisita(\'' + c.id + '\')">Iniciar visita</button> <button class="abtn abtn-ghost abtn-sm" onclick="event.stopPropagation();reprogramarModal(\'' + c.id + '\')">Reprogramar</button> <button class="abtn abtn-ghost abtn-sm" onclick="event.stopPropagation();cancelarVisitaModal(\'' + c.id + '\')">Cancelar</button>';
+    } else acc = '<span style="font-size:12px;color:var(--muted)">Esperando que el cliente elija</span>';
+    return '<tr onclick="abrirCaso(\'' + c.id + '\')" style="cursor:pointer"><td><b>' + (f.tipo==='conf'?fmtFecha(f.fecha) + '<br>' + f.franja:escH(f.franja)) + '</b>' + (f.tipo==='prop'?'<br><span class="badge b-info">propuesta</span>':'') + '</td>' +
+      '<td><b>' + escH(cli.nombre) + '</b><br><span style="font-size:11px;color:var(--muted)">' + c.id + '</span></td><td style="font-size:12px">' + escH(direccionDe(c)) + '</td><td onclick="event.stopPropagation()">' + cobroVisitaHtml(c) + '</td><td onclick="event.stopPropagation()">' + rec + '</td><td onclick="event.stopPropagation()">' + acc + '</td></tr>';
+  }).join('');
+  const pol = DB.cfg.visita.politica;
+  return '<div class="table-wrap"><table><thead><tr><th>Cuándo</th><th>Cliente</th><th>Dirección</th><th>Cobro visita</th><th>Recordatorio</th><th>Acciones</th></tr></thead><tbody>' + rows + '</tbody></table></div>' +
+    '<div style="font-size:12px;color:var(--muted)">Política: reprogramar sin coste hasta ' + pol.reprogramarGratisHoras + ' h antes; después, ' + (pol.tardia==='retiene'?'se retiene el cobro y se cobra la nueva visita':'sin cargo adicional') + '.</div>';
+}
+
+function agRuta(){
+  const ds = agendaRutaFecha || hoy();
+  const vis = visitasConfirmadas().filter(c => c.visita.elegida.fecha===ds);
+  let h = '<div class="ctrl-row"><span class="ctrl-lbl">Día</span><input type="date" value="' + ds + '" onchange="agendaRutaFecha=this.value;RENDERERS.agenda()" class="disp-inp"><button class="abtn abtn-ghost abtn-sm" onclick="agendaRutaFecha=null;RENDERERS.agenda()">Hoy</button></div>';
+  if (!vis.length) return h + '<div class="section-card" style="text-align:center;color:var(--muted)">Sin visitas confirmadas el ' + fmtFecha(ds) + '.</div>';
+  vis.forEach((c,i) => {
+    const cli = clienteDe(c), el = c.visita.elegida;
+    if (i>0){ const prev = vis[i-1].visita.elegida; const hueco = franjaIni(el) - franjaFin(prev); h += '<div class="ruta-tras">🚗 Traslado estimado ' + DB.cfg.visita.trasladoMin + ' min · ' + (hueco>=DB.cfg.visita.trasladoMin?'margen ' + (hueco-DB.cfg.visita.trasladoMin) + ' min':'<b style="color:var(--danger)">no llegas a tiempo</b>') + '</div>'; }
+    h += '<div class="ruta-item"><div style="display:flex;gap:14px;align-items:center;flex-wrap:wrap"><div class="ruta-hora">' + el.franja.split('-')[0] + '</div><div style="flex:1;min-width:180px"><b>' + escH(cli.nombre) + '</b> · ' + c.id + '<div style="font-size:12px;color:var(--muted)">' + escH(direccionDe(c)) + ' · ' + nombreTipoObra(c.solicitud.tipoObra) + '</div></div>' +
+      '<a class="abtn abtn-ghost abtn-sm" href="' + mapaLink(c) + '" target="_blank" rel="noopener">Abrir en el mapa</a>' +
+      '<a class="abtn abtn-ghost abtn-sm" href="tel:' + String(cli.tel).replace(/\s/g,'') + '">Llamar</a>' +
+      '<button class="abtn abtn-primary abtn-sm" onclick="abrirModoVisita(\'' + c.id + '\')">Iniciar visita</button></div>' +
+      '<div style="margin-top:8px;font-size:12px">' + cobroVisitaHtml(c) + '</div></div>';
+  });
+  return h;
+}
+
+function agDisponibilidad(){
+  const sem = DB.cfg.agenda.semana, v = DB.cfg.visita;
+  const dias = ORDEN_DIAS.map(d => {
+    const frs = (sem[d]||[]).map((f,i) => '<div class="disp-fr"><input type="time" value="' + f[0] + '" onchange="dispFranja(' + d + ',' + i + ',0,this.value)"> – <input type="time" value="' + f[1] + '" onchange="dispFranja(' + d + ',' + i + ',1,this.value)"><span style="cursor:pointer;color:var(--danger)" onclick="dispDelFranja(' + d + ',' + i + ')">✕</span></div>').join('');
+    return '<div class="disp-dia"><div class="dd-n">' + DIAS_LBL[d] + '</div><div style="flex:1">' + (frs || '<span style="color:var(--muted);font-size:12px">Sin atención</span>') + '<button class="abtn abtn-ghost abtn-sm" style="margin-top:4px" onclick="dispAddFranja(' + d + ')">+ Franja</button></div></div>';
+  }).join('');
+  const bloqs = (DB.cfg.agenda.bloqueos||[]).map((b,i) => '<div class="disp-fr">🚫 ' + fmtFecha(b.desde) + (b.hasta&&b.hasta!==b.desde?' → ' + fmtFecha(b.hasta):'') + ' · ' + escH(b.motivo||'') + ' <span style="cursor:pointer;color:var(--danger)" onclick="dispDelBloqueo(' + i + ')">✕</span></div>').join('') || '<div style="font-size:12px;color:var(--muted)">Sin bloqueos.</div>';
+  const libres = franjasLibres(DB.cfg, DB.casos, fechaMasDias(hoy(),1), 14);
+  const porDia = {}; libres.forEach(f => porDia[f.fecha] = (porDia[f.fecha]||0)+1);
+  const prev = Object.keys(porDia).slice(0,10).map(ds => '<span class="etiq-chip etiq-info">' + DIAS_CORTO[diaSemana(ds)] + ' ' + ds.slice(8) + ': ' + porDia[ds] + '</span>').join('');
+  return '<div class="section-card"><div class="section-card-title">Disponibilidad semanal (fuente de las franjas ofrecidas)</div>' + dias + '</div>' +
+    '<div class="section-card"><div class="section-card-title">Bloqueos (vacaciones, festivos)</div>' + bloqs +
+      '<div class="disp-fr" style="margin-top:8px"><input id="bq-desde" type="date" class="disp-inp"> → <input id="bq-hasta" type="date" class="disp-inp"> <input id="bq-motivo" class="disp-inp" placeholder="Motivo" style="flex:1"><button class="abtn abtn-primary abtn-sm" onclick="dispAddBloqueo()">Añadir</button></div></div>' +
+    '<div class="section-card"><div class="section-card-title">Visita y política</div>' +
+      '<div class="inl-field"><label>Duración de la visita (min)</label><input type="number" min="15" step="15" value="' + v.duracionMin + '" onchange="dispVisita(\'duracionMin\',this.value)"></div>' +
+      '<div class="inl-field"><label>Margen de traslado (min)</label><input type="number" min="0" step="5" value="' + v.trasladoMin + '" onchange="dispVisita(\'trasladoMin\',this.value)"></div>' +
+      '<div class="inl-field"><label>Reprogramar gratis hasta (h antes)</label><input type="number" min="0" value="' + v.politica.reprogramarGratisHoras + '" onchange="dispVisita(\'reprogramarGratisHoras\',this.value)"></div>' +
+      '<div class="inl-field"><label>Reprogramación tardía</label><select onchange="dispVisita(\'tardia\',this.value)"><option value="retiene"' + (v.politica.tardia==='retiene'?' selected':'') + '>Retener cobro y cobrar de nuevo</option><option value="sin_cargo"' + (v.politica.tardia==='sin_cargo'?' selected':'') + '>Sin cargo adicional</option></select></div></div>' +
+    '<div class="section-card"><div class="section-card-title">Franjas libres · próximos 14 días (' + libres.length + ')</div>' + (prev || '<span style="color:var(--muted);font-size:12px">Sin huecos: revisa la disponibilidad.</span>') + '</div>';
+}
+function dispFranja(d,i,w,val){ const f = DB.cfg.agenda.semana[d][i]; const nf = f.slice(); nf[w]=val; if (minDeHora(nf[1]) <= minDeHora(nf[0])){ toast('La hora de fin debe ser posterior al inicio','err'); } else f[w]=val; RENDERERS.agenda(); }
+function dispAddFranja(d){ DB.cfg.agenda.semana[d] = DB.cfg.agenda.semana[d]||[]; DB.cfg.agenda.semana[d].push(['09:00','13:00']); RENDERERS.agenda(); }
+function dispDelFranja(d,i){ DB.cfg.agenda.semana[d].splice(i,1); RENDERERS.agenda(); }
+function dispAddBloqueo(){ const d=document.getElementById('bq-desde').value, h=document.getElementById('bq-hasta').value||d, m=document.getElementById('bq-motivo').value; if(!d){ toast('Indica la fecha de inicio','err'); return; } if(h<d){ toast('La fecha final es anterior','err'); return; } DB.cfg.agenda.bloqueos.push({desde:d,hasta:h,motivo:m||'Bloqueo'}); RENDERERS.agenda(); }
+function dispDelBloqueo(i){ DB.cfg.agenda.bloqueos.splice(i,1); RENDERERS.agenda(); }
+function dispVisita(k,val){ if (k==='tardia') DB.cfg.visita.politica.tardia=val; else if (k==='reprogramarGratisHoras') DB.cfg.visita.politica.reprogramarGratisHoras=Number(val)||0; else DB.cfg.visita[k]=Math.max(0,Number(val)||0); RENDERERS.agenda(); }
+
+// ── Acciones sobre la visita ───────────────────────────
+function refrescar(){ renderPaginaActual(); }
+function registrarCobroVisita(id){
+  const c = DB.casos.find(x=>x.id===id); if(!c) return;
+  const imp = importeVisita(c, DB.cfg); if (imp<=0){ toast('Esta visita no tiene importe','err'); return; }
+  c.visita.cobro = Object.assign({}, c.visita.cobro, { importe:imp, estado:'cobrada', fecha:hoy() });
+  DB.cobros.push({ id:uid('cob'), casoId:c.id, importe:imp, concepto:'Visita técnica', fecha:hoy(), estado:'cobrado', metodo:'efectivo', tipo:'visita', descontable:!!DB.cfg.visita.descontable });
+  c.eventos.push({ fecha:hoy(), tipo:'cobro', texto:'Cobrada la visita técnica (' + fmtEur(imp) + ')', autor:'reformista' });
+  toast('Cobro de visita registrado · ' + fmtEur(imp)); refrescar(); if (_fichaId===id && document.getElementById('modal-bg').classList.contains('open')) renderFicha();
+}
+function eximirVisitaModal(id){
+  const c = DB.casos.find(x=>x.id===id); if(!c) return;
+  openModal('<div class="modal-title">Eximir cobro de la visita</div><p style="font-size:13px;color:var(--muted);margin-bottom:10px">' + escH(clienteDe(c).nombre) + ' · ' + fmtEur(importeVisita(c,DB.cfg)) + '</p><textarea id="exi-nota" placeholder="Motivo (obligatorio)" style="width:100%;min-height:70px;padding:10px;border:1px solid var(--border);border-radius:8px;font-family:inherit"></textarea>' +
+    '<div style="margin-top:14px;display:flex;gap:8px;justify-content:flex-end"><button class="abtn abtn-ghost" onclick="closeAllModals()">Cancelar</button><button class="abtn abtn-primary" onclick="eximirVisita(\'' + id + '\')">Eximir</button></div>');
+}
+function eximirVisita(id){
+  const c = DB.casos.find(x=>x.id===id); const nota = (document.getElementById('exi-nota')||{}).value||''; if(!c) return;
+  if (!nota.trim()){ toast('Indica el motivo de la exención','err'); return; }
+  c.visita.cobro = Object.assign({}, c.visita.cobro, { estado:'eximida', nota:nota.trim() });
+  c.eventos.push({ fecha:hoy(), tipo:'cobro', texto:'Visita eximida: ' + nota.trim(), autor:'reformista' });
+  closeAllModals(); toast('Visita eximida'); refrescar();
+}
+
+let _repro = { id:null, libres:[], sel:null };
+function reprogramarModal(id){
+  const c = DB.casos.find(x=>x.id===id); if(!c || !c.visita.elegida) return;
+  _repro = { id, libres: franjasLibres(DB.cfg, DB.casos, fechaMasDias(hoy(),1), 14, id).slice(0,12), sel:null };
+  renderRepro();
+}
+function renderRepro(){
+  const c = DB.casos.find(x=>x.id===_repro.id); const pol = politicaReprogramar(c, DB.cfg, _hoyDate());
+  const opts = _repro.libres.map((f,i)=>'<div class="franja-opt ' + (_repro.sel===i?'sel':'') + '" onclick="_repro.sel=' + i + ';renderRepro()">' + fmtFecha(f.fecha) + ' · ' + f.franja + '</div>').join('');
+  openModal('<div class="modal-title">Reprogramar visita · ' + escH(clienteDe(c).nombre) + '</div>' +
+    '<p style="font-size:13px;margin-bottom:6px">Actual: <b>' + fmtFecha(c.visita.elegida.fecha) + ' · ' + c.visita.elegida.franja + '</b> (en ' + pol.horas + ' h)</p>' +
+    '<div class="porque" style="margin-bottom:12px"><b>' + (pol.gratis?'✓ Reprogramación gratuita':'⚠ Reprogramación tardía') + '</b> (límite ' + pol.limite + ' h)<br>' + escH(pol.efecto) + '</div>' + opts +
+    '<div style="margin-top:14px;display:flex;gap:8px;justify-content:flex-end"><button class="abtn abtn-ghost" onclick="closeAllModals()">Cancelar</button><button class="abtn abtn-primary" ' + (_repro.sel==null?'disabled style="opacity:.5"':'') + ' onclick="confirmarRepro()">Reprogramar</button></div>');
+}
+function confirmarRepro(){ const c = DB.casos.find(x=>x.id===_repro.id); if(!c||_repro.sel==null) return; reprogramarVisita(c, _repro.libres[_repro.sel], 'reformista'); closeAllModals(); toast('Visita reprogramada'); refrescar(); }
+function reprogramarVisita(c, franja, autor){
+  const pol = politicaReprogramar(c, DB.cfg, _hoyDate()); const prev = c.visita.elegida;
+  c.visita.elegida = franja; c.visita.estado = 'confirmada'; c.visita.confirmadaCliente = false;
+  let extra = '';
+  if (pol && !pol.gratis && pol.tardia==='retiene' && c.visita.cobro && c.visita.cobro.estado==='cobrada'){ c.visita.cobro.estado = 'pendiente'; extra = ' · tardía: se retiene el cobro anterior y la nueva visita queda pendiente de cobro'; }
+  (c.eventos = c.eventos||[]).push({ fecha:hoy(), tipo:'visita', texto:'Visita reprogramada de ' + (prev?fmtFechaCorta(prev.fecha) + ' ' + prev.franja:'—') + ' a ' + fmtFechaCorta(franja.fecha) + ' ' + franja.franja + extra, autor:autor||'reformista' });
+  return pol;
+}
+function cancelarVisitaModal(id){
+  const c = DB.casos.find(x=>x.id===id); if(!c || !c.visita.elegida) return; const pol = politicaReprogramar(c, DB.cfg, _hoyDate());
+  openModal('<div class="modal-title">Cancelar visita · ' + escH(clienteDe(c).nombre) + '</div><p style="font-size:13px;margin-bottom:8px">' + fmtFecha(c.visita.elegida.fecha) + ' · ' + c.visita.elegida.franja + '</p>' +
+    '<div class="porque"><b>' + (pol.gratis?'✓ Cancelación sin coste':'⚠ Cancelación tardía') + '</b><br>' + (pol.pagada ? (pol.gratis?'Se reembolsará el cobro de la visita.':'Se retiene el cobro de la visita.') : 'No hay cobro de visita registrado.') + '</div>' +
+    '<div style="margin-top:14px;display:flex;gap:8px;justify-content:flex-end"><button class="abtn abtn-ghost" onclick="closeAllModals()">Volver</button><button class="abtn abtn-primary" onclick="cancelarVisita(\'' + id + '\')">Cancelar visita</button></div>');
+}
+function cancelarVisita(id){
+  const c = DB.casos.find(x=>x.id===id); if(!c) return; const pol = politicaReprogramar(c, DB.cfg, _hoyDate()); const prev = c.visita.elegida;
+  let extra = '';
+  if (pol && pol.pagada && pol.gratis){ DB.cobros.filter(m=>m.casoId===c.id && m.tipo==='visita' && m.estado==='cobrado').forEach(m=>m.estado='anulado'); c.visita.cobro.estado='pendiente'; extra = ' · cobro reembolsado'; }
+  else if (pol && pol.pagada) extra = ' · cancelación tardía: se retiene el cobro';
+  c.visita.estado = 'cancelada'; c.visita.elegida = null;
+  if (c.estado==='visita_confirmada' && puedeTransitar(c,'visita_propuesta')) transitar(c,'visita_propuesta',{autor:'reformista',texto:'Visita cancelada; se vuelve a proponer'});
+  c.eventos.push({ fecha:hoy(), tipo:'visita', texto:'Visita cancelada (' + fmtFechaCorta(prev.fecha) + ' ' + prev.franja + ')' + extra, autor:'reformista' });
+  closeAllModals(); toast('Visita cancelada'); refrescar();
+}
+
+// ═══════════════════════════════════════════════════════
+// SECCIÓN 12C: MODO VISITA (móvil / iPad)
+// ═══════════════════════════════════════════════════════
+const MV = { id:null, i:0, cards:[], grab:false, fotoEsp:null, fotoEti:'General', notaEsp:null, savedT:null };
+const MV_GRUPOS = ['Resumen','Checklist','Medidas','Fotos','Notas','Datos fiscales','Presupuesto','Cerrar visita'];
+function mvCaso(){ return DB.casos.find(c => c.id === MV.id); }
+function recalcularYGuardar(c){
+  asegurarBorrador(c);
+  const res = recalcularBorrador(c, DB.cfg);
+  c.borrador.lineas = res.lineas; c.borrador.avisos = res.avisos;
+  return res;
+}
+function mvCards(c){
+  const cards = [{ t:'resumen', g:'Resumen' }];
+  generarChecklist(c).forEach(it => cards.push({ t:'check', g:'Checklist', item:it }));
+  cards.push({ t:'medidas', g:'Medidas' }, { t:'fotos', g:'Fotos' }, { t:'notas', g:'Notas' }, { t:'fiscal', g:'Datos fiscales' }, { t:'presupuesto', g:'Presupuesto' }, { t:'cerrar', g:'Cerrar visita' });
+  return cards;
+}
+function abrirModoVisita(id){
+  const c = DB.casos.find(x => x.id === id); if (!c) return;
+  if (c.estado === 'visita_confirmada' && puedeTransitar(c, 'en_visita')) transitar(c, 'en_visita', { autor:'reformista', texto:'Visita iniciada (Modo visita)' });
+  c.visita = Object.assign({ checks:{}, medidas:{}, fotos:[], notas:[] }, c.visita);
+  recalcularYGuardar(c);
+  MV.id = id; MV.i = 0; MV.cards = mvCards(c); MV.grab = false; MV.fotoEsp = (c.solicitud.espacios[0]||{}).id || null; MV.notaEsp = MV.fotoEsp;
+  closeAllModals();
+  document.getElementById('demo-panel').style.display = 'none';
+  document.getElementById('mv-root').style.display = 'flex';
+  renderMV();
+}
+function cerrarModoVisita(){
+  document.getElementById('mv-root').style.display = 'none'; document.getElementById('mv-root').innerHTML = '';
+  document.getElementById('demo-panel').style.display = '';
+  MV.id = null; renderPaginaActual();
+}
+function mvGuardado(){
+  const el = document.getElementById('mv-saved'); if (!el) return;
+  el.textContent = 'Guardado ✓'; el.style.opacity = 1; clearTimeout(MV.savedT); MV.savedT = setTimeout(() => { const e2 = document.getElementById('mv-saved'); if (e2) e2.style.opacity = .35; }, 1400);
+}
+function mvTotal(){
+  const c = mvCaso(); if (!c) return; const tot = totalesBorrador(c);
+  const el = document.getElementById('mv-total'); if (el) el.textContent = fmtEur(tot.total);
+  const sub = document.getElementById('mv-sub'); if (sub) sub.textContent = 'Subtotal ' + fmtEur(tot.subtotal) + ' · IVA ' + (c.borrador.ivaPct) + '%';
+  mvGuardado();
+}
+function mvAvisosHtml(item){
+  const c = mvCaso(); const av = (c.borrador.avisos||[]).filter(a => !item || a.checkId === item.id);
+  return av.map(a => '<div class="mv-aviso">⚠ ' + escH(a.texto) + '</div>').join('');
+}
+function mvIr(d){ MV.i = clamp(MV.i + d, 0, MV.cards.length - 1); renderMV(); document.querySelector('.mv-body')?.scrollTo(0,0); }
+function mvIrGrupo(g){ const k = MV.cards.findIndex(x => x.g === g); if (k >= 0){ MV.i = k; renderMV(); } }
+
+function renderMV(){
+  const c = mvCaso(); if (!c) return; const cli = clienteDe(c); const card = MV.cards[MV.i];
+  const paso = MV_GRUPOS.indexOf(card.g) + 1; const pct = Math.round((MV.i + 1) / MV.cards.length * 100);
+  let cuerpo = '';
+  if (card.t === 'resumen') cuerpo = mvResumen(c);
+  else if (card.t === 'check') cuerpo = mvCheck(c, card.item);
+  else if (card.t === 'medidas') cuerpo = mvMedidas(c);
+  else if (card.t === 'fotos') cuerpo = mvFotos(c);
+  else if (card.t === 'notas') cuerpo = mvNotas(c);
+  else if (card.t === 'fiscal') cuerpo = mvFiscal(c);
+  else if (card.t === 'presupuesto') cuerpo = mvPresupuesto(c);
+  else if (card.t === 'cerrar') cuerpo = mvCerrar(c);
+  const tot = totalesBorrador(c);
+  document.getElementById('mv-root').innerHTML =
+    '<div class="mv-head"><button class="mv-back" onclick="cerrarModoVisita()">← Volver</button><div class="mv-head-t"><b>' + escH(cli.nombre) + '</b><span>' + escH(direccionDe(c)) + '</span></div><span style="font-size:12px;color:var(--warm)">' + c.id + '</span></div>' +
+    '<div class="mv-prog"><div style="width:' + pct + '%"></div></div>' +
+    '<div class="mv-body"><div class="mv-step">Paso ' + paso + ' de ' + MV_GRUPOS.length + ' · ' + card.g + (card.t==='check'?' · pregunta ' + (MV.cards.filter(x=>x.t==='check').indexOf(card)+1) + '/' + MV.cards.filter(x=>x.t==='check').length:'') + '</div>' + cuerpo +
+      (card.t==='cerrar' ? '' : '<div class="mv-nav"><button onclick="mvIr(-1)" ' + (MV.i===0?'disabled style="opacity:.4"':'') + '>← Anterior</button><button class="pri" onclick="mvIr(1)">Siguiente →</button></div>') + '</div>' +
+    '<div class="mv-foot"><div class="mv-foot-tot"><small>Total en vivo (IVA incl.)</small><b id="mv-total">' + fmtEur(tot.total) + '</b> <span id="mv-sub" style="font-size:11px;color:var(--warm)">Subtotal ' + fmtEur(tot.subtotal) + ' · IVA ' + c.borrador.ivaPct + '%</span></div><span class="mv-saved" id="mv-saved" style="opacity:.35">Guardado ✓</span><button class="mv-cerrar" onclick="mvIrGrupo(\'Cerrar visita\')">Cerrar visita</button></div>';
+}
+
+function mvResumen(c){
+  const v = versionVigente(c); const sc = scoreCalidad(c, DB.cfg);
+  const tot = v && v.totales || {};
+  let h = '<div class="mv-q">' + escH(nombreTipoObra(c.solicitud.tipoObra)) + '</div><div class="mv-ayuda">' + c.vivienda.m2 + ' m² · ' + escH(c.vivienda.tipo) + ' · ' + (c.vivienda.antiguedad||'') + '</div>';
+  h += '<div class="section-card"><div class="section-card-title">Versión vigente ' + (v?v.id:'') + '</div><div style="font-family:\'Cormorant Garamond\',serif;font-size:26px">' + (tot.lo ? fmtEur0(tot.lo) + ' – ' + fmtEur0(tot.hi) : fmtEur(tot.total||0)) + '</div></div>';
+  if (c.vivienda.humedades) h += '<div class="mv-aviso">⚠ El cliente declara humedades: revisa paredes y techos con foto.</div>';
+  if (c.vivienda.comunidad === 'pendiente') h += '<div class="mv-aviso">⚠ Autorización de la comunidad pendiente.</div>';
+  if (c.vivienda.topePresupuesto) h += '<div class="section-card">Tope de presupuesto del cliente: <b>' + fmtEur0(c.vivienda.topePresupuesto) + '</b></div>';
+  if (c.solicitud.notasCliente) h += '<div class="section-card" style="font-style:italic">“' + escH(c.solicitud.notasCliente) + '”</div>';
+  h += '<div class="section-card"><div class="section-card-title">Espacios</div>' + (c.solicitud.espacios||[]).map(e => '<span class="etiq-chip etiq-info">' + escH(e.nombre||e.tipo) + ' · ' + e.m2 + ' m²</span>').join('') + '<div style="font-size:12px;color:var(--muted);margin-top:8px">' + ((c.solicitud.fotosCliente||[]).length) + ' fotos del cliente · calidad del caso ' + sc.total + '/100</div></div>';
+  return h;
+}
+
+function mvCheck(c, it){
+  const ck = (c.visita.checks[it.id]) || {}; const val = ck.valor;
+  let h = '<div class="mv-q">' + escH(it.label) + '</div>' + (it.espacioNombre ? '<div class="mv-ayuda"><b>' + escH(it.espacioNombre) + '</b>' + (it.ayuda?' · ' + escH(it.ayuda):'') + '</div>' : (it.ayuda ? '<div class="mv-ayuda">' + escH(it.ayuda) + '</div>' : '<div class="mv-ayuda"></div>'));
+  if (it.tipo === 'si_no'){
+    h += '<div class="mv-opts"><button class="mv-opt ' + (val===true?'sel':'') + '" onclick="mvResp(true)">Sí</button><button class="mv-opt ' + (val===false?'sel':'') + '" onclick="mvResp(false)">No</button></div>';
+  } else if (it.tipo === 'opcion'){
+    h += '<div class="mv-opts">' + it.opciones.map(o => '<button class="mv-opt ' + (val===o?'sel':'') + '" onclick="mvResp(\'' + o + '\')">' + o.charAt(0).toUpperCase() + o.slice(1) + '</button>').join('') + '</div>';
+  } else if (it.tipo === 'numero'){
+    h += '<input class="mv-big" type="number" inputmode="decimal" step="0.01" id="mv-num" value="' + (val != null ? val : '') + '" placeholder="0" oninput="mvRespTxt(this.value)">';
+  } else if (it.tipo === 'texto'){
+    h += '<input class="mv-big" type="text" id="mv-txt" value="' + escH(val||'') + '" oninput="mvRespTxt(this.value)">';
+  } else if (it.tipo === 'foto'){
+    const n = (c.visita.fotos||[]).filter(f => f.checkId === it.id).length;
+    h += '<div class="mv-opts"><button class="mv-opt" onclick="mvAddFoto(\'' + it.id + '\',\'' + (it.espacioId||'') + '\')">📷 Hacer foto (' + n + ')</button></div>';
+    h += '<div class="mv-thumbs">' + (c.visita.fotos||[]).filter(f => f.checkId === it.id).map(f => mvThumb(f)).join('') + '</div>';
+  }
+  if (it.tipo !== 'foto' && it.tplId === 'humedades') h += '<div class="mv-opts"><button class="mv-opt" onclick="mvAddFoto(\'' + it.id + '\',\'' + (it.espacioId||'') + '\')">📷 Añadir foto de la humedad (' + (c.visita.fotos||[]).filter(f => f.checkId === it.id).length + ')</button></div>';
+  h += '<div id="mv-avisos">' + mvAvisosHtml(it) + '</div>';
+  return h;
+}
+function mvResp(valor){
+  const c = mvCaso(); const it = MV.cards[MV.i].item;
+  c.visita.checks[it.id] = Object.assign({}, c.visita.checks[it.id], { valor, efectoAplicado:true });
+  recalcularYGuardar(c); renderMV(); mvGuardado();
+}
+function mvRespTxt(valor){
+  const c = mvCaso(); const it = MV.cards[MV.i].item;
+  c.visita.checks[it.id] = Object.assign({}, c.visita.checks[it.id], { valor: valor === '' ? null : (it.tipo==='numero' ? valor : valor), efectoAplicado:true });
+  recalcularYGuardar(c);
+  const av = document.getElementById('mv-avisos'); if (av) av.innerHTML = mvAvisosHtml(it);
+  mvTotal();
+}
+function mvThumb(f){ return '<div class="mv-thumb">' + escH(f.etiqueta||'Foto') + (f.espacioNombre?' · ' + escH(f.espacioNombre):'') + '<span class="x" onclick="mvDelFoto(\'' + f.id + '\')">✕</span></div>'; }
+function mvAddFoto(checkId, espId, etiqueta){
+  const c = mvCaso(); const esp = (c.solicitud.espacios||[]).find(e => e.id === (espId || MV.fotoEsp));
+  c.visita.fotos.push({ id:uid('foto'), url:'foto-simulada.jpg', espacioId:esp?esp.id:null, espacioNombre:esp?(esp.nombre||esp.tipo):'', etiqueta:etiqueta||MV.fotoEti||'General', checkId:checkId||null, fecha:hoy() });
+  renderMV(); mvGuardado();
+}
+function mvDelFoto(id){ const c = mvCaso(); c.visita.fotos = c.visita.fotos.filter(f => f.id !== id); renderMV(); mvGuardado(); }
+
+function mvMedidas(c){
+  const espacios = c.solicitud.espacios || [];
+  let h = '<div class="mv-q">Medidas por espacio</div><div class="mv-ayuda">Introduce largo, ancho y alto, y pulsa «Aplicar a las líneas» para actualizar cantidades (las líneas bloqueadas no cambian).</div>';
+  espacios.forEach(e => {
+    const m = c.visita.medidas[e.id] || { largo:'', ancho:'', alto:'', huecos:[], aplicada:false };
+    const med = calcularMedidas(m);
+    h += '<div class="mv-med"><b>' + escH(e.nombre||e.tipo) + '</b> <span style="font-size:12px;color:var(--muted)">(estimado ' + e.m2 + ' m²)</span>' +
+      '<div class="mv-med-grid" style="margin-top:8px">' + ['largo','ancho','alto'].map(k => '<div><label>' + k.charAt(0).toUpperCase() + k.slice(1) + ' (m)</label><input type="number" inputmode="decimal" step="0.01" value="' + (m[k]||'') + '" oninput="mvMed(\'' + e.id + '\',\'' + k + '\',this.value)"></div>').join('') + '</div>' +
+      (m.huecos||[]).map((hu,i) => '<div class="mv-hueco"><input type="number" inputmode="decimal" step="0.01" placeholder="Ancho" value="' + (hu.ancho||'') + '" oninput="mvHueco(\'' + e.id + '\',' + i + ',\'ancho\',this.value)"><input type="number" inputmode="decimal" step="0.01" placeholder="Alto" value="' + (hu.alto||'') + '" oninput="mvHueco(\'' + e.id + '\',' + i + ',\'alto\',this.value)"><select onchange="mvHueco(\'' + e.id + '\',' + i + ',\'tipo\',this.value)"><option value="puerta"' + (hu.tipo==='puerta'?' selected':'') + '>Puerta</option><option value="ventana"' + (hu.tipo==='ventana'?' selected':'') + '>Ventana</option></select><span style="cursor:pointer;color:var(--danger)" onclick="mvDelHueco(\'' + e.id + '\',' + i + ')">✕</span></div>').join('') +
+      '<div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap"><button class="abtn abtn-ghost abtn-sm" onclick="mvAddHueco(\'' + e.id + '\')">+ Puerta/ventana</button><button class="abtn abtn-primary abtn-sm" onclick="mvAplicarMedidas(\'' + e.id + '\')">Aplicar a las líneas</button>' + (m.aplicada?'<span class="badge b-ok">aplicado</span>':'') + '</div>' +
+      '<div class="mv-res" id="mv-res-' + e.id + '">' + mvResMed(med) + '</div></div>';
+  });
+  return h;
+}
+function mvResMed(med){ return 'Suelo/techo ' + med.m2_suelo + ' m² · Paredes ' + med.m2_pared + ' m² · Rodapié ' + med.ml_rodapie + ' ml'; }
+function mvMedObj(c, eid){ return c.visita.medidas[eid] = c.visita.medidas[eid] || { largo:0, ancho:0, alto:0, huecos:[], aplicada:false }; }
+function mvMed(eid, k, val){ const c = mvCaso(); const m = mvMedObj(c, eid); m[k] = Number(val)||0; m.aplicada = false; const el = document.getElementById('mv-res-' + eid); if (el) el.textContent = mvResMed(calcularMedidas(m)); mvGuardado(); }
+function mvHueco(eid, i, k, val){ const c = mvCaso(); const hu = mvMedObj(c, eid).huecos[i]; hu[k] = k==='tipo' ? val : (Number(val)||0); mvMedObj(c, eid).aplicada = false; const el = document.getElementById('mv-res-' + eid); if (el) el.textContent = mvResMed(calcularMedidas(mvMedObj(c, eid))); mvGuardado(); }
+function mvAddHueco(eid){ const c = mvCaso(); mvMedObj(c, eid).huecos.push({ ancho:0.9, alto:2.1, tipo:'puerta' }); renderMV(); }
+function mvDelHueco(eid, i){ const c = mvCaso(); mvMedObj(c, eid).huecos.splice(i,1); renderMV(); }
+function mvAplicarMedidas(eid){
+  const c = mvCaso(); const m = mvMedObj(c, eid); if (!(m.largo > 0 && m.ancho > 0 && m.alto > 0)){ toast('Introduce largo, ancho y alto', 'err'); return; }
+  m.aplicada = true; recalcularYGuardar(c); toast('Medidas aplicadas a las líneas'); renderMV(); mvGuardado();
+}
+
+function mvFotos(c){
+  const espacios = c.solicitud.espacios || []; const etis = ['General','Detalle','Humedad','Instalación','Antes'];
+  let h = '<div class="mv-q">Fotos de la visita</div><div class="mv-ayuda">Elige estancia y etiqueta; cada foto queda vinculada.</div><div>' +
+    espacios.map(e => '<span class="mv-chip ' + (MV.fotoEsp===e.id?'sel':'') + '" onclick="MV.fotoEsp=\'' + e.id + '\';renderMV()">' + escH(e.nombre||e.tipo) + '</span>').join('') + '</div><div>' +
+    etis.map(t => '<span class="mv-chip ' + (MV.fotoEti===t?'sel':'') + '" onclick="MV.fotoEti=\'' + t + '\';renderMV()">' + t + '</span>').join('') + '</div>' +
+    '<div class="mv-opts"><button class="mv-opt" onclick="mvAddFoto(null,null)">📷 Hacer foto</button></div>';
+  h += '<div class="mv-thumbs">' + (c.visita.fotos||[]).map(f => mvThumb(f)).join('') + '</div>' + ((c.visita.fotos||[]).length ? '' : '<div class="mv-ayuda">Aún no hay fotos.</div>');
+  return h;
+}
+
+function mvNotas(c){
+  const espacios = c.solicitud.espacios || [];
+  let h = '<div class="mv-q">Notas de la visita</div><div class="mv-ayuda">Texto o nota de voz, por estancia.</div><div>' +
+    espacios.map(e => '<span class="mv-chip ' + (MV.notaEsp===e.id?'sel':'') + '" onclick="MV.notaEsp=\'' + e.id + '\';renderMV()">' + escH(e.nombre||e.tipo) + '</span>').join('') + '</div>';
+  h += '<textarea id="mv-nota-txt" class="mv-big" style="font-size:16px;min-height:90px;margin-top:8px" placeholder="Escribe una nota…"></textarea>';
+  h += '<div class="mv-opts"><button class="mv-opt" onclick="mvGuardarNota()">Guardar nota</button>' +
+    (MV.grab ? '<div class="mv-rec"><i></i> Grabando nota de voz…</div><button class="mv-opt sel" onclick="mvParar()">⏹ Parar y guardar</button>' : '<button class="mv-opt" onclick="MV.grab=true;renderMV()">🎙 Grabar nota de voz</button>') + '</div>';
+  h += (c.visita.notas||[]).map(n => '<div class="mv-nota"><div style="font-size:11px;color:var(--muted)">' + escH(n.espacioNombre||'General') + ' · ' + fmtFecha(n.fecha) + (n.audioUrl?' · 🎙 ' + n.segundos + ' s':'') + ' <span style="float:right;cursor:pointer;color:var(--danger)" onclick="mvDelNota(\'' + n.id + '\')">✕</span></div>' + (n.audioUrl ? '<button class="abtn abtn-ghost abtn-sm" style="margin:4px 0" onclick="toast(\'Reproduciendo nota (simulado)\')">▶ Reproducir</button><div><i>' + escH(n.transcripcion) + '</i></div>' : escH(n.texto)) + '</div>').join('');
+  return h;
+}
+function mvEspNom(c){ const e = (c.solicitud.espacios||[]).find(x => x.id === MV.notaEsp); return e ? (e.nombre||e.tipo) : ''; }
+function mvGuardarNota(){
+  const c = mvCaso(); const t = (document.getElementById('mv-nota-txt')||{}).value||''; if (!t.trim()){ toast('Escribe algo primero','err'); return; }
+  c.visita.notas.push({ id:uid('nota'), texto:t.trim(), audioUrl:null, transcripcion:null, espacioId:MV.notaEsp, espacioNombre:mvEspNom(c), fecha:hoy() }); renderMV(); mvGuardado();
+}
+function mvParar(){
+  const c = mvCaso(); MV.grab = false;
+  const frases = ['Revisar la bajante antes de alicatar.','El cliente quiere cambiar la ventana, valorar aparte.','Pared del fondo con desnivel, posible maestra.'];
+  c.visita.notas.push({ id:uid('nota'), texto:'', audioUrl:'nota-simulada.webm', transcripcion:'[Transcripción simulada] ' + frases[(c.visita.notas.length)%frases.length], segundos:6 + (c.visita.notas.length*3)%20, espacioId:MV.notaEsp, espacioNombre:mvEspNom(c), fecha:hoy() });
+  renderMV(); mvGuardado();
+}
+function mvDelNota(id){ const c = mvCaso(); c.visita.notas = c.visita.notas.filter(n => n.id !== id); renderMV(); }
+
+function mvFiscal(c){
+  c.fiscal = c.fiscal || { nombre:'', nif:'', direccion:'' };
+  const f = (k,l,ph) => '<div style="margin-bottom:12px"><label style="font-size:12px;color:var(--muted)">' + l + '</label><input class="mv-big" style="font-size:18px" value="' + escH(c.fiscal[k]||'') + '" placeholder="' + ph + '" oninput="mvFis(\'' + k + '\',this.value)"></div>';
+  return '<div class="mv-q">Datos fiscales</div><div class="mv-ayuda">Alimentan la factura futura.</div>' + f('nombre','Nombre o razón social',clienteDe(c).nombre) + f('nif','NIF / NIE','12345678Z') + f('direccion','Dirección fiscal',direccionDe(c));
+}
+function mvFis(k, val){ const c = mvCaso(); c.fiscal = c.fiscal || { nombre:'', nif:'', direccion:'' }; c.fiscal[k] = val; mvGuardado(); }
+
+function mvPresupuesto(c){
+  const b = c.borrador;
+  let h = '<div class="mv-q">Presupuesto</div><div class="mv-ayuda">Edita cantidad o precio y la línea se bloquea (no se pisa al recalcular).</div>';
+  const espNombre = eid => { const e = (c.solicitud.espacios||[]).find(x => x.id === eid); return e ? (e.nombre||e.tipo) : 'General'; };
+  const grupos = {}; b.lineas.forEach(l => (grupos[espNombre(l.espacioId)] = grupos[espNombre(l.espacioId)] || []).push(l));
+  let rows = '';
+  Object.entries(grupos).forEach(([g, ls]) => {
+    rows += '<tr><td colspan="5" class="lin-grupo-td">' + escH(g) + '</td></tr>';
+    rows += ls.map(l => '<tr><td><input value="' + escH(l.concepto) + '" oninput="mvLin(\'' + l.id + '\',\'concepto\',this.value)"><span class="lin-origen" id="mv-ori-' + l.id + '">' + (l.origen||'calculo') + '</span></td>' +
+      '<td style="width:64px"><input class="num" type="number" inputmode="decimal" step="0.01" value="' + l.cantidad + '" oninput="mvLin(\'' + l.id + '\',\'cantidad\',this.value)"></td>' +
+      '<td style="width:70px"><input class="num" type="number" inputmode="decimal" step="0.01" value="' + l.precio + '" oninput="mvLin(\'' + l.id + '\',\'precio\',this.value)"></td>' +
+      '<td style="width:70px;text-align:right" id="mv-sub-' + l.id + '">' + fmtEur0(l.subtotal) + '</td>' +
+      '<td style="width:54px;text-align:right"><span class="lin-cand ' + (l.bloqueada?'on':'') + '" id="mv-lock-' + l.id + '" onclick="mvCandado(\'' + l.id + '\')">' + (l.bloqueada?'🔒':'🔓') + '</span> <span style="cursor:pointer;color:var(--danger)" onclick="mvDelLinea(\'' + l.id + '\')">✕</span></td></tr>').join('');
+  });
+  h += '<table class="lineas-tbl"><thead><tr><th>Concepto</th><th>Cant.</th><th>Precio</th><th>Subtotal</th><th></th></tr></thead><tbody>' + rows + '</tbody></table>';
+  h += '<div style="margin-top:12px;display:flex;gap:10px;flex-wrap:wrap;align-items:center"><button class="abtn abtn-ghost abtn-sm" onclick="mvAddLinea()">+ Añadir línea</button><label style="font-size:13px">IVA <select onchange="mvIva(this.value)">' + [21,10,0].map(i => '<option value="' + i + '"' + (b.ivaPct===i?' selected':'') + '>' + i + '%</option>').join('') + '</select></label><span style="font-size:11px;color:var(--amber)">Confirmar el criterio con el gestor</span></div>';
+  return h;
+}
+function mvLinea(lid){ return mvCaso().borrador.lineas.find(l => l.id === lid); }
+function mvLin(lid, campo, val){
+  const l = mvLinea(lid); if (!l) return;
+  if (campo === 'cantidad' || campo === 'precio'){ l[campo] = r(Number(val)||0); l.subtotal = r(l.cantidad * l.precio); delete l.precioBase; } else l[campo] = val;
+  l.bloqueada = true; l.origen = 'manual';
+  const s = document.getElementById('mv-sub-' + lid); if (s) s.textContent = fmtEur0(l.subtotal);
+  const k = document.getElementById('mv-lock-' + lid); if (k){ k.textContent = '🔒'; k.classList.add('on'); }
+  const o = document.getElementById('mv-ori-' + lid); if (o) o.textContent = 'manual';
+  mvTotal();
+}
+function mvCandado(lid){ const l = mvLinea(lid); l.bloqueada = !l.bloqueada; renderMV(); mvGuardado(); }
+function mvDelLinea(lid){ const c = mvCaso(); c.borrador.lineas = c.borrador.lineas.filter(l => l.id !== lid); renderMV(); mvGuardado(); }
+function mvAddLinea(){ const c = mvCaso(); const e = (c.solicitud.espacios||[])[0]; c.borrador.lineas.push({ id:uid('L'), key:'manual', concepto:'Nueva partida', espacioId:e?e.id:null, unidad:'ud', base:'fijo', cantidad:1, precio:0, subtotal:0, tipo:'extra', origen:'manual', bloqueada:true }); renderMV(); mvGuardado(); }
+function mvIva(v){ const c = mvCaso(); c.borrador.ivaPct = Number(v); mvTotal(); }
+
+function borradorComoVersion(c, tipo){
+  const b = asegurarBorrador(c); const tot = totalesBorrador(c); const inc = calcularIncertidumbre(c); const hq = calcularHorquilla(tot.total, inc.nivel); tot.lo = hq.lo; tot.hi = hq.hi;
+  return { id:siguienteVersionId(c), tipo:tipo||'tras_visita', creadaAt:hoy(), enviadaAt:null, ivaPct:b.ivaPct, lineas:b.lineas, totales:tot, cambiosRespectoAnterior:null, estado:'borrador' };
+}
+function mvCerrar(c){
+  const vig = versionVigente(c); const tmp = borradorComoVersion(c); const d = diffVersiones(vig, tmp);
+  const delta = r(tmp.totales.total - (vig.totales.total||0)); const sig = siguienteVersionId(c);
+  const n = (c.visita.fotos||[]).length, nn = (c.visita.notas||[]).length, nc = Object.keys(c.visita.checks||{}).length;
+  const lista = d.anyadidas.map(l => '<div class="diff-row diff-add">+ ' + escH(l.concepto) + ' (' + fmtEur0(l.subtotal) + ')</div>').join('') + d.quitadas.map(l => '<div class="diff-row diff-del">− ' + escH(l.concepto) + '</div>').join('') + d.cambiadas.map(x => '<div class="diff-row diff-chg">~ ' + escH(x.a.concepto) + ': ' + fmtEur0(x.de.subtotal) + ' → ' + fmtEur0(x.a.subtotal) + '</div>').join('');
+  return '<div class="mv-q">Cerrar visita</div><div class="mv-ayuda">Resumen frente a ' + vig.id + ' · nueva versión: ' + sig + '</div>' +
+    '<div class="section-card"><div class="section-card-title">Cambios</div><div style="font-size:14px;margin-bottom:8px">' + vig.id + ': <b>' + fmtEur(vig.totales.total) + '</b> → ' + sig + ': <b>' + fmtEur(tmp.totales.total) + '</b> <span style="color:' + (delta>0?'var(--danger)':'var(--ok)') + '">(' + (delta>=0?'+':'') + fmtEur(delta) + ')</span></div>' + (lista || '<div style="font-size:12px;color:var(--muted)">Sin cambios de líneas.</div>') + '</div>' +
+    '<div class="section-card" style="font-size:13px">' + nc + ' respuestas · ' + n + ' fotos · ' + nn + ' notas' + (c.fiscal && c.fiscal.nif ? ' · datos fiscales ✓' : ' · <span style="color:var(--amber)">sin datos fiscales</span>') + '</div>' +
+    ((c.borrador.avisos||[]).length ? '<div class="section-card"><div class="section-card-title">Avisos activos</div>' + c.borrador.avisos.map(a => '<div class="mv-aviso" style="margin:6px 0">⚠ ' + escH(a.texto) + '</div>').join('') + '</div>' : '') +
+    '<div class="mv-opts"><button class="mv-opt sel" onclick="mvEnviarModal()">Enviar ' + sig + ' en directo</button><button class="mv-opt" onclick="mvDejarBorrador()">Dejar en borrador para revisar en el panel</button></div>' +
+    '<div class="mv-nav"><button onclick="mvIr(-1)">← Anterior</button></div>';
+}
+function mvDejarBorrador(){
+  const c = mvCaso(); c.visita.estado = 'realizada';
+  c.eventos.push({ fecha:hoy(), tipo:'visita', texto:'Visita realizada. Borrador de ' + siguienteVersionId(c) + ' pendiente de revisión', autor:'reformista' });
+  const id = c.id; cerrarModoVisita(); toast('Visita cerrada · borrador guardado'); navegarA('presupuestos', document.getElementById('nb-presupuestos')); void id;
+}
+function mvEnviarModal(){
+  const c = mvCaso(); const tmp = borradorComoVersion(c); const cli = clienteDe(c);
+  const msg = fillTpl(PLANTILLAS_MSG.envio_version, varsDe(c, { importe: fmtEur(tmp.totales.total) }));
+  openModal('<div class="modal-title">Enviar ' + tmp.id + ' en directo · ' + escH(cli.nombre) + '</div><div class="section-card"><div class="section-card-title">Total</div><div style="font-family:\'Cormorant Garamond\',serif;font-size:26px">' + fmtEur(tmp.totales.total) + '</div></div>' + msgBloque(msg, cli.tel) +
+    '<div style="margin-top:14px;display:flex;gap:8px;justify-content:flex-end"><button class="abtn abtn-ghost" onclick="closeAllModals()">Volver</button><button class="abtn abtn-primary" onclick="mvConfirmarEnvio()">Enviar y cerrar visita</button></div>');
+}
+function mvConfirmarEnvio(){
+  const c = mvCaso(); c.visita.estado = 'realizada';
+  const nv = enviarBorradorComoVersion(c, 'tras_visita');
+  closeAllModals(); cerrarModoVisita(); toast('Versión ' + nv.id + ' enviada'); navegarA('presupuestos', document.getElementById('nb-presupuestos'));
+}
+function enviarBorradorComoVersion(c, tipo){
+  const nv = borradorComoVersion(c, tipo);
+  enviarVersion(c, nv, 'WhatsApp'); c.borrador = null;
+  if (['en_triaje','en_visita'].includes(c.estado) && puedeTransitar(c, 'propuesta_enviada')) transitar(c, 'propuesta_enviada', { autor:'reformista', texto:'Presupuesto ' + nv.id + ' enviado' });
+  return nv;
+}
+
+// ═══════════════════════════════════════════════════════
 // SECCIÓN 13: STUBS (fases futuras)
 // ═══════════════════════════════════════════════════════
 function stub(id, icon, title, sub, tags, fase){
@@ -2252,7 +3005,6 @@ function stub(id, icon, title, sub, tags, fase){
     '<div class="stub-tags">' + tags.map(t => '<span class="stub-tag">' + t + '</span>').join('') + '</div></div>';
 }
 RENDERERS.obras = () => stub('obras','🏗','Obras','Panel de obras en curso con hitos, cambios, adendas y partes de trabajo. Los datos y la lógica (progreso, salud, adendas) ya están cargados.',['Hitos','Cambios y adendas','Progreso','Salud de obra'],'Fase D');
-RENDERERS.agenda = () => stub('agenda','📅','Agenda','Calendario de visitas y modo visita en tableta, con checklist, medidas y recálculo del borrador en sitio.',['Franjas','Modo visita','Checklist','Medidas'],'Fase C');
 RENDERERS.configuracion = () => stub('configuracion','⚙','Configuración','Ajustes del negocio: márgenes, IVA, zona, visita, plan de cobros, hitos tipo y pesos de calidad. Todo editable sobre la configuración por defecto ya cargada.',['Económico','Zona y visita','Plan de cobros','Pesos de calidad'],'Fase G');
 
 // ═══════════════════════════════════════════════════════
