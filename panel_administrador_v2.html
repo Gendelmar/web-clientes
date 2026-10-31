@@ -399,6 +399,33 @@ input,select,textarea{font-family:inherit}
 .obra-card:hover{box-shadow:0 2px 12px rgba(0,0,0,.08)}
 .obra-card.en_riesgo{border-left-color:#e6a100}
 .obra-card.bloqueada{border-left-color:var(--danger)}
+
+/* ── CONFIGURACIÓN / CATÁLOGO ────────────────────── */
+.cfg-row{display:flex;align-items:center;gap:14px;padding:8px 0;border-bottom:1px dashed var(--border);font-size:13px}
+.cfg-row>label{flex:0 0 280px;color:var(--ink)}
+.cfg-row>label small{display:block;color:var(--muted);font-size:11px}
+.cfg-ctl{flex:1;display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.cfg-ctl input[type=text],.cfg-ctl input[type=number],.cfg-ctl select,.cfg-ctl textarea,.cfg-row>label input{padding:6px 9px;border:1.5px solid var(--border);border-radius:6px;font-family:inherit;font-size:13px;background:#fff;color:var(--ink)}
+.cfg-ctl input[type=text],.cfg-ctl textarea{flex:1;min-width:180px}
+.cfg-ctl input[type=number]{width:110px}
+.cfg-ctl input:focus,.cfg-ctl select:focus,.cfg-ctl textarea:focus{border-color:var(--accent);outline:none}
+.cfg-suf{font-size:12px;color:var(--muted)}
+.cfg-live{font-size:10px;color:var(--ok);white-space:nowrap}
+.section-card h3{font-family:'Cormorant Garamond',serif;font-size:20px;color:var(--terra);margin:18px 0 4px}
+.section-card h3:first-child{margin-top:0}
+.ck-ef{display:flex;gap:6px;align-items:center;flex-wrap:wrap;padding:5px 0;border-bottom:1px dashed var(--border)}
+.ck-ef input,.ck-ef select{padding:4px 6px;border:1px solid var(--border);border-radius:5px;font-size:12px;font-family:inherit}
+.cat-thumb{width:40px;height:40px;border-radius:8px;background:var(--stone);display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0}
+.vis-track{display:inline-block;width:34px;height:18px;background:var(--warm);border-radius:10px;position:relative;vertical-align:middle}
+.vis-track.on{background:var(--ok)}
+.vis-knob{position:absolute;top:2px;left:2px;width:14px;height:14px;background:#fff;border-radius:50%;transition:left .15s}
+.vis-track.on .vis-knob{left:18px}
+@media(max-width:700px){.cfg-row{flex-direction:column;align-items:flex-start;gap:4px}.cfg-row>label{flex:none}}
+body[data-densidad=compacta] .caso-card{padding:10px 14px;margin-bottom:6px}
+body[data-densidad=compacta] .apage{padding:18px 22px}
+body[data-densidad=compacta] .stat-card{padding:12px 14px}
+body[data-densidad=amplia] .caso-card{padding:22px 26px;margin-bottom:14px}
+body[data-densidad=amplia] .apage{padding:36px 42px}
 </style>
 </head>
 <body>
@@ -505,9 +532,10 @@ function hoy(){ return _hoyDate().toISOString().split('T')[0]; }
 function rel(n){ const d = _hoyDate(); d.setDate(d.getDate() + n); return d.toISOString().split('T')[0]; }
 function diasEntre(a, b){ return Math.round((new Date(b) - new Date(a)) / 86400000); }
 function horasEntre(a, b){ return (new Date(b) - new Date(a)) / 3600000; }
-function fmtEur(v){ return r(v).toLocaleString('es-ES',{minimumFractionDigits:2}) + '€'; }
-function fmtEur0(v){ return Math.round(v).toLocaleString('es-ES') + '€'; }
-function fmtFecha(s){ if(!s) return '—'; const d = new Date(s); return d.toLocaleDateString('es-ES',{day:'2-digit',month:'short',year:'numeric'}); }
+const FMT = { fecha:'larga', espacioMoneda:false };
+function fmtEur(v){ return r(v).toLocaleString('es-ES',{minimumFractionDigits:2}) + (FMT.espacioMoneda ? ' €' : '€'); }
+function fmtEur0(v){ return Math.round(v).toLocaleString('es-ES') + (FMT.espacioMoneda ? ' €' : '€'); }
+function fmtFecha(s){ if(!s) return '—'; const d = new Date(s); return FMT.fecha === 'numerica' ? d.toLocaleDateString('es-ES',{day:'2-digit',month:'2-digit',year:'numeric'}) : d.toLocaleDateString('es-ES',{day:'2-digit',month:'short',year:'numeric'}); }
 function fmtFechaCorta(s){ if(!s) return '—'; const d = new Date(s); return d.toLocaleDateString('es-ES',{day:'2-digit',month:'2-digit'}); }
 function clamp(v,lo,hi){ return Math.max(lo, Math.min(hi, v)); }
 function uid(p){ return (p||'id') + '_' + Math.random().toString(36).slice(2,8); }
@@ -516,7 +544,14 @@ function uid(p){ return (p||'id') + '_' + Math.random().toString(36).slice(2,8);
 // SECCIÓN 2: CONFIGURACIÓN POR DEFECTO
 // ═══════════════════════════════════════════════════════
 const CFG_DEFAULT = {
-  empresa:{ nombre:'Anatoliy Reformas', email:'admin@anatoliyreformas.es', tel:'+34 600 000 000', cif:'B-00000000' },
+  empresa:{ nombre:'Anatoliy Reformas', email:'admin@anatoliyreformas.es', tel:'+34 600 000 000', cif:'B-00000000', logoTexto:'Anatoliy', colorAccent:'#c96f28' },
+  textos:{ condiciones:'Presupuesto válido durante el plazo indicado. Los importes incluyen mano de obra y materiales salvo indicación. Cualquier trabajo adicional se acordará por escrito mediante cambio o adenda.', clausulaAjuste:'Presupuesto orientativo sin visita técnica. El importe puede ajustarse tras comprobar medidas y estado real.' },
+  motivosDescarte:['Fuera de la zona de servicio','Importe demasiado bajo','Tipo de obra que no hacemos','Sin respuesta del cliente','Agenda completa','Otro'],
+  cobros:{ medios:['efectivo','bizum','transferencia','pasarela'], iban:'ES00 0000 0000 0000 0000 0000', titular:'Anatoliy Reformas S.L.' },
+  relojes:{ recordatorio1:2, recordatorio2:5, propuesta1:3, propuesta2:7, avisoCaducidad:5 },
+  pantalla:{ densidad:'normal', ordenBandeja:'prioridad', fecha:'larga', espacioMoneda:false, colBandeja:{ barras:true, chips:true, acciones:true, importe:true } },
+  privacidad:{ textoRgpd:'Tus datos se usan únicamente para gestionar tu solicitud de reforma. Puedes ejercer tus derechos de acceso, rectificación y supresión escribiendo a la empresa.', conservacionMeses:24, pedirWhatsapp:true },
+  textoActa:'Las partes declaran haber revisado la obra ejecutada y conformes con su estado, salvo los remates consignados.',
   // Económico
   margen: 22, iva: 21, minimo: 500, validezDias: 30,
   // Triaje
@@ -592,6 +627,8 @@ const CHECKLIST_PLANTILLAS = [
     efectos:[{ tipo:'add_linea', cuando:{op:'eq',valor:'obsoleta'}, concepto:'Renovación de cuadro y líneas', unidad:'fijo', cantidad:1, precio:1250, tipo_linea:'mo' }] },
   { id:'fotos_gen', label:'Fotos generales de la estancia', tipo:'foto', porEspacio:true, aplicaA:{siempre:true}, efectos:[{ tipo:'ninguno' }] },
 ];
+
+const CHECKLIST_DEF = JSON.parse(JSON.stringify(CHECKLIST_PLANTILLAS));
 
 // Etiquetas y tonos de estado
 const ESTADO_LABEL = {
@@ -1067,12 +1104,12 @@ function evaluarRelojes(caso, cfg, ahora){
   const out = [];
   const ultTrans = [...(caso.eventos||[])].reverse().find(e => e.tipo === 'transicion');
   const desdeFase = ultTrans?.fecha || caso.creadoAt || ahora;
-  const pausaDias = cfg.diasPausaAuto || 8;
+  const pausaDias = cfg.diasPausaAuto || 8; const rl = Object.assign({ recordatorio1:2, recordatorio2:5, propuesta1:3, propuesta2:7, avisoCaducidad:5 }, cfg.relojes || {});
   const faseCliente = (fase, texto, concepto) => {
     const dias = diasEntre(desdeFase, ahora);
     if (dias >= pausaDias) out.push({ tipo:'pausa', fase, texto:'Sin respuesta tras ' + dias + ' días. Se pausa automáticamente.', accion:'transitar_a_pausa' });
     else {
-      const n = dias >= 5 ? 2 : dias >= 2 ? 1 : 0;
+      const n = dias >= rl.recordatorio2 ? 2 : dias >= rl.recordatorio1 ? 1 : 0;
       if (n && !recordatorioEnviado(caso, fase, n)) out.push({ tipo:'recordatorio', fase, n, ultimo:n===2, concepto, texto:'Recordatorio ' + n + '/2: ' + texto + ' (día ' + dias + ').', accion:'enviar_recordatorio' });
     }
   };
@@ -1084,8 +1121,8 @@ function evaluarRelojes(caso, cfg, ahora){
       const dias = diasEntre(v.enviadaAt, ahora); const validez = cfg.validezDias || 30;
       if (dias >= validez) out.push({ tipo:'caducidad', fase:'propuesta_enviada', texto:'Propuesta enviada hace ' + dias + ' días (validez ' + validez + '). Caducada.', accion:'marcar_caducada' });
       else {
-        if (dias >= validez - 5) out.push({ tipo:'aviso_caducidad', fase:'propuesta_enviada', texto:'La propuesta caduca en ' + (validez - dias) + ' días.', accion:'recordar_caducidad' });
-        const n = dias >= 7 ? 2 : dias >= 3 ? 1 : 0;
+        if (dias >= validez - rl.avisoCaducidad) out.push({ tipo:'aviso_caducidad', fase:'propuesta_enviada', texto:'La propuesta caduca en ' + (validez - dias) + ' días.', accion:'recordar_caducidad' });
+        const n = dias >= rl.propuesta2 ? 2 : dias >= rl.propuesta1 ? 1 : 0;
         if (n && !recordatorioEnviado(caso, 'propuesta_enviada', n)) out.push({ tipo:'recordatorio', fase:'propuesta_enviada', n, ultimo:n===2, concepto:'revisar tu presupuesto', texto:'Recordatorio ' + n + '/2 de propuesta enviada (día ' + dias + ').', accion:'enviar_recordatorio' });
       }
     }
@@ -2182,6 +2219,18 @@ window.__tests = function(){
   a('bandeja de ejemplo: calidad alta con prioridad media', bandeja.some(x => x.q.total >= 70 && x.p.nivel === 'Pronto'));
   a('la sugerencia «presupuesto sin visita» aparece en los datos de ejemplo', DB.casos.some(c => accionSugerida(c, DB.cfg).id === 'presupuesto_sin_visita'));
 
+  // ── 24. Catálogo y configuración en vivo ──
+  a('variación de precio = (último − anterior)/anterior', variacionPct({ hist:[10, 10.5] }) === 5 && variacionPct({ hist:[10] }) === 0);
+  a('alerta de variación usa el umbral configurable', alertaVariacion({ hist:[10, 10.6] }, { catalogo:{ umbralAlerta:5 } }) && !alertaVariacion({ hist:[10, 10.6] }, { catalogo:{ umbralAlerta:8 } }));
+  a('producto usado en presupuestos abiertos', productoUsado(DB, 'p1') === true && productoUsado(DB, 'p13') === false);
+  a('actualización simulada determinista (misma semilla = mismos precios)', (()=>{ const x = { catalogo:JSON.parse(JSON.stringify(DB.catalogo)), cfg:DB.cfg }, y = { catalogo:JSON.parse(JSON.stringify(DB.catalogo)), cfg:DB.cfg }; return JSON.stringify(actualizarPreciosSimulado(x,'s1')) === JSON.stringify(actualizarPreciosSimulado(y,'s1')) && x.catalogo[0].hist.length === DB.catalogo[0].hist.length + (variacionSimulada(DB.catalogo[0].id,'s1') ? 1 : 0); })());
+  a('actualización simulada respeta los precios manuales (sin cambio efectivo)', (()=>{ const db2 = { catalogo:JSON.parse(JSON.stringify(DB.catalogo)), cfg:DB.cfg }; db2.catalogo.forEach(p => p.precioManual = 1); return actualizarPreciosSimulado(db2,'s1').length === 0; })());
+  a('recalcularEstimaciones: margen nuevo sube totales sin tocar enviadas', (()=>{ const db2 = { casos:JSON.parse(JSON.stringify(DB.casos)), cfg:JSON.parse(JSON.stringify(DB.cfg)) }; const e0 = db2.casos[0].versiones[0].totales.total; const env0 = db2.casos.find(c=>c.id==='REF-0007').versiones.find(v=>v.estado==='vigente').totales.total; db2.cfg.margen = 40; recalcularEstimaciones(db2, null); return db2.casos[0].versiones[0].totales.total > e0 && db2.casos.find(c=>c.id==='REF-0007').versiones.find(v=>v.estado==='vigente').totales.total === env0; })());
+  a('la zona siempre se deriva del CP configurado', (()=>{ const c2 = JSON.parse(JSON.stringify(cfg)); c2.zonaTramos = { dentro:['45'], limite:[] }; return zonaDeCp('45001', c2) === 'dentro' && zonaDeCp('28010', c2) === 'fuera'; })());
+  a('la política de visita genera el texto del mensaje', /cuesta 60€/.test(textoPoliticaVisita(DB.casos[0])) && /íntegramente/.test(textoPoliticaVisita(DB.casos[0])));
+  a('formato de moneda configurable', (()=>{ const f = FMT.espacioMoneda; FMT.espacioMoneda = true; const t = fmtEur0(1234).includes(' €'); FMT.espacioMoneda = f; return t; })());
+  a('estados de ejemplo: una proforma, una acta y plantillas editables', DB.proformas.length === 1 && Object.keys(PLANTILLAS_MSG).length === 9);
+
   // ── Cobertura de la DB de ejemplo ──
   const estados = new Set(DB.casos.map(c=>c.estado));
   a('DB: ≥14 casos', DB.casos.length >= 14);
@@ -2206,7 +2255,7 @@ window.__tests = function(){
 // SECCIÓN 6.5: PLANTILLAS DE MENSAJE Y HELPERS DE ACCIÓN
 // ═══════════════════════════════════════════════════════
 const PLANTILLAS_MSG = {
-  proponer_visita:  'Hola {{cliente}}, soy {{reformista}}. He revisado tu solicitud ({{ref}}) y me gustaría visitar la vivienda. Estos son los huecos que tengo: {{franjas}}. Puedes elegir el que mejor te venga aquí: {{enlace}}',
+  proponer_visita:  'Hola {{cliente}}, soy {{reformista}}. He revisado tu solicitud ({{ref}}) y me gustaría visitar la vivienda. Estos son los huecos que tengo: {{franjas}}. Puedes elegir el que mejor te venga aquí: {{enlace}} {{politicaVisita}}',
   pedir_info:       'Hola {{cliente}}, para afinar tu presupuesto ({{ref}}) necesito: {{concepto}}. Puedes enviarlo desde tu enlace: {{enlace}}. Gracias.',
   recordatorio:     'Hola {{cliente}}, te recuerdo que tienes pendiente {{concepto}} en tu solicitud {{ref}}. Lo tienes aquí: {{enlace}}. Si ya no lo necesitas, dímelo y no te escribo más.',
   confirmacion_visita:'Hola {{cliente}}, mañana {{fecha}} paso por la vivienda. ¿Me confirmas? Puedes confirmar o cambiar la hora aquí: {{enlace}}',
@@ -2216,16 +2265,22 @@ const PLANTILLAS_MSG = {
   cierre_remates:   'Hola {{cliente}}, la obra está terminada. Revisa y anota los remates que veas en {{enlace}}; los resuelvo y después cerramos con el acta de entrega.',
   descarte:         'Hola {{cliente}}, gracias por contar con nosotros. En este caso no vamos a poder encargarnos de tu reforma ({{concepto}}). Te deseamos mucho éxito con el proyecto.',
 };
+const PLANTILLAS_DEF = JSON.parse(JSON.stringify(PLANTILLAS_MSG));
 function varsDe(caso, extra){
   const cli = clienteDe(caso); const v = caso.versiones.find(x=>x.estado==='vigente') || caso.versiones[0];
   const tv = totalVigente(caso);
   return Object.assign({
     cliente: (cli.nombre||'').split(' ')[0], reformista: DB.cfg.empresa.nombre, ref: caso.id,
     franjas: (caso.visita?.franjasOfrecidas||[]).map(f => fmtFechaCorta(f.fecha)+' '+f.franja).join(', '),
-    enlace: 'anatoliyreformas.es/c/'+caso.enlace.token,
+    enlace: 'anatoliyreformas.es/c/'+caso.enlace.token, politicaVisita: textoPoliticaVisita(caso),
     importe: v?.totales?.total ? fmtEur(v.totales.total) : '—',
     total: tv.total ? fmtEur(tv.total) : '—', concepto: '', fecha: caso.visita?.elegida ? fmtFecha(caso.visita.elegida.fecha) : ''
   }, extra||{});
+}
+function textoPoliticaVisita(caso){
+  const v = DB.cfg.visita; if (!v.cobra) return 'La visita técnica no tiene coste.';
+  const d = visitaDescuento(DB.cfg); const imp = importeVisita(caso, DB.cfg);
+  return 'La visita técnica cuesta ' + fmtEur0(imp) + (d.modo === 'total' ? ' y se descuenta íntegramente del presupuesto si lo aceptas.' : d.modo === 'parcial' ? ' y se descuenta un ' + d.pct + ' % del presupuesto si lo aceptas.' : '.') + ' Puedes cambiar la hora sin coste hasta ' + v.politica.reprogramarGratisHoras + ' h antes.';
 }
 function fillTpl(tpl, vars){ return tpl.replace(/\{\{(\w+)\}\}/g, (m,k) => vars[k] != null ? vars[k] : m); }
 function waLink(tel, msg){ return 'https://wa.me/34' + String(tel||'').replace(/\D/g,'') + '?text=' + encodeURIComponent(msg); }
@@ -2486,16 +2541,16 @@ function filaBandeja(caso, prio, cal){
     '<div class="caso-card-top" onclick="abrirCaso(\'' + caso.id + '\')" style="cursor:pointer">' +
       '<span class="caso-ref">' + caso.id + '</span>' + badgeEstado(caso.estado) +
       '<span class="caso-nombre">' + escH(cli.nombre) + '</span>' + prioChip(prio.nivel) +
-      '<span class="caso-importe" style="margin-left:auto">' + (v?.totales?.lo?fmtEur0(v.totales.lo)+'–'+fmtEur0(v.totales.hi):'—') + '</span>' +
+      (DB.cfg.pantalla.colBandeja.importe ? '<span class="caso-importe" style="margin-left:auto">' : '<span style="display:none">') + (v?.totales?.lo?fmtEur0(v.totales.lo)+'–'+fmtEur0(v.totales.hi):'—') + '</span>' +
     '</div>' +
     '<div class="caso-card-mid">' +
       '<span class="caso-tipo">' + resumen + ' · ' + escH(cli.zona||'') + '</span>' +
-      barra2(cal, prio) +
+      (DB.cfg.pantalla.colBandeja.barras ? barra2(cal, prio) : '') +
       '<button class="abtn abtn-ghost abtn-sm" onclick="porqueAbierto[\'' + caso.id + '\']=!porqueAbierto[\'' + caso.id + '\'];RENDERERS.presupuestos()">' + (abierto?'Ocultar':'Por qué') + '</button>' +
     '</div>' +
-    (cal.etiquetas.length?'<div style="margin-top:6px">' + etiqChips(cal.etiquetas.slice(0,5)) + '</div>':'') +
+    (cal.etiquetas.length && DB.cfg.pantalla.colBandeja.chips ?'<div style="margin-top:6px">' + etiqChips(cal.etiquetas.slice(0,5)) + '</div>':'') +
     (abierto?porqueHtml(caso,cal,prio):'') +
-    botonesTriaje(caso) +
+    (DB.cfg.pantalla.colBandeja.acciones ? botonesTriaje(caso) : '') +
   '</div>';
 }
 
@@ -2618,7 +2673,7 @@ function exitPresupuestoSinVisita(id){
   openModal('<div class="modal-title">Presupuesto sin visita · ' + escH(cli.nombre) + '</div>' +
     '<div class="section-card"><div class="section-card-title">Versión a enviar · ' + (v?.id||'V1') + '</div>' +
       '<div style="font-family:\'Cormorant Garamond\',serif;font-size:24px">' + fmtEur(v?.totales?.total||0) + '</div>' +
-      '<div style="font-size:12px;color:var(--amber);margin-top:6px">⚠ Incluye cláusula de ajuste: «Presupuesto orientativo sin visita técnica. El importe puede ajustarse tras comprobar medidas y estado real.»</div></div>' +
+      '<div style="font-size:12px;color:var(--amber);margin-top:6px">⚠ Incluye cláusula de ajuste: «' + escH(DB.cfg.textos.clausulaAjuste) + '»</div></div>' +
     '<div class="modal-section"><b style="font-size:12px;text-transform:uppercase;color:var(--muted)">Mensaje</b>' + msgBloque(msg, cli.tel) + '</div>' +
     '<div style="margin-top:16px;display:flex;gap:8px;justify-content:flex-end"><button class="abtn abtn-ghost" onclick="closeAllModals()">Cancelar</button>' +
     '<button class="abtn abtn-primary" onclick="confirmarPresupuestoSinVisita(\'' + c.id + '\')">Enviar presupuesto</button></div>');
@@ -2634,7 +2689,7 @@ function confirmarPresupuestoSinVisita(id){
 
 function exitDescartar(id){
   const c = DB.casos.find(x=>x.id===id); if(!c) return; const cli=clienteDe(c);
-  const motivos = ['Fuera de la zona de servicio','Importe demasiado bajo','Tipo de obra que no hacemos','Sin respuesta del cliente','Agenda completa','Otro'];
+  const motivos = DB.cfg.motivosDescarte;
   _descarte = { motivo: motivos[0] };
   const sel = '<select id="desc-motivo" onchange="_descarte.motivo=this.value">' + motivos.map(m=>'<option>' + m + '</option>').join('') + '</select>';
   const msg = fillTpl(PLANTILLAS_MSG.descarte, varsDe(c,{concepto:nombreTipoObra(c.solicitud.tipoObra).toLowerCase()}));
@@ -2805,14 +2860,14 @@ function fichaPresupuesto(c){
       '<button class="abtn abtn-ghost abtn-sm" onclick="c_recalcular()">Recalcular</button>' +
     '</div>';
     h += '<div class="totbar"><span>Subtotal <b>' + fmtEur(tot.subtotal) + '</b></span><span>Margen <b>' + fmtEur(tot.margen) + '</b></span><span>IVA <b>' + fmtEur(tot.iva) + '</b></span><span class="tot-final">' + fmtEur(tot.total) + '</span></div>';
-    h += '<div style="margin-top:10px;display:flex;gap:8px;justify-content:flex-end"><button class="abtn abtn-ghost abtn-sm" onclick="c_descartarBorrador()">Descartar borrador</button><button class="abtn abtn-primary abtn-sm" onclick="c_enviarVersion()">Enviar versión</button></div>';
+    h += '<div style="margin-top:10px;display:flex;gap:8px;justify-content:flex-end"><button class="abtn abtn-ghost abtn-sm" onclick="materialesClienteModal(\'' + c.id + '\')">Materiales del cliente</button><button class="abtn abtn-ghost abtn-sm" onclick="c_descartarBorrador()">Descartar borrador</button><button class="abtn abtn-primary abtn-sm" onclick="c_enviarVersion()">Enviar versión</button></div>';
     h += '</div>';
   } else {
     h += '<div class="section-card"><div class="section-card-title">Versión vigente · ' + (vig?.id||'—') + ' · IVA ' + (vig?.ivaPct||21) + '%</div>';
     h += tablaLineas(c, vig?.lineas||[], false);
     const tot = vig?.totales||{};
     h += '<div class="totbar"><span>Subtotal <b>' + fmtEur(tot.subtotal||0) + '</b></span><span>Margen <b>' + fmtEur(tot.margen||0) + '</b></span><span>IVA <b>' + fmtEur(tot.iva||0) + '</b></span><span class="tot-final">' + fmtEur(tot.total||0) + '</span></div>';
-    h += '<div style="margin-top:10px;display:flex;gap:8px;justify-content:flex-end"><button class="abtn abtn-ghost abtn-sm" onclick="c_editar()">Editar (crear borrador)</button>';
+    h += '<div style="margin-top:10px;display:flex;gap:8px;justify-content:flex-end"><button class="abtn abtn-ghost abtn-sm" onclick="materialesClienteModal(\'' + c.id + '\')">Materiales del cliente</button><button class="abtn abtn-ghost abtn-sm" onclick="c_editar()">Editar (crear borrador)</button>';
     if (c.estado==='propuesta_enviada') h += '<button class="abtn abtn-ghost abtn-sm" onclick="accionArchivo(\'' + c.id + '\',\'renovar\')">Renovar</button>';
     h += '</div></div>';
   }
@@ -2925,7 +2980,7 @@ function vistaCliente(id){
   if (c.estado==='esperando_info') accionHtml = '<div class="cv-action"><b>Necesitamos algo más</b><p style="font-size:13px;color:var(--muted);margin:6px 0">Sube las fotos o datos que te hemos pedido.</p><button class="cv-btn" onclick="accCliente(\'' + id + '\',\'responder\')">Enviar información y fotos</button></div>';
   else if (c.estado==='visita_propuesta') accionHtml = '<div class="cv-action"><b>Elige el día de la visita</b>' + (c.visita.franjasOfrecidas||[]).map((f,i)=>'<button class="cv-btn ' + (i>0?'ghost':'') + '" onclick="accCliente(\'' + id + '\',\'elegir_franja\',' + i + ')">' + fmtFecha(f.fecha) + ' · ' + f.franja + '</button>').join('') + '</div>';
   else if (c.estado==='propuesta_enviada') accionHtml = '<div class="cv-action"><b>Tu presupuesto: ' + fmtEur(v?.totales?.total||0) + '</b>' +
-      (v?.clausulaAjuste?'<p style="font-size:11px;color:var(--amber);margin:6px 0">Orientativo sin visita; puede ajustarse.</p>':'') +
+      (v?.clausulaAjuste?'<p style="font-size:11px;color:var(--amber);margin:6px 0">' + escH(DB.cfg.textos.clausulaAjuste) + '</p>':'') + '<p style="font-size:11px;color:var(--muted);margin:6px 0">' + escH(DB.cfg.textos.condiciones) + '</p>' +
       '<button class="cv-btn" onclick="accCliente(\'' + id + '\',\'aceptar\')">Aceptar presupuesto</button>' +
       '<button class="cv-btn ghost" onclick="accCliente(\'' + id + '\',\'pedir_cambios\')">Pedir cambios</button>' +
       '<button class="cv-btn ghost" onclick="accCliente(\'' + id + '\',\'rechazar\')">No me interesa</button></div>';
@@ -2989,31 +3044,6 @@ function accClienteCambio(id, cambioId){
   marcarDesacuerdo(c, cambioId);
   toast('Desacuerdo registrado · avisado el reformista'); renderPaginaActual(); vistaCliente(id);
 }
-
-// ═══════════════════════════════════════════════════════
-// SECCIÓN 12: CATÁLOGO
-// ═══════════════════════════════════════════════════════
-let catFiltroCat = 'todos';
-RENDERERS.catalogo = function(){
-  let lista = DB.catalogo.slice();
-  if (catFiltroCat === 'alertas') lista = lista.filter(p => p.alerta);
-  else if (catFiltroCat !== 'todos') lista = lista.filter(p => p.cat === catFiltroCat);
-  const cats = [...new Set(DB.catalogo.map(p => p.cat))];
-  const chip = (k,l) => '<button class="bandeja-filter" style="' + (catFiltroCat===k?'border-color:var(--accent);color:var(--accent);font-weight:600':'') + '" onclick="catFiltroCat=\'' + k + '\';RENDERERS.catalogo()">' + l + '</button>';
-  const rows = lista.map(p => {
-    const maxH = Math.max(...p.hist), spark = p.hist.map((v,i) => '<div class="spark-bar" style="display:inline-block;width:5px;margin-right:1px;vertical-align:bottom;background:' + (i===p.hist.length-1 && p.alerta ? 'var(--danger)':'var(--warm)') + ';height:' + Math.round(v/maxH*20) + 'px"></div>').join('');
-    return '<tr style="' + (p.alerta?'background:#fffaf4':'') + '"><td><b>' + escH(p.nombre) + '</b><br><span style="color:var(--muted);font-size:11px">' + escH(p.marca) + ' · ' + escH(p.proveedor) + '</span></td>' +
-      '<td><span class="badge b-mute">' + escH(p.cat) + '</span></td>' +
-      '<td><b>' + p.precio.toFixed(2) + ' €/' + p.unidad + '</b>' + (p.alerta?'<br><span style="font-size:11px;color:var(--danger)">↑ variación</span>':'') + '</td>' +
-      '<td>' + spark + '</td>' +
-      '<td><span class="badge ' + (p.stock?'b-ok':'b-err') + '">' + (p.stock?'Stock':'Agotado') + '</span></td></tr>';
-  }).join('');
-  document.getElementById('pg-catalogo').innerHTML =
-    '<div class="page-hdr"><div><div class="page-title">Catálogo</div><div class="page-sub">' + DB.catalogo.length + ' productos · precios de referencia</div></div></div>' +
-    '<div class="bandeja-tools">' + chip('todos','Todos') + cats.map(c => chip(c, c)).join('') + chip('alertas','⚠ Alertas') + '</div>' +
-    '<div class="table-wrap"><table><thead><tr><th>Producto</th><th>Categoría</th><th>Precio</th><th>Histórico</th><th>Stock</th></tr></thead><tbody>' + rows + '</tbody></table></div>' +
-    '<div style="font-size:12px;color:var(--muted)">La edición de precios, el impacto en presupuestos y la lista de compra llegan en la Fase G.</div>';
-};
 
 // ═══════════════════════════════════════════════════════
 // SECCIÓN 12B: AGENDA
@@ -3547,6 +3577,7 @@ function obraCabecera(c){
     '<div class="kv"><span class="k">+ Cambios provisionales</span>' + fmtEur(tv.provisional) + '</div>' +
     '<div class="kv"><span class="k">Total vigente</span><b style="font-size:16px">' + fmtEur(tv.total) + '</b> <span style="color:' + (tv.desviacionPct > 0 ? 'var(--amber)' : 'var(--muted)') + '">(' + (tv.desviacionPct >= 0 ? '+' : '') + tv.desviacionPct + ' % vs aceptada)</span></div>' +
     '<div class="kv"><span class="k">Cobrado / saldo</span>' + fmtEur(eco.cobrado) + ' · <b style="color:' + (eco.saldo > 0.005 ? 'var(--danger)' : 'var(--ok)') + '">' + fmtEur(eco.saldo) + '</b> <span class="badge ' + (eco.estado==='cobrado'?'b-ok':eco.estado==='parcial'?'b-warn':'b-err') + '">' + eco.estado + '</span></div>' +
+    (c.aceptacion ? '<div style="margin:8px 0"><button class="abtn abtn-ghost abtn-sm" onclick="listaCompraModal(\'' + c.id + '\')">Lista de compra</button> <button class="abtn abtn-ghost abtn-sm" onclick="materialesClienteModal(\'' + c.id + '\')">Materiales del cliente</button></div>' : '') +
     (c.estado === 'cerrada' && eco.saldo > 0.005 ? '<div class="mv-aviso" style="font-size:13px">Obra <b>cerrada</b> pero <b>no cobrada</b>: quedan ' + fmtEur(eco.saldo) + ' pendientes. Cerrada y cobrada son estados distintos.</div>' : '') + '</div>';
 }
 function obraIniciar(){ const c = _fc(); const f = document.getElementById('ob-inicio').value || hoy(); try { iniciarObra(c, DB.cfg, f); toast('Obra iniciada'); renderPaginaActual(); renderFicha(); } catch(e){ toast(e.message,'err'); } }
@@ -3750,7 +3781,7 @@ function docActa(c, a){
     '<tr><td>Conformidad</td><td>' + (a.conformidad ? (a.conformidad.tipo === 'expresa' ? 'Expresa del cliente' : 'Cerrada por plazo, sin conformidad expresa') + ' (' + fmtFecha(a.conformidad.fecha) + ')' : '—') + '</td></tr></table>' +
     '<h2>Importes</h2><table class="doc-t"><tr><td>Total final (IVA incl.)</td><td><b>' + fmtEur(a.totalFinal) + '</b></td></tr><tr><td>Cobrado</td><td>' + fmtEur(a.cobrado) + '</td></tr><tr><td>Saldo pendiente</td><td>' + fmtEur(a.saldo) + '</td></tr></table>' +
     '<h2>Documentación adjunta</h2><ul>' + a.documentacion.map(d => '<li>' + escH(d) + '</li>').join('') + '</ul>' +
-    '<h2>Garantía</h2><p>Inicio de la garantía: <b>' + fmtFecha(a.garantiaInicio) + '</b>.</p><p>' + escH(a.textoGarantia) + '</p>' +
+    '<h2>Garantía</h2><p>Inicio de la garantía: <b>' + fmtFecha(a.garantiaInicio) + '</b>.</p><p>' + escH(a.textoGarantia) + '</p><p style="font-size:12px">' + escH(DB.cfg.textoActa) + '</p>' +
     '<div class="doc-firmas"><div>Por el reformista</div><div>Por el cliente</div></div></div>';
 }
 
@@ -3819,7 +3850,7 @@ function cobroModal(casoId, pre){
     '<div class="inl-field"><label>Tipo</label><select id="cb-tipo" onchange="_cobro.tipo=this.value;cobroModal(_cobro.casoId,{tipo:this.value,concepto:document.getElementById(\'cb-conc\').value,importe:document.getElementById(\'cb-imp\').value})">' + Object.entries(TIPO_COBRO).map(([k,v]) => '<option value="' + k + '"' + (k===_cobro.tipo?' selected':'') + '>' + v + '</option>').join('') + '</select></div>' + aviso +
     '<div class="inl-field"><label>Concepto</label><input id="cb-conc" value="' + escH(_cobro.concepto) + '"></div>' +
     '<div class="inl-field"><label>Importe (IVA incl.)</label><input id="cb-imp" type="number" step="0.01" value="' + escH(String(_cobro.importe)) + '"></div>' +
-    '<div class="inl-field"><label>Medio</label><select id="cb-medio">' + Object.entries(MEDIO_LBL).map(([k,v]) => '<option value="' + k + '">' + v + '</option>').join('') + '</select></div>' +
+    '<div class="inl-field"><label>Medio</label><select id="cb-medio">' + Object.entries(MEDIO_LBL).filter(([k]) => DB.cfg.cobros.medios.includes(k)).map(([k,v]) => '<option value="' + k + '">' + v + '</option>').join('') + '</select></div>' +
     '<div class="inl-field"><label>Fecha</label><input id="cb-fecha" type="date" value="' + hoy() + '"></div><div class="inl-field"><label>Referencia</label><input id="cb-ref" placeholder="Nº de transferencia, recibo…"></div>' +
     (_cobro.tipo === 'devolucion' ? '<p style="font-size:12px;color:var(--muted)">Se registrará con importe negativo.</p>' : '') +
     '<div style="margin-top:14px;display:flex;gap:8px;justify-content:flex-end"><button class="abtn abtn-ghost" onclick="closeAllModals();_fichaId&&document.getElementById(\'main-modal\').classList.contains(\'modal-lg\')===false&&0">Cancelar</button><button class="abtn abtn-primary" onclick="cobroConfirmar()">Registrar</button></div>');
@@ -3865,7 +3896,7 @@ function docProforma(p){
     '<tr><td><b>Total vigente</b></td><td><b>' + fmtEur(p.total) + '</b> (base ' + fmtEur(p.base) + ' + IVA ' + p.ivaPct + ' % ' + fmtEur(p.iva) + ')</td></tr><tr><td>Cobrado</td><td>' + fmtEur(p.cobrado) + '</td></tr><tr><td><b>Saldo pendiente</b></td><td><b>' + fmtEur(p.saldo) + '</b></td></tr></table>' +
     '<h2>Cobros registrados</h2><table class="doc-t">' + (p.movimientos.map(m => '<tr><td>' + fmtFecha(m.fecha) + ' · ' + escH(m.concepto) + (m.aCuenta ? ' <i>(pago a cuenta)</i>' : '') + '</td><td>' + fmtEur(m.importe) + '</td></tr>').join('') || '<tr><td colspan="2">Sin cobros</td></tr>') + '</table>' +
     (hayVisita ? '<p style="font-size:11px;color:var(--muted);margin-top:8px">La visita técnica se trata como pago a cuenta: criterio contable pendiente de confirmar con el gestor.</p>' : '') +
-    '<div class="doc-leyenda">' + escH(p.leyenda) + '</div></div>';
+    '<p style="font-size:11px;margin-top:8px">Pago por transferencia a ' + escH(DB.cfg.cobros.titular) + ' · IBAN ' + escH(DB.cfg.cobros.iban) + '</p><div class="doc-leyenda">' + escH(p.leyenda) + '</div></div>';
 }
 
 // Exportar
@@ -4013,6 +4044,294 @@ function simularPedidoEntrante(){
 }
 
 // ═══════════════════════════════════════════════════════
+// SECCIÓN 12G: CATÁLOGO
+// ═══════════════════════════════════════════════════════
+function variacionPct(p){ const h = p.hist || []; if (h.length < 2 || !h[h.length-2]) return 0; return r((h[h.length-1] - h[h.length-2]) / h[h.length-2] * 100); }
+function alertaVariacion(p, cfg){ return Math.abs(variacionPct(p)) >= ((cfg.catalogo && cfg.catalogo.umbralAlerta) || 5); }
+function productoUsado(db, pid){
+  return (db.casos||[]).filter(esAbierto).some(c => (c.borrador?.lineas||[]).some(l => l.productoId === pid) || (c.versiones||[]).some(v => !['sustituida','caducada','rechazada','aceptada'].includes(v.estado) && (v.lineas||[]).some(l => l.productoId === pid)));
+}
+function recalcularEstimaciones(db, ivaAnterior){
+  let n = 0;
+  (db.casos||[]).filter(esAbierto).forEach(caso => {
+    (caso.versiones||[]).filter(v => !v.enviadaAt && !['sustituida','caducada','rechazada','aceptada'].includes(v.estado)).forEach(v => {
+      v.ivaPct = db.cfg.iva; const tot = calcularTotales(v.lineas, v.ivaPct, db.cfg.margen, db.cfg.minimo); const hq = calcularHorquilla(tot.total, calcularIncertidumbre(caso).nivel); tot.lo = hq.lo; tot.hi = hq.hi; v.totales = tot; n++;
+    });
+    if (caso.borrador && (ivaAnterior == null || caso.borrador.ivaPct === ivaAnterior)) caso.borrador.ivaPct = db.cfg.iva;
+  });
+  return n;
+}
+// variación determinista de la actualización simulada (-6 % … +6 %)
+function variacionSimulada(pid, semilla){ let h = 0; const t = pid + '|' + semilla; for (let i = 0; i < t.length; i++) h = (h * 31 + t.charCodeAt(i)) % 9973; return ((h % 13) - 6) / 100; }
+function actualizarPreciosSimulado(db, semilla){
+  const cambios = [];
+  db.catalogo.forEach(p => { const v = variacionSimulada(p.id, semilla); if (!v) return; const antes = p.precio; p.precio = r(antes * (1 + v)); p.hist = (p.hist||[]).concat([p.precio]).slice(-8); p.alerta = alertaVariacion(p, db.cfg); if (p.precioManual == null) cambios.push({ id:p.id, antes, despues:p.precio, pct:r(v*100) }); });
+  return cambios;
+}
+let catF = { cat:'', prov:'', variacion:'', stock:'', usados:false, fav:false, q:'', orden:'nombre' };
+const CAT_ICON = { suelo:'▦', pintura:'🎨', tabiqueria:'▤', sanitario:'🚽', mueble:'🗄', fontaneria:'🚰', caldera:'🔥', calefaccion:'♨' };
+RENDERERS.catalogo = function(){
+  const cfg = DB.cfg; let lista = DB.catalogo.slice();
+  if (catF.cat) lista = lista.filter(p => p.cat === catF.cat);
+  if (catF.prov) lista = lista.filter(p => p.proveedor === catF.prov);
+  if (catF.variacion === 'con') lista = lista.filter(p => alertaVariacion(p, cfg));
+  if (catF.stock) lista = lista.filter(p => catF.stock === 'si' ? p.stock : !p.stock);
+  if (catF.usados) lista = lista.filter(p => productoUsado(DB, p.id));
+  if (catF.fav) lista = lista.filter(p => p.favorito);
+  if (catF.q) lista = lista.filter(p => (p.nombre + ' ' + p.marca).toLowerCase().includes(catF.q.toLowerCase()));
+  const ord = { nombre:(a,b) => a.nombre.localeCompare(b.nombre), precio:(a,b) => precioEfectivo(b) - precioEfectivo(a), variacion:(a,b) => Math.abs(variacionPct(b)) - Math.abs(variacionPct(a)) };
+  lista.sort(ord[catF.orden] || ord.nombre);
+  const cats = [...new Set(DB.catalogo.map(p => p.cat))], provs = [...new Set(DB.catalogo.map(p => p.proveedor))];
+  const sel = (k, lbl, opts) => '<select onchange="catF.' + k + '=this.value;RENDERERS.catalogo()"><option value="">' + lbl + '</option>' + opts.map(o => '<option value="' + o[0] + '"' + (catF[k]===o[0]?' selected':'') + '>' + o[1] + '</option>').join('') + '</select>';
+  const nAlertas = DB.catalogo.filter(p => alertaVariacion(p, cfg)).length;
+  const rows = lista.map(p => {
+    const vp = variacionPct(p), al = alertaVariacion(p, cfg), maxH = Math.max(...p.hist), efec = precioEfectivo(p);
+    const spark = p.hist.map((v,i) => '<span style="display:inline-block;width:5px;margin-right:1px;vertical-align:bottom;background:' + (i===p.hist.length-1 && al ? 'var(--danger)' : 'var(--warm)') + ';height:' + Math.max(3, Math.round(v/maxH*22)) + 'px"></span>').join('');
+    const usos = DB.casos.filter(esAbierto).filter(c => (c.borrador?.lineas||[]).some(l => l.productoId === p.id) || (c.versiones||[]).some(v => !['sustituida','caducada','rechazada','aceptada'].includes(v.estado) && (v.lineas||[]).some(l => l.productoId === p.id))).length;
+    return '<tr style="' + (al ? 'background:#fffaf4' : '') + '"><td><div style="display:flex;gap:10px;align-items:center"><div class="cat-thumb">' + (CAT_ICON[p.cat]||'▣') + '</div><div><b>' + escH(p.nombre) + '</b> <span style="cursor:pointer;color:' + (p.favorito?'#e6a100':'var(--warm)') + '" onclick="catFav(\'' + p.id + '\')">' + (p.favorito?'★':'☆') + '</span><div style="font-size:11px;color:var(--muted)">' + escH(p.marca) + ' · ' + escH(p.proveedor) + (usos ? ' · <b style="color:var(--accent)">en ' + usos + ' presupuesto(s) abierto(s)</b>' : '') + '</div></div></div></td>' +
+      '<td><span class="badge b-mute">' + p.cat + '</span></td>' +
+      '<td><div style="font-size:12px;color:var(--muted)">Scrapeado ' + p.precio.toFixed(2) + ' €/' + p.unidad + '</div>' + (p.precioManual != null ? '<div><span class="badge b-acc">manual</span> <b>' + p.precioManual.toFixed(2) + ' €</b> <span style="cursor:pointer;color:var(--danger)" title="Quitar precio manual" onclick="catPrecio(\'' + p.id + '\',\'\')">✕</span></div>' : '<b>' + p.precio.toFixed(2) + ' €/' + p.unidad + '</b>') + '</td>' +
+      '<td style="white-space:nowrap"><input class="price-inp" type="number" step="0.01" min="0" placeholder="' + efec.toFixed(2) + '" id="pm-' + p.id + '" style="width:80px;padding:4px 6px;border:1px solid var(--border);border-radius:5px"> <button class="abtn abtn-ghost abtn-sm" onclick="catPrecio(\'' + p.id + '\',document.getElementById(\'pm-' + p.id + '\').value)">Guardar</button></td>' +
+      '<td>' + spark + '<div style="font-size:11px;color:' + (al ? 'var(--danger)' : 'var(--muted)') + '">' + (vp > 0 ? '+' : '') + vp + ' %' + (al ? ' ⚠' : '') + '</div></td>' +
+      '<td><span class="badge ' + (p.stock?'b-ok':'b-err') + '">' + (p.stock?'Stock':'Agotado') + '</span></td>' +
+      '<td><span class="vis-track ' + (p.visible?'on':'') + '" onclick="catVisible(\'' + p.id + '\')" style="cursor:pointer"><span class="vis-knob"></span></span></td></tr>'; }).join('');
+  const obras = DB.casos.filter(c => c.aceptacion);
+  document.getElementById('pg-catalogo').innerHTML =
+    '<div class="page-hdr"><div><div class="page-title">Catálogo</div><div class="page-sub">' + DB.catalogo.length + ' productos · ' + nAlertas + ' con variación ≥ ' + cfg.catalogo.umbralAlerta + ' %</div></div><button class="abtn abtn-primary" onclick="catActualizar()">⟳ Actualizar precios</button></div>' +
+    '<div class="ctrl-row">' + sel('cat','Toda categoría',cats.map(c => [c,c])) + sel('prov','Todo proveedor',provs.map(c => [c,c])) + sel('variacion','Variación',[['con','Con variación reciente']]) + sel('stock','Stock',[['si','En stock'],['no','Agotado']]) +
+      '<label class="ctrl-check"><input type="checkbox" ' + (catF.usados?'checked':'') + ' onchange="catF.usados=this.checked;RENDERERS.catalogo()"> Usados en presupuestos abiertos</label><label class="ctrl-check"><input type="checkbox" ' + (catF.fav?'checked':'') + ' onchange="catF.fav=this.checked;RENDERERS.catalogo()"> ★ Favoritos</label>' +
+      '<input type="text" placeholder="Buscar…" value="' + escH(catF.q) + '" oninput="catF.q=this.value;clearTimeout(window._cat);window._cat=setTimeout(RENDERERS.catalogo,250)"><span class="ctrl-lbl">Orden</span>' + sel('orden','',[['nombre','Nombre'],['precio','Precio'],['variacion','Variación']]).replace('<option value=""></option>','') + '</div>' +
+    '<div class="section-card" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap"><b style="font-size:13px">Lista de compra</b><select id="lc-caso" class="disp-inp">' + obras.map(c => '<option value="' + c.id + '">' + c.id + ' · ' + escH(clienteDe(c).nombre) + '</option>').join('') + '</select><button class="abtn abtn-ghost abtn-sm" onclick="listaCompraModal(document.getElementById(\'lc-caso\').value)">Generar lista de compra</button><span style="font-size:12px;color:var(--muted)">Agrupada por proveedor, con merma y redondeo a la unidad de venta.</span></div>' +
+    (lista.length ? '<div class="table-wrap"><table><thead><tr><th>Producto</th><th>Categoría</th><th>Precio</th><th>Precio manual</th><th>Histórico</th><th>Stock</th><th>Visible</th></tr></thead><tbody>' + rows + '</tbody></table></div>' : '<div class="section-card" style="text-align:center;color:var(--muted)">Ningún producto coincide con los filtros.</div>');
+};
+function catFav(id){ const p = DB.catalogo.find(x => x.id === id); p.favorito = !p.favorito; RENDERERS.catalogo(); }
+function catVisible(id){ const p = DB.catalogo.find(x => x.id === id); p.visible = !p.visible; RENDERERS.catalogo(); }
+let _catImp = null;
+function catPrecio(id, val){
+  const p = DB.catalogo.find(x => x.id === id); const vacio = String(val).trim() === ''; const nuevo = vacio ? p.precio : Number(val);
+  if (!vacio && !(nuevo > 0)){ toast('Introduce un precio válido','err'); return; }
+  if (vacio && p.precioManual == null){ toast('Introduce un precio manual','err'); return; }
+  _catImp = { id, nuevo, quitar:vacio, imp:impactoCambioPrecio(DB, id, nuevo) }; impactoModal();
+}
+function impactoModal(){
+  const { id, nuevo, imp, quitar } = _catImp; const p = DB.catalogo.find(x => x.id === id); const act = precioEfectivo(p);
+  openModal('<div class="modal-title">' + (quitar ? 'Quitar precio manual' : 'Nuevo precio manual') + ' · ' + escH(p.nombre) + '</div>' +
+    '<p style="font-size:14px;margin-bottom:8px">' + act.toFixed(2) + ' € → <b>' + nuevo.toFixed(2) + ' €/' + p.unidad + '</b></p>' +
+    (imp.nCasos ? '<div class="mv-aviso" style="font-size:14px;font-weight:500">Afecta a <b>' + imp.nCasos + '</b> presupuesto(s) abierto(s) · <b>' + (imp.deltaAgregado >= 0 ? '+' : '') + fmtEur(imp.deltaAgregado) + '</b> sin IVA</div>' : '<div class="porque">No afecta a ningún presupuesto abierto.</div>') +
+    '<table class="doc-t" style="margin-top:8px"><tr><td><b>Borradores y estimaciones</b> (se pueden recalcular)</td><td>' + imp.borradores.n + ' caso(s) · ' + (imp.borradores.delta >= 0 ? '+' : '') + fmtEur(imp.borradores.delta) + '<br><span style="font-size:11px;color:var(--muted)">' + imp.borradores.recalculables + ' línea(s) recalculable(s) · ' + imp.borradores.bloqueadas + ' bloqueada(s) que no cambian</span></td></tr>' +
+    '<tr><td><b>Versiones ya enviadas</b> (requieren nueva versión)</td><td>' + imp.enviadas.n + ' caso(s) · ' + (imp.enviadas.delta >= 0 ? '+' : '') + fmtEur(imp.enviadas.delta) + (imp.enviadas.casos.length ? '<br>' + imp.enviadas.casos.map(cid => '<a href="#" onclick="event.preventDefault();abrirCaso(\'' + cid + '\');_fichaTab=\'presupuesto\';renderFicha()">' + cid + '</a>').join(', ') : '') + '</td></tr></table>' +
+    '<div style="margin-top:14px;display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap"><button class="abtn abtn-ghost" onclick="closeAllModals()">Cancelar</button><button class="abtn abtn-ghost" onclick="catAplicar(false)">Aplicar solo el precio</button>' + (imp.borradores.recalculables ? '<button class="abtn abtn-primary" onclick="catAplicar(true)">Aplicar y recalcular borradores</button>' : '') + '</div>');
+}
+function catAplicar(recalcular){
+  const { id, nuevo, quitar } = _catImp; const p = DB.catalogo.find(x => x.id === id);
+  if (quitar) p.precioManual = null; else { p.precioManual = nuevo; p.hist = (p.hist||[]).concat([nuevo]).slice(-8); }
+  let msg = 'Precio actualizado'; if (recalcular){ const res = aplicarPrecioABorradores(DB, id, nuevo); msg += ' · ' + res.lineas + ' línea(s) recalculada(s) en ' + res.casos.length + ' borrador(es)'; }
+  closeAllModals(); toast(msg); RENDERERS.catalogo();
+}
+function catActualizar(){
+  const cambios = actualizarPreciosSimulado(DB, hoy() + '|' + DB.catalogo.length);
+  const filas = cambios.map(c => { const p = DB.catalogo.find(x => x.id === c.id); const imp = impactoCambioPrecio(DB, c.id, precioEfectivo(p)); return { c, p, imp }; });
+  const conImpacto = filas.filter(f => f.imp.nCasos);
+  openModal('<div class="modal-title">Precios actualizados (simulación)</div><p style="font-size:13px;color:var(--muted);margin-bottom:8px">' + cambios.length + ' producto(s) con precio nuevo. Los precios manuales siguen teniendo prioridad.</p>' +
+    '<div style="max-height:260px;overflow-y:auto"><table class="lineas-tbl"><thead><tr><th>Producto</th><th>Antes</th><th>Ahora</th><th>Var.</th><th>Impacto</th></tr></thead><tbody>' + filas.map(f => '<tr><td>' + escH(f.p.nombre) + '</td><td>' + f.c.antes.toFixed(2) + '</td><td><b>' + f.c.despues.toFixed(2) + '</b></td><td style="color:' + (f.c.pct > 0 ? 'var(--danger)' : 'var(--ok)') + '">' + (f.c.pct > 0 ? '+' : '') + f.c.pct + ' %</td><td style="font-size:11px">' + (f.imp.nCasos ? f.imp.nCasos + ' presupuesto(s)' : '—') + '</td></tr>').join('') + '</tbody></table></div>' +
+    (conImpacto.length ? '<div class="mv-aviso" style="font-size:13px;font-weight:400">Afecta a presupuestos abiertos: <b>' + new Set(conImpacto.flatMap(f => f.imp.afectados.map(a => a.casoId))).size + '</b> caso(s).</div>' : '') +
+    '<div style="margin-top:12px;display:flex;gap:8px;justify-content:flex-end"><button class="abtn abtn-ghost" onclick="closeAllModals();RENDERERS.catalogo()">Cerrar</button>' + (conImpacto.length ? '<button class="abtn abtn-primary" onclick="catRecalcularTodos()">Recalcular todos los borradores</button>' : '') + '</div>');
+  window._catFilas = filas;
+}
+function catRecalcularTodos(){ let n = 0; (window._catFilas||[]).forEach(f => { n += aplicarPrecioABorradores(DB, f.p.id, precioEfectivo(f.p)).lineas; }); closeAllModals(); toast(n + ' línea(s) recalculada(s) (líneas bloqueadas intactas)'); RENDERERS.catalogo(); }
+
+// Lista de compra
+function listaCompraTexto(c, lc){
+  return 'Lista de compra · ' + c.id + ' · ' + clienteDe(c).nombre + '\n' + lc.grupos.map(g => '\n' + g.proveedor + '\n' + g.items.map(i => '- ' + i.nombre + ': ' + i.packs + ' × ' + (i.pack !== 1 ? i.pack + ' ' + i.unidad : '1 ud') + ' = ' + i.cantidadCompra + ' ' + i.unidad).join('\n')).join('\n');
+}
+let _lcTxt = '';
+function listaCompraModal(casoId){
+  const c = DB.casos.find(x => x.id === casoId); if (!c) return; const lc = listaCompra(c, DB.catalogo, DB.cfg); _lcTxt = listaCompraTexto(c, lc);
+  const total = r(lc.grupos.reduce((s,g) => s + g.total, 0));
+  openModal('<div class="modal-title">Lista de compra · ' + escH(clienteDe(c).nombre) + '</div><p style="font-size:12px;color:var(--muted);margin-bottom:8px">Cantidad × (1 + merma), redondeada hacia arriba a la unidad de venta. Agrupada por proveedor.</p>' +
+    (lc.grupos.length ? lc.grupos.map(g => '<div class="section-card"><div class="section-card-title">' + escH(g.proveedor) + ' · ' + fmtEur(g.total) + '</div><table class="lineas-tbl"><thead><tr><th>Material</th><th>Necesario</th><th>Merma</th><th>Unidades de venta</th><th>A comprar</th><th style="text-align:right">Importe</th></tr></thead><tbody>' + g.items.map(i => '<tr><td>' + escH(i.nombre) + '</td><td>' + i.necesaria + ' ' + i.unidad + '</td><td>' + Math.round(i.merma*100) + ' %</td><td>' + i.packs + ' × ' + i.pack + '</td><td><b>' + i.cantidadCompra + ' ' + i.unidad + '</b></td><td style="text-align:right">' + fmtEur(i.subtotal) + '</td></tr>').join('') + '</tbody></table></div>').join('') + '<div style="text-align:right;font-size:13px">Total estimado de compra: <b>' + fmtEur(total) + '</b></div>' : '<div class="section-card" style="color:var(--muted)">Esta obra no tiene materiales enlazados al catálogo.</div>') +
+    (lc.sinVincular ? '<div style="font-size:12px;color:var(--amber);margin-top:6px">⚠ ' + lc.sinVincular + ' línea(s) de material sin producto del catálogo no aparecen en la lista.</div>' : '') +
+    '<div class="msg-actions"><button class="abtn abtn-ghost abtn-sm" onclick="copiarTexto(_lcTxt)">Copiar</button><a class="abtn abtn-primary abtn-sm" target="_blank" rel="noopener" href="https://wa.me/?text=' + encodeURIComponent(_lcTxt) + '">Abrir WhatsApp</a><button class="abtn abtn-ghost abtn-sm" onclick="closeAllModals()">Cerrar</button></div>', true);
+}
+
+// Materiales aportados por el cliente
+function materialesClienteModal(casoId){
+  const c = DB.casos.find(x => x.id === casoId); const esp = c.solicitud.espacios||[]; const post = !!c.aceptacion;
+  openModal('<div class="modal-title">Materiales aportados por el cliente</div><p style="font-size:13px;color:var(--muted);margin-bottom:8px">' + (post ? 'La propuesta ya está aceptada: se registrará un <b>cambio</b> (importe negativo, con margen) y quedará solo la mano de obra.' : 'Las líneas de material de los espacios elegidos se anulan en el borrador (queda mano de obra).') + '</p>' +
+    esp.map(e => '<label class="check-q"><input type="checkbox" class="mc-esp" value="' + e.id + '" checked> ' + escH(e.nombre||e.tipo) + ' · ' + e.m2 + ' m²</label>').join('') +
+    '<div style="margin-top:14px;display:flex;gap:8px;justify-content:flex-end"><button class="abtn abtn-ghost" onclick="renderFicha()">Cancelar</button><button class="abtn abtn-primary" onclick="materialesClienteOk(\'' + casoId + '\')">Aplicar</button></div>');
+}
+function materialesClienteOk(casoId){
+  const c = DB.casos.find(x => x.id === casoId); const ids = [...document.querySelectorAll('.mc-esp:checked')].map(x => x.value); if (!ids.length){ toast('Elige al menos un espacio','err'); return; }
+  if (c.aceptacion){
+    const base = (c.versiones||[]).find(v => v.id === c.aceptacion.versionId); const copia = (base?.lineas||[]).map(l => Object.assign({}, l)); const am = anularMaterialesCliente(copia, ids, DB.cfg.margen);
+    if (!am.ahorro){ toast('No hay materiales que anular en esos espacios','err'); return; }
+    const nombres = (c.solicitud.espacios||[]).filter(e => ids.includes(e.id)).map(e => e.nombre||e.tipo).join(', ');
+    const ch = registrarCambio(c, { tipo:'material_cliente', concepto:'Materiales aportados por el cliente: ' + nombres, importe:-am.ahorro, aprobacion:'presencial' }); c.vivienda.materialesComprados = true;
+    toast('Cambio ' + ch.id + ' registrado: ' + fmtEur(ch.importe) + ' sin IVA'); renderPaginaActual(); renderFicha(); return;
+  }
+  const b = asegurarBorrador(c); const am = anularMaterialesCliente(b.lineas, ids, DB.cfg.margen); c.vivienda.materialesComprados = true;
+  c.eventos.push({ fecha:hoy(), tipo:'version', texto:'Materiales aportados por el cliente: se anulan ' + fmtEur(am.ahorroSinMargen) + ' de material en el borrador', autor:'reformista' });
+  toast('Materiales anulados en el borrador (−' + fmtEur(am.ahorro) + ' con margen)'); renderFicha();
+}
+
+// ═══════════════════════════════════════════════════════
+// SECCIÓN 12H: CONFIGURACIÓN
+// ═══════════════════════════════════════════════════════
+const CFG_GRUPOS = [['negocio','Negocio',1],['presupuesto','Presupuesto',1],['visita','Visita',1],['agenda','Agenda',1],['triaje','Triaje',1],['checklist','Checklist',1],['obra','Obra',1],['cobros','Cobros',1],['comunicaciones','Comunicaciones',1],['catalogo','Catálogo',1],['pantalla','Pantalla',1],['privacidad','Privacidad',0],['equipo','Equipo',0]];
+let cfgGrupo = 'negocio';
+function cfgGet(path){ return path.split('.').reduce((o,k) => o == null ? o : o[k], DB.cfg); }
+function cfgPut(path, val){ const ps = path.split('.'); let o = DB.cfg; for (let i = 0; i < ps.length - 1; i++) o = o[ps[i]] = o[ps[i]] || {}; o[ps[ps.length-1]] = val; }
+function aplicarTema(){
+  const e = DB.cfg.empresa; const c = e.colorAccent || '#c96f28'; document.documentElement.style.setProperty('--accent', c);
+  const lt = document.querySelector('.sidebar-logo-t'); if (lt) lt.textContent = e.logoTexto || (e.nombre||'').split(' ')[0];
+  document.title = 'Panel del reformista v2 — ' + (e.nombre||'');
+}
+function aplicarPantalla(){ const p = DB.cfg.pantalla; FMT.fecha = p.fecha; FMT.espacioMoneda = !!p.espacioMoneda; document.body.dataset.densidad = p.densidad; bandejaSort = p.ordenBandeja || bandejaSort; }
+function restablecerGlobales(){
+  Object.keys(PLANTILLAS_MSG).forEach(k => delete PLANTILLAS_MSG[k]); Object.assign(PLANTILLAS_MSG, JSON.parse(JSON.stringify(PLANTILLAS_DEF)));
+  CHECKLIST_PLANTILLAS.length = 0; JSON.parse(JSON.stringify(CHECKLIST_DEF)).forEach(t => CHECKLIST_PLANTILLAS.push(t));
+  aplicarTema(); aplicarPantalla();
+}
+// Escribe un valor de configuración con su tipo y aplica los efectos en vivo
+function cfgSet(path, raw, tipo){
+  let val = raw;
+  if (tipo === 'num') val = Number(raw); else if (tipo === 'bool') val = !!raw; else if (tipo === 'csv') val = String(raw).split(',').map(x => x.trim()).filter(Boolean); else if (tipo === 'lineas') val = String(raw).split('\n').map(x => x.trim()).filter(Boolean);
+  if (tipo === 'num' && (isNaN(val) || val < 0)){ toast('Introduce un número válido','err'); RENDERERS.configuracion(); return; }
+  const ivaAnt = DB.cfg.iva; cfgPut(path, val);
+  if (['margen','iva','minimo'].includes(path)){ const n = recalcularEstimaciones(DB, path === 'iva' ? ivaAnt : null); toast('Guardado · ' + n + ' estimación(es) recalculada(s)'); }
+  else toast('Guardado · efecto inmediato');
+  if (path.startsWith('empresa.')) aplicarTema(); if (path.startsWith('pantalla.')) aplicarPantalla();
+  RENDERERS.configuracion();
+}
+function cfgField(path, label, tipo, extra){
+  extra = extra || {}; const v = cfgGet(path); const live = extra.live !== false ? '<span class="cfg-live" title="Cambia el comportamiento sin recargar">● en vivo</span>' : '';
+  let ctl;
+  if (tipo === 'num') ctl = '<input type="number" step="' + (extra.step||'any') + '" min="0" value="' + (v==null?'':v) + '" onchange="cfgSet(\'' + path + '\',this.value,\'num\')"' + (extra.dis ? ' disabled' : '') + '>' + (extra.suf ? '<span class="cfg-suf">' + extra.suf + '</span>' : '');
+  else if (tipo === 'bool') ctl = '<input type="checkbox" ' + (v?'checked':'') + ' onchange="cfgSet(\'' + path + '\',this.checked,\'bool\')">';
+  else if (tipo === 'csv') ctl = '<input type="text" value="' + escH((v||[]).join(', ')) + '" onchange="cfgSet(\'' + path + '\',this.value,\'csv\')">';
+  else if (tipo === 'area') ctl = '<textarea rows="' + (extra.rows||3) + '" onchange="cfgSet(\'' + path + '\',this.value,\'txt\')">' + escH(v||'') + '</textarea>';
+  else if (tipo === 'lineas') ctl = '<textarea rows="' + (extra.rows||4) + '" onchange="cfgSet(\'' + path + '\',this.value,\'lineas\')">' + escH((v||[]).join('\n')) + '</textarea>';
+  else if (tipo === 'sel') ctl = '<select onchange="cfgSet(\'' + path + '\',this.value,\'txt\')">' + extra.opts.map(o => '<option value="' + o[0] + '"' + (String(v)===String(o[0])?' selected':'') + '>' + o[1] + '</option>').join('') + '</select>';
+  else if (tipo === 'color') ctl = '<input type="color" value="' + (v||'#c96f28') + '" onchange="cfgSet(\'' + path + '\',this.value,\'txt\')">';
+  else ctl = '<input type="text" value="' + escH(v==null?'':v) + '" onchange="cfgSet(\'' + path + '\',this.value,\'txt\')">';
+  return '<div class="cfg-row"><label>' + label + (extra.ayuda ? '<small>' + extra.ayuda + '</small>' : '') + '</label><div class="cfg-ctl">' + ctl + '</div>' + live + '</div>';
+}
+RENDERERS.configuracion = function(){
+  const tabs = CFG_GRUPOS.map(g => '<button class="tab ' + (cfgGrupo===g[0]?'active':'') + '" onclick="cfgGrupo=\'' + g[0] + '\';RENDERERS.configuracion()">' + g[1] + (g[0]==='equipo'?'<span class="tab-n">pronto</span>':'') + '</button>').join('');
+  const fn = { negocio:cfgNegocio, presupuesto:cfgPresupuesto, visita:cfgVisita, agenda:cfgAgenda, triaje:cfgTriaje, checklist:cfgChecklist, obra:cfgObra, cobros:cfgCobros, comunicaciones:cfgComunicaciones, catalogo:cfgCatalogo, pantalla:cfgPantalla, privacidad:cfgPrivacidad, equipo:cfgEquipo }[cfgGrupo];
+  const solo = CFG_GRUPOS.find(g => g[0] === cfgGrupo)[2] === 0;
+  document.getElementById('pg-configuracion').innerHTML =
+    '<div class="page-hdr"><div><div class="page-title">Configuración</div><div class="page-sub">Los campos marcados <span class="cfg-live">● en vivo</span> cambian el comportamiento sin recargar</div></div><button class="abtn abtn-ghost" onclick="cfgRestaurarGrupo()">Restaurar valores de este grupo</button></div>' +
+    '<div class="tabs">' + tabs + '</div><div class="section-card">' + (solo ? '<div class="mv-aviso" style="font-size:12px;font-weight:400;margin-top:0">Este grupo es solo un formulario en el prototipo (no cambia el comportamiento).</div>' : '') + fn() + '</div>';
+};
+function cfgRestaurarGrupo(){
+  const d = JSON.parse(JSON.stringify(CFG_DEFAULT)); const g = cfgGrupo;
+  const mapa = { negocio:['empresa','zonaTramos'], presupuesto:['margen','iva','minimo','validezDias','importeMinimoUtil','tiposQueHace','tiposBajoInteres','tiposQueNoHace','textos'], visita:['visita'], agenda:[], triaje:['pesosCalidad','umbralesPrioridad','plazoRespuestaHoras','sinVisita','motivosDescarte'], obra:['hitosTipo','adendaModo','adendaUmbral','adendaUmbralEur','adendaTopeIndividual','adendaPorHito','rematesPlazoDias','textoGarantia','textoActa'], cobros:['planCobros','cobros'], comunicaciones:['relojes','diasPausaAuto'], catalogo:['catalogo'], pantalla:['pantalla'], privacidad:['privacidad'] };
+  if (g === 'checklist'){ restablecerGlobales(); } else if (g === 'comunicaciones'){ restablecerGlobales(); (mapa[g]||[]).forEach(k => DB.cfg[k] = d[k]); } else (mapa[g]||[]).forEach(k => DB.cfg[k] = d[k]);
+  if (g === 'agenda'){ DB.cfg.agenda = d.agenda; }
+  aplicarTema(); aplicarPantalla(); recalcularEstimaciones(DB, null); toast('Grupo restaurado'); RENDERERS.configuracion();
+}
+function cfgNegocio(){
+  const t = DB.cfg.zonaTramos;
+  return '<h3>Datos de la empresa</h3>' + cfgField('empresa.nombre','Nombre comercial','txt') + cfgField('empresa.cif','CIF','txt',{live:false}) + cfgField('empresa.email','Email','txt',{live:false}) + cfgField('empresa.tel','Teléfono','txt',{live:false}) +
+    cfgField('empresa.logoTexto','Logo (texto de la barra lateral)','txt') + cfgField('empresa.colorAccent','Color de acento','color') +
+    '<h3>Zona de trabajo (tramos por código postal)</h3><div style="font-size:12px;color:var(--muted);margin-bottom:6px">Prefijos de CP separados por comas. Todo lo que no encaje se considera «fuera». La zona se deriva siempre del CP.</div>' +
+    cfgFieldTramo('dentro','Dentro de tu zona') + cfgFieldTramo('limite','Zona límite');
+}
+function cfgFieldTramo(k, label){ return '<div class="cfg-row"><label>' + label + '</label><div class="cfg-ctl"><input type="text" value="' + escH((DB.cfg.zonaTramos[k]||[]).join(', ')) + '" onchange="cfgSet(\'zonaTramos.' + k + '\',this.value,\'csv\')"></div><span class="cfg-live">● en vivo</span></div>'; }
+function cfgPresupuesto(){
+  return '<h3>Cálculo</h3>' + cfgField('margen','Margen sobre el subtotal','num',{suf:'%',ayuda:'Recalcula estimaciones y borradores'}) + cfgField('iva','IVA por defecto','num',{suf:'%',ayuda:'Confirmar el criterio con el gestor'}) + cfgField('minimo','Importe mínimo de presupuesto','num',{suf:'€'}) + cfgField('validezDias','Validez de la propuesta','num',{suf:'días'}) + cfgField('importeMinimoUtil','Importe mínimo útil','num',{suf:'€',ayuda:'Por debajo, se sugiere descartar'}) +
+    '<h3>Tipos de obra</h3>' + cfgField('tiposQueHace','Que haces','csv') + cfgField('tiposBajoInteres','De bajo interés','csv') + cfgField('tiposQueNoHace','Que no haces','csv') +
+    '<h3>Textos</h3>' + cfgField('textos.condiciones','Condiciones del presupuesto','area') + cfgField('textos.clausulaAjuste','Cláusula de ajuste (sin visita)','area');
+}
+function cfgVisita(){
+  const v = DB.cfg.visita;
+  return '<h3>Cobro de la visita</h3>' + cfgField('visita.cobra','¿Cobras la visita?','bool') + cfgField('visita.importePorZona.dentro','Importe · dentro de zona','num',{suf:'€'}) + cfgField('visita.importePorZona.limite','Importe · zona límite','num',{suf:'€'}) + cfgField('visita.importePorZona.fuera','Importe · fuera de zona','num',{suf:'€'}) +
+    cfgField('visita.descuento','Descuento si el cliente acepta','sel',{opts:[['no','No se descuenta'],['total','Se descuenta por completo'],['parcial','Se descuenta en parte']]}) + (v.descuento === 'parcial' ? cfgField('visita.descuentoPct','Porcentaje descontable','num',{suf:'%'}) : '') +
+    cfgField('visita.cobroCuando','Cuándo se cobra','sel',{opts:[['en_visita','En la visita'],['al_reservar','Al reservar la franja'],['al_aceptar','Al aceptar el presupuesto']],live:false}) +
+    '<h3>Cancelación y reprogramación</h3>' + cfgField('visita.politica.reprogramarGratisHoras','Reprogramar gratis hasta','num',{suf:'h antes'}) + cfgField('visita.politica.tardia','Si es más tarde','sel',{opts:[['retiene','Retener el cobro y cobrar la nueva visita'],['sin_cargo','Sin cargo adicional']]}) +
+    '<div class="porque" style="margin-top:12px"><b>Vista previa del mensaje al proponer visita</b><br>' + escH(textoPoliticaVisita(DB.casos[0])) + '</div>';
+}
+function cfgAgenda(){ const v = DB.cfg.visita; return '<h3>Visitas</h3>' + cfgField('visita.duracionMin','Duración de la visita','num',{suf:'min'}) + cfgField('visita.trasladoMin','Margen de traslado','num',{suf:'min'}) + '<div style="margin-top:10px"><button class="abtn abtn-primary" onclick="agendaTab=\'disp\';navegarA(\'agenda\',document.getElementById(\'nb-agenda\'))">Editar disponibilidad semanal y bloqueos →</button></div><p style="font-size:12px;color:var(--muted);margin-top:8px">La disponibilidad (franjas por día y bloqueos) es la fuente de las franjas ofrecidas al cliente.</p>'; }
+function cfgTriaje(){
+  const pesos = DB.cfg.pesosCalidad; const nombres = ['Importe estimado','Completitud del pedido','Urgencia del cliente','Zona geográfica','Propietario y comunidad','Encaje de presupuesto','Tipo de obra']; const suma = pesos.reduce((s,x) => s + x, 0);
+  return '<h3>Pesos de calidad (máximo de cada factor)</h3>' + nombres.map((n,i) => '<div class="cfg-row"><label>' + n + '</label><div class="cfg-ctl"><input type="number" min="0" value="' + pesos[i] + '" onchange="cfgPeso(' + i + ',this.value)"></div><span class="cfg-live">● en vivo</span></div>').join('') + '<div style="font-size:12px;margin:6px 0;color:' + (suma === 100 ? 'var(--ok)' : 'var(--amber)') + '">Suma: ' + suma + (suma === 100 ? ' ✓' : ' (recomendado 100)') + '</div>' +
+    '<h3>Prioridad</h3>' + cfgField('umbralesPrioridad.hoy','«Atender hoy» desde','num',{suf:'puntos'}) + cfgField('umbralesPrioridad.pronto','«Pronto» desde','num',{suf:'puntos'}) + cfgField('plazoRespuestaHoras','Plazo de respuesta','num',{suf:'h'}) +
+    '<h3>Presupuesto sin visita</h3>' + cfgField('sinVisita.tipos','Tipos permitidos','csv') + cfgField('sinVisita.hiMax','Importe máximo sin visita','num',{suf:'€'}) + cfgField('sinVisita.fotosMin','Fotos mínimas','num') +
+    '<h3>Motivos de descarte</h3>' + cfgField('motivosDescarte','Uno por línea','lineas',{live:true});
+}
+function cfgPeso(i, val){ const n = Number(val); if (isNaN(n) || n < 0){ toast('Peso no válido','err'); return; } DB.cfg.pesosCalidad[i] = n; toast('Guardado · la bandeja se reordena'); RENDERERS.configuracion(); }
+function cfgObra(){
+  return '<h3>Hitos tipo</h3>' + cfgField('hitosTipo','Uno por línea (se precargan al iniciar una obra)','lineas',{rows:8}) +
+    '<h3>Adendas</h3>' + cfgField('adendaModo','Umbral expresado en','sel',{opts:[['pct','% de la aceptada'],['eur','Importe fijo']]}) + (DB.cfg.adendaModo === 'eur' ? cfgField('adendaUmbralEur','Umbral','num',{suf:'€ sin IVA'}) : cfgField('adendaUmbral','Umbral','num',{suf:'% de la aceptada'})) + cfgField('adendaTopeIndividual','Tope de un cambio individual','num',{suf:'€'}) + cfgField('adendaPorHito','Disparar adenda al marcar un hito con cambios pendientes','bool') +
+    '<h3>Cierre</h3>' + cfgField('rematesPlazoDias','Plazo de remates','num',{suf:'días'}) + cfgField('textoGarantia','Texto de la garantía','area') + cfgField('textoActa','Texto del acta de entrega','area');
+}
+function cfgCobros(){
+  const pl = DB.cfg.planCobros; const suma = pl.reduce((s,t) => s + t.pct, 0); const cuando = ['aceptacion', ...DB.cfg.hitosTipo.map(h => 'hito:' + h), 'entrega'];
+  return '<h3>Medios aceptados</h3><div style="margin-bottom:8px">' + Object.entries(MEDIO_LBL).map(([k,l]) => '<label class="ctrl-check" style="display:inline-flex;margin-right:14px"><input type="checkbox" ' + (DB.cfg.cobros.medios.includes(k)?'checked':'') + ' onchange="cfgMedio(\'' + k + '\',this.checked)"> ' + l + '</label>').join('') + '</div>' +
+    cfgField('cobros.titular','Titular de la cuenta','txt',{live:false}) + cfgField('cobros.iban','IBAN','txt',{live:false,ayuda:'Se muestra en las proformas'}) +
+    '<h3>Plan de cobros por defecto</h3>' + pl.map((t,i) => '<div class="cfg-row"><label><input type="text" value="' + escH(t.label) + '" onchange="cfgPlan(' + i + ',\'label\',this.value)"></label><div class="cfg-ctl"><input type="number" min="0" value="' + t.pct + '" style="max-width:80px" onchange="cfgPlan(' + i + ',\'pct\',this.value)"><span class="cfg-suf">%</span><select onchange="cfgPlan(' + i + ',\'cuando\',this.value)">' + cuando.map(c => '<option value="' + c + '"' + (t.cuando===c?' selected':'') + '>' + c.replace('aceptacion','Al aceptar').replace('entrega','A la entrega').replace('hito:','Al completar «') + (c.startsWith('hito:')?'»':'') + '</option>').join('') + '</select><span style="cursor:pointer;color:var(--danger)" onclick="cfgPlanDel(' + i + ')">✕</span></div><span class="cfg-live">● en vivo</span></div>').join('') +
+    '<div style="font-size:12px;margin:6px 0;color:' + (suma === 100 ? 'var(--ok)' : 'var(--danger)') + '">Suma de tramos: ' + suma + ' %' + (suma === 100 ? ' ✓' : ' — debe sumar 100 %') + '</div><button class="abtn abtn-ghost abtn-sm" onclick="cfgPlanAdd()">+ Añadir tramo</button>';
+}
+function cfgMedio(k, on){ const m = DB.cfg.cobros.medios; if (on && !m.includes(k)) m.push(k); if (!on) DB.cfg.cobros.medios = m.filter(x => x !== k); if (!DB.cfg.cobros.medios.length) DB.cfg.cobros.medios = [k]; RENDERERS.configuracion(); }
+function cfgPlan(i, k, v){ DB.cfg.planCobros[i][k] = k === 'pct' ? Number(v)||0 : v; toast('Plan de cobros actualizado'); RENDERERS.configuracion(); }
+function cfgPlanDel(i){ DB.cfg.planCobros.splice(i,1); RENDERERS.configuracion(); }
+function cfgPlanAdd(){ DB.cfg.planCobros.push({ pct:0, cuando:'entrega', label:'Nuevo tramo' }); RENDERERS.configuracion(); }
+const VARS_TPL = '{{cliente}} {{reformista}} {{ref}} {{franjas}} {{enlace}} {{importe}} {{total}} {{concepto}} {{fecha}} {{politicaVisita}}';
+const TPL_LBL = { proponer_visita:'Proponer visita', pedir_info:'Pedir fotos o información', recordatorio:'Recordatorio', confirmacion_visita:'Confirmación de visita (24 h antes)', envio_version:'Envío de versión', aviso_cambio:'Aviso de cambio registrado', adenda_firmar:'Adenda para firmar', cierre_remates:'Cierre y remates', descarte:'Descarte amable' };
+function cfgComunicaciones(){
+  return '<h3>Plantillas de mensajes</h3><div style="font-size:11px;color:var(--muted);margin-bottom:8px">Variables: ' + VARS_TPL + '</div>' + Object.keys(TPL_LBL).map(k => '<div class="cfg-row" style="align-items:flex-start"><label>' + TPL_LBL[k] + '</label><div class="cfg-ctl"><textarea rows="3" onchange="cfgPlantilla(\'' + k + '\',this.value)">' + escH(PLANTILLAS_MSG[k]) + '</textarea></div><span class="cfg-live">● en vivo</span></div>').join('') +
+    '<h3>Recordatorios y plazos (días)</h3>' + cfgField('relojes.recordatorio1','Datos y visita: 1.er recordatorio','num',{suf:'día'}) + cfgField('relojes.recordatorio2','Datos y visita: 2.º recordatorio (último)','num',{suf:'día'}) + cfgField('diasPausaAuto','Pausa automática si no responde','num',{suf:'día'}) +
+    cfgField('relojes.propuesta1','Propuesta enviada: 1.er recordatorio','num',{suf:'día'}) + cfgField('relojes.propuesta2','Propuesta enviada: 2.º recordatorio','num',{suf:'día'}) + cfgField('relojes.avisoCaducidad','Aviso antes de caducar','num',{suf:'días antes'});
+}
+function cfgPlantilla(k, v){ PLANTILLAS_MSG[k] = v; toast('Plantilla guardada · se usa ya en los mensajes'); }
+function cfgCatalogo(){
+  const cats = [...new Set(DB.catalogo.map(p => p.cat))];
+  return '<h3>Merma por categoría</h3><div style="font-size:12px;color:var(--muted);margin-bottom:6px">Se aplica en la lista de compra salvo que el producto tenga su propia merma.</div>' + cats.map(c => '<div class="cfg-row"><label>' + c + '</label><div class="cfg-ctl"><input type="number" min="0" step="1" value="' + Math.round(((DB.cfg.catalogo.mermaPorCategoria[c] != null ? DB.cfg.catalogo.mermaPorCategoria[c] : DB.cfg.catalogo.mermaDefecto)) * 100) + '" onchange="cfgMerma(\'' + c + '\',this.value)"><span class="cfg-suf">%</span></div><span class="cfg-live">● en vivo</span></div>').join('') +
+    '<h3>Alertas</h3>' + cfgField('catalogo.umbralAlerta','Umbral de alerta de variación de precio','num',{suf:'%'});
+}
+function cfgMerma(c, v){ DB.cfg.catalogo.mermaPorCategoria[c] = (Number(v)||0) / 100; toast('Merma actualizada'); RENDERERS.configuracion(); }
+function cfgPantalla(){
+  const cb = DB.cfg.pantalla.colBandeja;
+  return cfgField('pantalla.densidad','Densidad','sel',{opts:[['compacta','Compacta'],['normal','Normal'],['amplia','Amplia']]}) + cfgField('pantalla.ordenBandeja','Orden por defecto de la bandeja','sel',{opts:[['prioridad','Prioridad'],['calidad','Calidad'],['espera','Espera'],['importe','Importe']]}) +
+    cfgField('pantalla.fecha','Formato de fecha','sel',{opts:[['larga','31 oct 2026'],['numerica','31/10/2026']]}) + cfgField('pantalla.espacioMoneda','Moneda con espacio antes del símbolo (1.234,56 €)','bool') +
+    '<h3>Columnas visibles de la bandeja</h3>' + [['barras','Barras de calidad y espera'],['chips','Chips de motivo'],['importe','Horquilla de importe'],['acciones','Botones de acción']].map(([k,l]) => '<label class="check-q"><input type="checkbox" ' + (cb[k]?'checked':'') + ' onchange="cfgSet(\'pantalla.colBandeja.' + k + '\',this.checked,\'bool\')"> ' + l + '</label>').join('');
+}
+function cfgPrivacidad(){ return cfgField('privacidad.textoRgpd','Texto de la política de privacidad','area',{live:false,rows:4}) + cfgField('privacidad.conservacionMeses','Conservación de fotos y audios','num',{suf:'meses',live:false}) + cfgField('privacidad.pedirWhatsapp','Pedir permiso de WhatsApp en el alta','bool',{live:false}); }
+function cfgEquipo(){ return '<table class="lineas-tbl"><thead><tr><th>Usuario</th><th>Rol</th><th></th></tr></thead><tbody><tr><td>admin@anatoliyreformas.es</td><td>Propietario</td><td><span class="badge b-ok">activo</span></td></tr></tbody></table><div style="margin-top:10px;display:flex;gap:8px"><input class="disp-inp" disabled placeholder="Email del nuevo usuario"><select class="disp-inp" disabled><option>Administrador</option><option>Operario</option></select><button class="abtn abtn-ghost" disabled>Invitar</button></div><p style="font-size:12px;color:var(--muted);margin-top:8px">Usuarios y roles: <b>próximamente</b>.</p>'; }
+
+// Editor de plantillas de checklist
+function cfgChecklist(){
+  const tipos = ['si_no','numero','texto','opcion','foto']; const efTipos = ['ninguno','set_cantidad','add_linea','multiplicador','aviso'];
+  const apl = t => t.aplicaA && t.aplicaA.espacios ? 'espacios' : (t.aplicaA && t.aplicaA.trabajos ? 'trabajos' : 'siempre');
+  return '<div style="font-size:12px;color:var(--muted);margin-bottom:8px">Las preguntas del Modo visita salen de aquí. Cada respuesta puede aplicar efectos sobre el presupuesto.</div>' +
+    CHECKLIST_PLANTILLAS.map((t,i) => '<details class="ob-det"><summary>' + escH(t.label) + ' <span style="font-weight:400;color:var(--muted)">· ' + t.tipo + (t.porEspacio?' · por espacio':'') + ' · ' + (t.efectos||[]).length + ' efecto(s)</span></summary>' +
+      '<div class="cfg-row"><label>Pregunta</label><div class="cfg-ctl"><input value="' + escH(t.label) + '" onchange="ckEdit(' + i + ',\'label\',this.value)"></div></div>' +
+      '<div class="cfg-row"><label>Tipo</label><div class="cfg-ctl"><select onchange="ckEdit(' + i + ',\'tipo\',this.value)">' + tipos.map(x => '<option' + (t.tipo===x?' selected':'') + '>' + x + '</option>').join('') + '</select></div></div>' +
+      (t.tipo === 'opcion' ? '<div class="cfg-row"><label>Opciones</label><div class="cfg-ctl"><input value="' + escH((t.opciones||[]).join(', ')) + '" onchange="ckEdit(' + i + ',\'opciones\',this.value)"></div></div>' : '') +
+      '<div class="cfg-row"><label>Una por espacio</label><div class="cfg-ctl"><input type="checkbox" ' + (t.porEspacio?'checked':'') + ' onchange="ckEdit(' + i + ',\'porEspacio\',this.checked)"></div></div>' +
+      '<div class="cfg-row"><label>Aplica a</label><div class="cfg-ctl"><select onchange="ckApl(' + i + ',this.value)"><option value="siempre"' + (apl(t)==='siempre'?' selected':'') + '>Siempre</option><option value="espacios"' + (apl(t)==='espacios'?' selected':'') + '>Tipos de espacio</option><option value="trabajos"' + (apl(t)==='trabajos'?' selected':'') + '>Trabajos concretos</option></select>' + (apl(t) !== 'siempre' ? '<input value="' + escH(((t.aplicaA.espacios||t.aplicaA.trabajos)||[]).join(', ')) + '" placeholder="separados por comas" onchange="ckAplLista(' + i + ',this.value)">' : '') + '</div></div>' +
+      '<div style="margin:6px 0 4px;font-size:11px;text-transform:uppercase;color:var(--muted)">Efectos</div>' + (t.efectos||[]).map((e,j) => '<div class="ck-ef"><select onchange="ckEf(' + i + ',' + j + ',\'tipo\',this.value)">' + efTipos.map(x => '<option' + (e.tipo===x?' selected':'') + '>' + x + '</option>').join('') + '</select>' +
+        (['add_linea','multiplicador','aviso'].includes(e.tipo) ? '<select onchange="ckEfCuando(' + i + ',' + j + ',\'op\',this.value)">' + ['eq','true','gt','lt'].map(x => '<option' + ((e.cuando&&e.cuando.op)===x?' selected':'') + '>' + x + '</option>').join('') + '</select><input style="width:90px" placeholder="valor" value="' + escH(e.cuando && e.cuando.valor != null ? e.cuando.valor : '') + '" onchange="ckEfCuando(' + i + ',' + j + ',\'valor\',this.value)">' : '') +
+        (e.tipo === 'set_cantidad' ? '<input style="width:110px" placeholder="base" value="' + escH(e.base||'m2_suelo') + '" onchange="ckEf(' + i + ',' + j + ',\'base\',this.value)">' : '') +
+        (e.tipo === 'add_linea' ? '<input placeholder="Concepto" value="' + escH(e.concepto||'') + '" onchange="ckEf(' + i + ',' + j + ',\'concepto\',this.value)"><input type="number" style="width:80px" placeholder="€" value="' + (e.precio||0) + '" onchange="ckEf(' + i + ',' + j + ',\'precio\',this.value)"><input style="width:90px" placeholder="cantidad" value="' + escH(e.cantidad != null ? e.cantidad : 1) + '" onchange="ckEf(' + i + ',' + j + ',\'cantidad\',this.value)">' : '') +
+        (e.tipo === 'multiplicador' ? '<input type="number" step="0.01" style="width:80px" value="' + (e.factor||1) + '" onchange="ckEf(' + i + ',' + j + ',\'factor\',this.value)"> × MO' : '') +
+        (e.tipo === 'aviso' ? '<input placeholder="Texto del aviso" value="' + escH(e.texto||'') + '" onchange="ckEf(' + i + ',' + j + ',\'texto\',this.value)">' : '') + '<span style="cursor:pointer;color:var(--danger)" onclick="ckEfDel(' + i + ',' + j + ')">✕</span></div>').join('') +
+      '<div style="margin-top:6px;display:flex;gap:8px"><button class="abtn abtn-ghost abtn-sm" onclick="ckEfAdd(' + i + ')">+ Efecto</button><button class="abtn abtn-ghost abtn-sm" onclick="ckDel(' + i + ')">Eliminar pregunta</button></div></details>').join('') +
+    '<div style="margin-top:10px;display:flex;gap:8px"><button class="abtn abtn-primary abtn-sm" onclick="ckAdd()">+ Nueva pregunta</button></div>';
+}
+function ckEdit(i, k, v){ const t = CHECKLIST_PLANTILLAS[i]; if (k === 'opciones') v = String(v).split(',').map(x => x.trim()).filter(Boolean); t[k] = v; toast('Pregunta actualizada · se usa en la próxima visita'); RENDERERS.configuracion(); }
+function ckApl(i, m){ const t = CHECKLIST_PLANTILLAS[i]; t.aplicaA = m === 'siempre' ? { siempre:true } : (m === 'espacios' ? { espacios:['bano','cocina'] } : { trabajos:['cambiar_suelo'] }); RENDERERS.configuracion(); }
+function ckAplLista(i, v){ const t = CHECKLIST_PLANTILLAS[i]; const l = String(v).split(',').map(x => x.trim()).filter(Boolean); if (t.aplicaA.espacios) t.aplicaA.espacios = l; else t.aplicaA.trabajos = l; toast('Pregunta actualizada'); RENDERERS.configuracion(); }
+function ckEf(i, j, k, v){ const e = CHECKLIST_PLANTILLAS[i].efectos[j]; if (k === 'tipo'){ const base = { tipo:v }; if (v === 'add_linea') Object.assign(base, { cuando:{op:'true'}, concepto:'Nueva partida', unidad:'fijo', cantidad:1, precio:100, tipo_linea:'mo' }); if (v === 'multiplicador') Object.assign(base, { cuando:{op:'eq',valor:''}, aplicaA:['mo'], factor:1.05 }); if (v === 'aviso') Object.assign(base, { cuando:{op:'true'}, texto:'Aviso' }); if (v === 'set_cantidad') base.base = 'm2_suelo'; CHECKLIST_PLANTILLAS[i].efectos[j] = base; } else e[k] = ['precio','factor'].includes(k) ? Number(v)||0 : (k === 'cantidad' && v !== 'm2_espacio' ? (Number(v)||1) : v); toast('Efecto actualizado'); RENDERERS.configuracion(); }
+function ckEfCuando(i, j, k, v){ const e = CHECKLIST_PLANTILLAS[i].efectos[j]; e.cuando = e.cuando || { op:'true' }; e.cuando[k] = k === 'valor' && v !== '' && !isNaN(v) ? Number(v) : v; RENDERERS.configuracion(); }
+function ckEfAdd(i){ (CHECKLIST_PLANTILLAS[i].efectos = CHECKLIST_PLANTILLAS[i].efectos||[]).push({ tipo:'aviso', cuando:{op:'true'}, texto:'Aviso' }); RENDERERS.configuracion(); }
+function ckEfDel(i, j){ CHECKLIST_PLANTILLAS[i].efectos.splice(j,1); RENDERERS.configuracion(); }
+function ckDel(i){ confirmarAccion('Eliminar pregunta', '¿Eliminar «' + CHECKLIST_PLANTILLAS[i].label + '» del checklist?', () => { CHECKLIST_PLANTILLAS.splice(i,1); closeAllModals(); RENDERERS.configuracion(); }); }
+function ckAdd(){ CHECKLIST_PLANTILLAS.push({ id:'q' + Date.now().toString(36), label:'Nueva pregunta', tipo:'si_no', porEspacio:false, aplicaA:{ siempre:true }, efectos:[{ tipo:'ninguno' }] }); RENDERERS.configuracion(); }
+
+// ═══════════════════════════════════════════════════════
 // SECCIÓN 13: STUBS (fases futuras)
 // ═══════════════════════════════════════════════════════
 function stub(id, icon, title, sub, tags, fase){
@@ -4022,7 +4341,6 @@ function stub(id, icon, title, sub, tags, fase){
     '<div class="stub-sub">' + sub + '</div>' +
     '<div class="stub-tags">' + tags.map(t => '<span class="stub-tag">' + t + '</span>').join('') + '</div></div>';
 }
-RENDERERS.configuracion = () => stub('configuracion','⚙','Configuración','Ajustes del negocio: márgenes, IVA, zona, visita, plan de cobros, hitos tipo y pesos de calidad. Todo editable sobre la configuración por defecto ya cargada.',['Económico','Zona y visita','Plan de cobros','Pesos de calidad'],'Fase G');
 
 // ═══════════════════════════════════════════════════════
 // SECCIÓN 14: LOGIN Y ARRANQUE
@@ -4073,12 +4391,12 @@ function avanzarTiempo(dias){
   toast('Avanzado ' + dias + ' día' + (dias>1?'s':'') + ' · ' + fmtFecha(hoy()));
 }
 function volverHoy(){
-  _hoyOffset = 0; DB = crearDBInicial();
+  _hoyOffset = 0; DB = crearDBInicial(); restablecerGlobales();
   actualizarDemoFecha(); renderPaginaActual();
   toast('Fecha restablecida a hoy');
 }
 function restablecerDatos(){
-  _hoyOffset = 0; DB = crearDBInicial();
+  _hoyOffset = 0; DB = crearDBInicial(); restablecerGlobales(); catF = { cat:'', prov:'', variacion:'', stock:'', usados:false, fav:false, q:'', orden:'nombre' };
   catFiltroCat = 'todos'; bandejaFiltro = 'activos';
   actualizarDemoFecha(); renderPaginaActual();
   toast('Datos de demostración restablecidos');
@@ -4086,7 +4404,7 @@ function restablecerDatos(){
 
 // Arranque
 (function init(){
-  actualizarDemoFecha();
+  actualizarDemoFecha(); aplicarTema(); aplicarPantalla();
   const res = window.__tests();
   console.log('%cPanel del reformista v2 — Fase A cargada. Ejecuta __tests() en consola para ver el detalle.', 'color:#c96f28');
   if (res.fails && res.fails.length) console.warn('Tests con fallos:', res.fails);
