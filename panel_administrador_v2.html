@@ -357,6 +357,31 @@ input,select,textarea{font-family:inherit}
 .mv-rec i{width:10px;height:10px;border-radius:50%;background:var(--danger);animation:mvpulse 1s infinite}
 @keyframes mvpulse{50%{opacity:.25}}
 .mv-nota{background:#fff;border:1px solid var(--border);border-radius:10px;padding:10px 12px;margin-top:8px;font-size:13px}
+
+/* ── OBRA / DOCUMENTOS ───────────────────────────── */
+.ob-det{background:#fff;border:1px solid var(--border);border-radius:var(--r);padding:10px 14px;margin-bottom:12px}
+.ob-det>summary{cursor:pointer;font-weight:600;font-size:13px;color:var(--terra);list-style:none;padding:2px 0}
+.ob-det>summary::-webkit-details-marker{display:none}
+.ob-det>summary::before{content:'▸ ';color:var(--accent)}
+.ob-det[open]>summary::before{content:'▾ '}
+.ob-det[open]>summary{margin-bottom:8px}
+.doc-wrap{background:#fff;border:1px solid var(--border);border-radius:10px;padding:24px;max-height:60vh;overflow-y:auto}
+.doc h1{font-family:'Cormorant Garamond',serif;font-size:28px;margin-bottom:2px}
+.doc h2{font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin:16px 0 6px}
+.doc-sub{font-size:12px;color:var(--muted);margin-bottom:12px}
+.doc-t{width:100%;border-collapse:collapse;font-size:13px}
+.doc-t td{padding:5px 8px;border-bottom:1px solid var(--border)}
+.doc-t td:first-child{color:var(--muted);width:42%}
+.doc-leyenda{margin:12px 0;padding:8px 12px;border:2px dashed var(--danger);color:var(--danger);font-weight:600;text-align:center;font-size:13px}
+.doc-firmas{display:flex;justify-content:space-between;margin-top:46px;font-size:12px;color:var(--muted)}
+.doc-firmas div{border-top:1px solid #000;padding-top:4px;width:44%;text-align:center}
+.doc ul{font-size:13px;padding-left:18px}
+#print-area{display:none}
+@media print{
+  body>*:not(#print-area){display:none!important}
+  #print-area{display:block!important;padding:18mm;background:#fff;color:#000}
+  #print-area .doc-wrap{border:none;max-height:none;overflow:visible;padding:0}
+}
 </style>
 </head>
 <body>
@@ -444,6 +469,9 @@ input,select,textarea{font-family:inherit}
 
 <!-- MODO VISITA -->
 <div class="mv-root" id="mv-root"></div>
+
+<!-- ÁREA DE IMPRESIÓN -->
+<div id="print-area"></div>
 
 <!-- TOAST -->
 <div class="toast-wrap" id="toast-wrap"></div>
@@ -1974,6 +2002,167 @@ window.__tests = function(){
   a('cobro visita: económico no cuenta visita no descontable', calcularCobrado({id:'Z'}, [{casoId:'Z', importe:60, estado:'cobrado', tipo:'visita', descontable:false},{casoId:'Z', importe:100, estado:'cobrado'}]) === 100);
   a('cobro visita: descontable sí cuenta', calcularCobrado({id:'Z'}, [{casoId:'Z', importe:60, estado:'cobrado', tipo:'visita', descontable:true}]) === 60);
 
+  // ── 20. Obras: total vigente (casos 9 y 10), adendas, cambios, cierre ──
+  const c9 = DB.casos.find(x => x.id==='REF-0009'), c10 = DB.casos.find(x => x.id==='REF-0010'), c12 = DB.casos.find(x => x.id==='REF-0012');
+  const tv9 = totalVigente(c9), tv10 = totalVigente(c10);
+  a('caso 9: firmado = aceptada + adendas firmadas × (1+iva)', tv9.firmado === r(c9.aceptacion.importe + r(450*1.21)));
+  a('caso 9: provisional = cambios registrados × (1+iva)', tv9.provisional === r((200+120)*1.21));
+  a('caso 9: desviación % = (firmado+provisional−aceptada)/aceptada', Math.abs(tv9.desviacionPct - r((tv9.total - tv9.aceptada)/tv9.aceptada*100)) < 0.011);
+  a('caso 10: provisional = 1.200 × 1,21 y sin adendas firmadas', tv10.provisional === r(1200*1.21) && tv10.adendasFirmadas === 0);
+  a('caso 9: progreso ≈ 60 %', calcularProgreso(c9) > 0.55 && calcularProgreso(c9) < 0.65);
+  a('caso 10: salud bloqueada', saludObra(c10, DB.cfg, hoy()) === 'bloqueada');
+  a('caso 12: cerrada con saldo pendiente (cerrada ≠ cobrada)', c12.estado==='cerrada' && estadoEconomico(c12, DB.cobros).saldo > 0 && estadoEconomico(c12, DB.cobros).estado === 'parcial');
+  a('totalVigente: un cambio en desacuerdo sigue siendo provisional', (()=>{ const c=mkCaso(); c.aceptacion={versionId:'V1',importe:1000}; c.obra={cambios:[{estado:'en_desacuerdo',importe:100}],adendas:[]}; return totalVigente(c).provisional === r(100*1.21); })());
+
+  const obraBase = () => { const c = mkCaso({ estado:'en_obra' }); c.aceptacion = {versionId:'V1', importe:10000}; c.versiones[0].estado='aceptada'; c.versiones[0].ivaPct=21; c.eventos=[]; c.obra = { inicio:rel(-5), hitos:[], cambios:[], adendas:[], fotos:[], solicitudesCambio:[], remates:[], cierre:null }; return c; };
+  const cf = JSON.parse(JSON.stringify(cfgA));
+  let co = obraBase(); // umbral 5 % de 10.000/1,21 = 413,22 sin IVA
+  registrarCambio(co, { concepto:'a', importe:200 });
+  a('registrarCambio: id C1 y estado registrado', co.obra.cambios[0].id === 'C1' && co.obra.cambios[0].estado === 'registrado');
+  a('adenda: por debajo del umbral no dispara', !debeGenerarAdenda(co, cf, {}).includes('umbral'));
+  registrarCambio(co, { concepto:'b', importe:250 });
+  a('adenda: acumulado ≥ umbral dispara «umbral»', debeGenerarAdenda(co, cf, {}).includes('umbral'));
+  const cfEur = Object.assign({}, cf, { adendaModo:'eur', adendaUmbralEur:1000 });
+  a('adenda: umbral configurable en € (no dispara con 450 < 1.000)', !debeGenerarAdenda(co, cfEur, {}).includes('umbral'));
+  a('adenda: «hito» solo con cambios pendientes y activado', debeGenerarAdenda(co, cf, {contexto:'hito'}).includes('hito') && !debeGenerarAdenda(co, Object.assign({}, cf, {adendaPorHito:false}), {contexto:'hito'}).includes('hito') && !debeGenerarAdenda(obraBase(), cf, {contexto:'hito'}).includes('hito'));
+  a('adenda: «cobro» con cambios pendientes', debeGenerarAdenda(co, cf, {contexto:'cobro'}).includes('cobro'));
+  a('adenda: «manual» lo lanza el reformista', debeGenerarAdenda(obraBase(), cf, {contexto:'manual'}).includes('manual'));
+  registrarCambio(co, { concepto:'grande', importe:1500 });
+  a('adenda: cambio ≥ tope dispara «tope» (adenda inmediata)', debeGenerarAdenda(co, cf, {}).includes('tope'));
+  a('registrarCambio admite importes negativos', registrarCambio(obraBase(), { concepto:'material cliente', importe:-300 }).importe === -300);
+
+  co = obraBase(); registrarCambio(co, {concepto:'x', importe:100}); registrarCambio(co, {concepto:'y', importe:50});
+  a('terminar obra bloqueado con cambios sin consolidar', puedeTerminarObra(co).ok === false && /adenda/i.test(puedeTerminarObra(co).motivo) && !puedeTransitar(co,'terminada'));
+  marcarDesacuerdo(co, 'C2');
+  a('desacuerdo: el cambio queda en_desacuerdo', co.obra.cambios[1].estado === 'en_desacuerdo');
+  a('desacuerdo: no se puede incluir en una adenda', (()=>{ try{ crearAdenda(co, ['C2'], 'manual'); return false; }catch(e){ return true; } })());
+  a('desacuerdo: el motivo del bloqueo lo menciona', /desacuerdo/.test(puedeTerminarObra(co).motivo) || puedeTerminarObra(co).desacuerdos.length === 1);
+  const ad1 = crearAdenda(co, ['C1'], 'cierre');
+  a('adenda enviada: delta = Σ importes; cambio sigue registrado hasta firmar', ad1.delta === 100 && ad1.estado === 'enviada' && co.obra.cambios[0].estado === 'registrado');
+  marcarDesacuerdo(co, 'C1');
+  firmarAdenda(co, ad1.id);
+  a('firmar adenda: un cambio en desacuerdo NO se consolida', co.obra.cambios[0].estado === 'en_desacuerdo' && ad1.cambios.length === 0 && ad1.delta === 0);
+  resolverDesacuerdo(co, 'C1', 'ajustar', 80); resolverDesacuerdo(co, 'C2', 'mantener');
+  a('resolver desacuerdo: vuelve a registrado (importe ajustado)', co.obra.cambios[0].estado === 'registrado' && co.obra.cambios[0].importe === 80 && co.obra.cambios[1].estado === 'registrado');
+  const ad2 = crearAdenda(co, ['C1','C2'], 'cierre'); firmarAdenda(co, ad2.id);
+  a('firmar adenda: consolida los cambios y el total no cambia', co.obra.cambios.every(x => x.estado === 'consolidado') && ad2.delta === 130 && totalVigente(co).provisional === 0 && totalVigente(co).adendasFirmadas === r(130*1.21));
+  a('terminar obra permitido tras consolidar', puedeTerminarObra(co).ok && puedeTransitar(co,'terminada'));
+
+  const cr2 = mkCaso({ estado:'en_remates' }); cr2.obra = { cambios:[], adendas:[], hitos:[], remates:[{id:'R1',estado:'abierto',texto:'x'}], cierre:{ terminadaAt:rel(-3), conformidad:null } };
+  a('cerrar: remates abiertos lo impiden', puedeCerrarObra(cr2, cf, 'expresa').ok === false);
+  cr2.obra.remates[0].estado = 'resuelto';
+  a('cerrar por plazo: deshabilitado antes del plazo (7 días)', puedeCerrarObra(cr2, cf, 'plazo').ok === false && /faltan 4/.test(puedeCerrarObra(cr2, cf, 'plazo').motivo));
+  a('cerrar con conformidad expresa: permitido sin esperar plazo', puedeCerrarObra(cr2, cf, 'expresa').ok === true);
+  cr2.obra.cierre.terminadaAt = rel(-8);
+  a('cerrar por plazo: habilitado una vez pasado el plazo', puedeCerrarObra(cr2, cf, 'plazo').ok === true);
+  a('relojes: remates_plazo avisa pasado el plazo', evaluarRelojes(cr2, cf, hoy()).some(x => x.tipo === 'remates_plazo'));
+
+  const ci = mkCaso({ estado:'aceptada' }); ci.eventos=[]; ci.obra={}; iniciarObra(ci, cf, rel(0));
+  a('iniciar obra: crea los hitos tipo y pasa a en_obra', ci.estado === 'en_obra' && ci.obra.hitos.length === cf.hitosTipo.length && ci.obra.hitos.every(h => h.estado === 'pendiente'));
+  a('hitos: fechas previstas consecutivas', ci.obra.hitos[1].fechaInicioPrevista === ci.obra.hitos[0].fechaFinPrevista);
+  ci.obra.hitos[0].diasEstimados = 10; replanificarHitos(ci.obra);
+  a('replanificar: cambiar días desplaza los siguientes', ci.obra.hitos[0].fechaFinPrevista === fechaMasDias(rel(0), 10) && ci.obra.hitos[1].fechaInicioPrevista === ci.obra.hitos[0].fechaFinPrevista);
+  marcarHito(ci, 'H1', 'hecho', { fecha:rel(0), fotos:2 });
+  a('marcar hito hecho: fecha real y fotos', ci.obra.hitos[0].fechaReal === rel(0) && ci.obra.hitos[0].fotos.length === 2);
+  a('no se puede iniciar obra desde otro estado', (()=>{ try{ iniciarObra(mkCaso({estado:'en_triaje'}), cf); return false; }catch(e){ return true; } })());
+
+  // relojes de obra
+  const cb = obraBase(); registrarCambio(cb, { concepto:'bloq', importe:50, bloqueaObra:true });
+  cb.obra.cambios[0].fecha = rel(-1);
+  a('relojes: cambio bloqueante a 24 h', evaluarRelojes(cb, cf, hoy()).some(x => x.tipo === 'cambio_bloqueante' && x.n === 1));
+  cb.obra.cambios[0].fecha = rel(-2);
+  a('relojes: a 48 h pausa la partida pendiente de aprobación', evaluarRelojes(cb, cf, hoy()).some(x => x.tipo === 'pausar_partida'));
+  const cn = obraBase(); registrarCambio(cn, { concepto:'no bloq', importe:50 }); cn.obra.cambios[0].fecha = rel(-4);
+  a('relojes: cambio sin bloqueo recuerda cada 3 días', evaluarRelojes(cn, cf, hoy()).some(x => x.tipo === 'cambio_pendiente'));
+
+  // relojes de fase (spec 6.13)
+  const ce2 = mkCaso({ estado:'esperando_info', eventos:[{fecha:rel(-2),tipo:'transicion',autor:'reformista'}] });
+  a('relojes: recordatorio 1 el día 2', evaluarRelojes(ce2, cf, hoy()).some(x => x.tipo==='recordatorio' && x.n===1));
+  const ce5 = mkCaso({ estado:'esperando_info', eventos:[{fecha:rel(-5),tipo:'transicion',autor:'reformista'}] });
+  a('relojes: recordatorio 2 (último) el día 5', evaluarRelojes(ce5, cf, hoy()).some(x => x.tipo==='recordatorio' && x.n===2 && x.ultimo));
+  ce5.recordatorios = [{ fase:'esperando_info', n:2, enviadoAt:rel(0) }];
+  a('relojes: un recordatorio ya enviado no vuelve a aparecer', !evaluarRelojes(ce5, cf, hoy()).some(x => x.tipo==='recordatorio'));
+  const cvp = mkCaso({ estado:'visita_propuesta', eventos:[{fecha:rel(-9),tipo:'transicion',autor:'reformista'}] });
+  a('relojes: visita_propuesta pasa a pausa el día 8', evaluarRelojes(cvp, cf, hoy()).some(x => x.tipo==='pausa'));
+  const cpe = mkCaso({ estado:'propuesta_enviada', versiones:[{id:'V1',estado:'vigente',enviadaAt:rel(-3)}] });
+  a('relojes: propuesta enviada recuerda el día 3', evaluarRelojes(cpe, cf, hoy()).some(x => x.tipo==='recordatorio' && x.n===1));
+  cpe.versiones[0].enviadaAt = rel(-7);
+  a('relojes: propuesta enviada recuerda de nuevo el día 7', evaluarRelojes(cpe, cf, hoy()).some(x => x.tipo==='recordatorio' && x.n===2));
+
+  // ── 21. Cobros: plan, proforma, acta, exportaciones ──
+  const c8 = DB.casos.find(x => x.id==='REF-0008'), c11 = DB.casos.find(x => x.id==='REF-0011');
+  const pl8 = planCobros(c8, DB.cfg, DB.cobros);
+  a('plan de cobros: 3 tramos 30/30/40', pl8.length === 3 && pl8.map(t => t.pct).join() === '30,30,40');
+  a('plan: la señal de la aceptada está cobrada (visita a cuenta incluida)', pl8[0].estado === 'cobrado' && pl8[1].estado === 'pendiente');
+  a('plan: importes de los tramos suman la aceptada', r(pl8.reduce((s,t)=>s+t.importe,0)) === c8.aceptacion.importe);
+  a('plan: tramo de hito pasa a «debido» al hacer el hito', (()=>{ const cc = JSON.parse(JSON.stringify(c9)); const pl = planCobros(cc, DB.cfg, []); return pl[0].estado === 'debido'; })());
+  const pl12 = planCobros(c12, DB.cfg, DB.cobros);
+  a('plan: en obra entregada, el último tramo está debido', pl12[2].estado === 'debido' && proximoTramo(c12, DB.cfg, DB.cobros).cuando === 'entrega');
+  a('visita descontable: cuenta como pago a cuenta en el saldo', calcularCobrado(c8, DB.cobros) === r(DB.cobros.filter(m => m.casoId==='REF-0008').reduce((s,m)=>s+m.importe,0)) && DB.cobros.some(m => m.casoId==='REF-0008' && m.tipo==='visita'));
+  a('visita descontable parcial: solo cuenta el porcentaje', calcularCobrado({id:'Q'}, [{casoId:'Q', importe:60, estado:'cobrado', tipo:'visita', descontable:true, descontablePct:50}]) === 30);
+  a('saldo = totalVigente − cobrado en todos los casos aceptados', DB.casos.filter(c => c.aceptacion).every(c => { const e = estadoEconomico(c, DB.cobros); return e.saldo === r(totalVigente(c).total - calcularCobrado(c, DB.cobros)); }));
+  a('estado económico de los ejemplos (8,9,11,12 = parcial)', ['REF-0008','REF-0009','REF-0011','REF-0012'].every(id => estadoEconomico(DB.casos.find(c=>c.id===id), DB.cobros).estado === 'parcial'));
+  a('cobros de ejemplo: varios medios', new Set(DB.cobros.map(m => m.medio)).size >= 3);
+  const pf = crearProforma(c9, DB.cobros, 2, rel(0));
+  a('proforma: numeración propia PF-0002 y leyenda de borrador', pf.id === 'PF-0002' && /no es una factura/.test(pf.leyenda));
+  a('proforma: separa firmado, provisional y cobrado', pf.firmado === totalVigente(c9).firmado && pf.provisional === totalVigente(c9).provisional && pf.cobrado === calcularCobrado(c9, DB.cobros) && pf.saldo === r(pf.total - pf.cobrado));
+  a('proforma: es una copia congelada (no cambia si cambia el caso)', (()=>{ const tot = pf.total; registrarCambio(c9, {concepto:'tmp', importe:999}); const igual = pf.total === tot && totalVigente(c9).total !== tot; c9.obra.cambios.pop(); return igual; })());
+  a('proforma: base + IVA = total', r(pf.base + pf.iva) === pf.total);
+  a('DB: hay una proforma y un acta de ejemplo', DB.proformas.length === 1 && DB.proformas[0].id === 'PF-0001' && DB.actas.length === 1 && DB.actas[0].id === c12.obra.cierre.actaId);
+  const csv = cobrosCSV([{id:'1',casoId:'X',fecha:'2026-01-01',tipo:'hito',concepto:'Pago, "parcial"',importe:10.5,medio:'bizum',referencia:'',estado:'cobrado'}]);
+  a('CSV: cabecera, comillas escapadas y dos decimales', csv.split('\r\n').length === 2 && csv.includes('"Pago, ""parcial"""') && csv.includes('"10.50"'));
+  a('CSV de la DB: una fila por movimiento', cobrosCSV(DB.cobros).split('\r\n').length === DB.cobros.length + 1);
+  const js = JSON.parse(JSON.stringify(resumenObraJSON(c9, DB.cobros, clienteDe(c9))));
+  a('JSON de obra: válido y con saldo coherente', js.caso === 'REF-0009' && js.economico.saldo === r(js.economico.total - js.economico.cobrado) && js.cobros.length === DB.cobros.filter(m => m.casoId==='REF-0009').length);
+  a('acta: totales, garantía y documentación', (()=>{ const ac = crearActa(c12, DB.cobros, 5, rel(0), DB.cfg); return ac.id === 'ACTA-0005' && ac.totalFinal === totalVigente(c12).total && ac.documentacion.length >= 3 && /Garantía/.test(ac.textoGarantia); })());
+
+  // ── 22. Catálogo: impacto, recálculo, lista de compra, materiales del cliente ──
+  const mkDb = () => { const casos = [
+    { id:'A', estado:'en_triaje', versiones:[{id:'V1', estado:'vigente', enviadaAt:null, ivaPct:21, lineas:[{id:'1',productoId:'p1',tipo:'mat',precio:18.9,cantidad:10,subtotal:189,origen:'calculo'}], totales:{}}], borrador:{ lineas:[{id:'2',productoId:'p1',tipo:'mat',precio:18.9,cantidad:5,subtotal:94.5,origen:'calculo'},{id:'3',productoId:'p1',tipo:'mat',precio:18.9,cantidad:2,subtotal:37.8,origen:'manual',bloqueada:true}] }, solicitud:{espacios:[]}, vivienda:{} },
+    { id:'B', estado:'propuesta_enviada', versiones:[{id:'V1', estado:'vigente', enviadaAt:rel(-3), ivaPct:21, lineas:[{id:'4',productoId:'p1',tipo:'mat',precio:18.9,cantidad:20,subtotal:378,origen:'calculo'}], totales:{}}], solicitud:{espacios:[]}, vivienda:{} },
+    { id:'C', estado:'en_obra', versiones:[{id:'V1', estado:'aceptada', enviadaAt:rel(-30), ivaPct:21, lineas:[{id:'5',productoId:'p1',tipo:'mat',precio:18.9,cantidad:99,subtotal:1871,origen:'calculo'}], totales:{}}], solicitud:{espacios:[]}, vivienda:{} } ];
+    return { casos, cfg:JSON.parse(JSON.stringify(CFG_DEFAULT)) }; };
+  const impA = impactoCambioPrecio(mkDb(), 'p1', 20.9);
+  a('impacto: ignora presupuestos de obras ya aceptadas/en obra', impA.nCasos === 2);
+  a('impacto: separa borradores (A) de enviadas (B)', impA.borradores.n === 1 && impA.enviadas.n === 1 && impA.enviadas.casos[0] === 'B');
+  a('impacto: delta de enviadas = 2 × 20 uds', impA.enviadas.delta === 40);
+  a('impacto: cuenta líneas bloqueadas aparte de las recalculables', impA.borradores.bloqueadas === 1 && impA.borradores.recalculables === 2);
+  const dbx = mkDb(); const ap = aplicarPrecioABorradores(dbx, 'p1', 20.9);
+  a('recalcular borradores: aplica el precio a líneas no bloqueadas', dbx.casos[0].borrador.lineas[0].precio === 20.9 && dbx.casos[0].borrador.lineas[0].subtotal === r(20.9*5) && dbx.casos[0].versiones[0].lineas[0].precio === 20.9);
+  a('recalcular borradores: respeta líneas bloqueadas/manuales', dbx.casos[0].borrador.lineas[1].precio === 18.9);
+  a('recalcular borradores: no toca versiones enviadas ni aceptadas', dbx.casos[1].versiones[0].lineas[0].precio === 18.9 && dbx.casos[2].versiones[0].lineas[0].precio === 18.9 && ap.casos.join() === 'A');
+  a('recalcular borradores: recalcula los totales de la estimación', dbx.casos[0].versiones[0].totales.total > 0);
+  a('líneas de la DB enlazadas a productos del catálogo', DB.casos.some(c => (c.versiones[0].lineas||[]).some(l => l.productoId)));
+  const cat = DB.catalogo; const casoLC = { aceptacion:{versionId:'V1'}, versiones:[{id:'V1', estado:'aceptada', lineas:[ {tipo:'mat',productoId:'p1',cantidad:20}, {tipo:'mat',productoId:'p1',cantidad:0.8}, {tipo:'mat',productoId:'p8',cantidad:3}, {tipo:'mat',cantidad:5,concepto:'sin vincular'} ]}] };
+  const lc = listaCompra(casoLC, cat, DB.cfg);
+  const itP1 = lc.grupos.flatMap(g => g.items).find(i => i.productoId === 'p1');
+  a('lista de compra: suma líneas y aplica merma (10 % suelo)', itP1.necesaria === 20.8 && itP1.merma === 0.10);
+  a('lista de compra: redondea hacia arriba a la unidad de venta (cajas de 1,44)', itP1.packs === Math.ceil(20.8*1.10/1.44) && itP1.cantidadCompra === r(itP1.packs*1.44));
+  a('lista de compra: agrupa por proveedor', lc.grupos.length === 2 && lc.grupos.map(g => g.proveedor).sort().join() === 'Leroy Merlin,Obramart');
+  a('lista de compra: total del grupo = Σ subtotales', lc.grupos.every(g => g.total === r(g.items.reduce((s,i)=>s+i.subtotal,0))));
+  a('lista de compra: avisa de materiales sin producto vinculado', lc.sinVincular === 1);
+  a('merma por categoría configurable en vivo', (()=>{ const cfg2 = JSON.parse(JSON.stringify(DB.cfg)); cfg2.catalogo.mermaPorCategoria.suelo = 0.20; return listaCompra(casoLC, cat, cfg2).grupos.flatMap(g=>g.items).find(i=>i.productoId==='p1').merma === 0.20; })());
+  a('precio manual tiene prioridad sobre el scrapeado', precioEfectivo({precio:10, precioManual:12}) === 12 && precioEfectivo({precio:10, precioManual:null}) === 10);
+  const lmat = [ {id:'a',tipo:'mat',espacioId:'e1',subtotal:100,precio:10,concepto:'Suelo'}, {id:'b',tipo:'mo',espacioId:'e1',subtotal:50,precio:5,concepto:'MO'}, {id:'c',tipo:'mat',espacioId:'e2',subtotal:200,precio:20,concepto:'Otro'} ];
+  const am = anularMaterialesCliente(lmat, ['e1'], 22);
+  a('materiales del cliente: anula solo el material del espacio indicado', lmat[0].anulada && lmat[0].subtotal === 0 && lmat[1].subtotal === 50 && !lmat[2].anulada);
+  a('materiales del cliente: el ahorro incluye el margen (cambio en obra)', am.ahorroSinMargen === 100 && am.ahorro === 122);
+  a('materiales anulados quedan bloqueados (no se pisan al recalcular)', lmat[0].bloqueada === true && lmat[0].origen === 'manual');
+
+  // ── 23. Clientes duplicados y reparto de la bandeja ──
+  a('duplicados: se detectan por email (CL-01 / CL-17)', detectarDuplicados(DB.clientes).some(p => p.includes('CL-01') && p.includes('CL-17')));
+  a('duplicados: coincidencia por teléfono con distinto formato', coincideCliente({email:'a@x.es', tel:'+34 612 345 678'}, {email:'b@x.es', tel:'612345678'}));
+  a('duplicados: buscarDuplicado al crear un cliente', buscarDuplicado(DB.clientes, {email:'MARIA.GARCIA@gmail.com', tel:''}).id === 'CL-01');
+  a('duplicados: clientes distintos no coinciden', !coincideCliente({email:'a@x.es', tel:'611111111'}, {email:'b@x.es', tel:'622222222'}));
+  const dbU = { clientes: JSON.parse(JSON.stringify(DB.clientes)), casos: JSON.parse(JSON.stringify(DB.casos)) };
+  unirClientes(dbU, 'CL-01', 'CL-17');
+  a('unir clientes: reasigna casos y elimina el duplicado', !dbU.clientes.some(x => x.id === 'CL-17') && detectarDuplicados(dbU.clientes).length === 0);
+  const bandeja = DB.casos.filter(enBandeja).map(c => ({ p:scorePrioridad(c,DB.cfg,hoy()), q:scoreCalidad(c,DB.cfg) }));
+  a('bandeja de ejemplo: hay casos en los tres niveles', ['Atender hoy','Pronto','Sin prisa'].every(n => bandeja.some(x => x.p.nivel === n)));
+  a('bandeja de ejemplo: prioridad alta con calidad baja', bandeja.some(x => x.p.total >= 60 && x.q.total < 50));
+  a('bandeja de ejemplo: calidad alta con prioridad media', bandeja.some(x => x.q.total >= 70 && x.p.nivel === 'Pronto'));
+  a('la sugerencia «presupuesto sin visita» aparece en los datos de ejemplo', DB.casos.some(c => accionSugerida(c, DB.cfg).id === 'presupuesto_sin_visita'));
+
   // ── Cobertura de la DB de ejemplo ──
   const estados = new Set(DB.casos.map(c=>c.estado));
   a('DB: ≥14 casos', DB.casos.length >= 14);
@@ -2064,6 +2253,16 @@ function aplicarAccionCliente(caso, accionId, datos){
       caso.visita.estado = 'confirmada';
       if (puedeTransitar(caso,'visita_confirmada')) transitar(caso,'visita_confirmada',{autor:'cliente',texto:'El cliente eligió franja de visita'});
       ev('El cliente confirmó la visita: ' + fmtFecha(caso.visita.elegida.fecha) + ' ' + caso.visita.elegida.franja); break;
+    case 'firmar_adenda':
+      if (datos.id) firmarAdenda(caso, datos.id); break;
+    case 'listar_remate':
+      (caso.obra.remates = caso.obra.remates||[]).push({ id:nuevoIdSeq(caso.obra.remates,'R'), texto:datos.texto||'Remate indicado por el cliente', foto:true, estado:'abierto', autor:'cliente' });
+      ev('El cliente lista un remate: ' + (datos.texto||'')); break;
+    case 'conformidad':
+      if (caso.estado === 'en_remates'){ const ok = puedeCerrarObra(caso, DB.cfg, 'expresa'); if (ok.ok){ caso.obra.cierre.conformidad = { tipo:'expresa', fecha:hoy(), rastro:[] }; transitar(caso,'cerrada',{autor:'cliente',texto:'Conformidad expresa del cliente: obra cerrada'}); } else return caso; }
+      ev('El cliente da su conformidad'); break;
+    case 'desacuerdo':
+      marcarDesacuerdo(caso, datos.id); break;
     case 'confirmar_visita':
       caso.visita.confirmadaCliente = true; ev('El cliente confirma que estará en la visita'); break;
     case 'reprogramar':
@@ -2079,7 +2278,7 @@ function aplicarAccionCliente(caso, accionId, datos){
         ev('¡Propuesta aceptada! Importe ' + fmtEur(v?.totales?.total||0));
       } break;
     case 'pedir_cambios':
-      (caso.obra.solicitudesCambio = caso.obra.solicitudesCambio||[]).push({ id:uid('S'), fecha:hoy(), texto:datos.texto||'El cliente pide cambios en la propuesta', estado:'abierta' });
+      (caso.obra.solicitudesCambio = caso.obra.solicitudesCambio||[]).push({ id:nuevoIdSeq(caso.obra.solicitudesCambio,'S'), fecha:hoy(), texto:datos.texto||'El cliente pide cambios en la propuesta', estado:'abierta' });
       ev('El cliente pide cambios: ' + (datos.texto||'(sin detalle)')); break;
     case 'rechazar':
       if (puedeTransitar(caso,'rechazada')){ const v=caso.versiones.find(x=>x.estado==='vigente'); if(v)v.estado='rechazada'; transitar(caso,'rechazada',{autor:'cliente',texto:'Rechazada: '+(datos.motivo||'sin motivo')}); }
@@ -2500,7 +2699,7 @@ function confirmarRecordatorio(id){
 
 // ── Ficha del caso ──────────────────────────────────────
 let _fichaId = null, _fichaTab = 'resumen', _fichaDiff = null;
-function abrirCaso(id){ _fichaId = id; _fichaTab = 'resumen'; _fichaDiff = null; renderFicha(); }
+function abrirCaso(id){ _fichaId = id; _fichaTab = 'resumen'; _fichaDiff = null; _adSel = null; renderFicha(); }
 function renderFicha(){
   const c = DB.casos.find(x=>x.id===_fichaId); if(!c) return;
   const cli = clienteDe(c); const prio = scorePrioridad(c,DB.cfg,hoy()); const eco = estadoEconomico(c,DB.cobros);
@@ -2677,7 +2876,7 @@ function c_editLinea(lid, campo, val){ const c=_fc(); const b=asegurarBorrador(c
   if(campo==='cantidad'||campo==='precio'){ l[campo]=r(Number(val)||0); l.subtotal=r(l.cantidad*l.precio); } else l[campo]=val;
   l.bloqueada=true; l.origen='manual'; renderFicha(); }
 function c_candado(lid){ const c=_fc(); const b=asegurarBorrador(c); const l=b.lineas.find(x=>x.id===lid); if(l){l.bloqueada=!l.bloqueada; renderFicha();} }
-function c_delLinea(lid){ const c=_fc(); const b=asegurarBorrador(c); b.lineas=b.lineas.filter(x=>x.id!==lid); renderFicha(); }
+function c_delLinea(lid){ const c=_fc(); const b=asegurarBorrador(c); const l=b.lineas.find(x=>x.id===lid); confirmarAccion('Eliminar línea','¿Eliminar «' + (l?l.concepto:'línea') + '» del borrador?', () => { b.lineas=b.lineas.filter(x=>x.id!==lid); renderFicha(); }); }
 function c_addLinea(){ const c=_fc(); const b=asegurarBorrador(c); const esp=(c.solicitud.espacios||[])[0];
   b.lineas.push({id:uid('L'),key:'manual',concepto:'Nueva partida',espacioId:esp?.id||null,unidad:'ud',base:'fijo',cantidad:1,precio:0,subtotal:0,tipo:'extra',origen:'manual',bloqueada:true}); renderFicha(); }
 function c_setIva(val){ const c=_fc(); const b=asegurarBorrador(c); b.ivaPct=Number(val); renderFicha(); }
@@ -2721,23 +2920,6 @@ function fichaVisita(c){
   if ((vis.fotos||[]).length) h += '<div class="section-card"><div class="section-card-title">Fotos (' + vis.fotos.length + ')</div><div class="mv-thumbs">' + vis.fotos.map(f=>'<div class="mv-thumb">' + escH(f.etiqueta||'Foto') + (f.espacioNombre?' · ' + escH(f.espacioNombre):'') + '</div>').join('') + '</div></div>';
   if ((vis.notas||[]).length) h += '<div class="section-card"><div class="section-card-title">Notas</div>' + vis.notas.map(n=>'<div class="mv-nota"><div style="font-size:11px;color:var(--muted)">' + escH(n.espacioNombre||'General') + ' · ' + fmtFecha(n.fecha) + (n.audioUrl?' · 🎙':'') + '</div>' + (n.audioUrl?'<i>' + escH(n.transcripcion) + '</i>':escH(n.texto)) + '</div>').join('') + '</div>';
   if (c.fiscal && (c.fiscal.nif || c.fiscal.nombre)) h += '<div class="section-card"><div class="section-card-title">Datos fiscales</div><div class="kv"><span class="k">Nombre</span>' + escH(c.fiscal.nombre) + '</div><div class="kv"><span class="k">NIF</span>' + escH(c.fiscal.nif) + '</div><div class="kv"><span class="k">Dirección</span>' + escH(c.fiscal.direccion) + '</div></div>';
-  return h;
-}
-
-// ── Ficha: Obra ─────────────────────────────────────────
-function fichaObra(c){
-  if (!['en_obra','en_remates','terminada','cerrada'].includes(c.estado)) return '<div class="section-card" style="color:var(--muted)">La obra aún no ha comenzado.</div>';
-  const prog=calcularProgreso(c); const salud=saludObra(c,DB.cfg,hoy()); const tv=totalVigente(c);
-  let h='<div class="section-card"><div class="section-card-title">Progreso ' + Math.round(prog*100) + '% · salud: ' + salud.replace(/_/g,' ') + '</div>' +
-    '<div class="prog-bar" style="margin-bottom:10px"><div class="prog-fill" style="width:' + (prog*100) + '%"></div></div>' +
-    (c.obra.hitos||[]).map(hh=>'<div style="display:flex;align-items:center;gap:8px;font-size:12px;padding:2px 0"><span class="etiq-chip etiq-' + (hh.estado==='hecho'?'ok':hh.estado==='en_curso'?'info':'warn') + '">' + hh.estado.replace(/_/g,' ') + '</span><span style="flex:1">' + escH(hh.nombre) + '</span><span style="color:var(--muted)">' + hh.diasEstimados + ' d</span></div>').join('') + '</div>';
-  const cambios=c.obra.cambios||[];
-  if (cambios.length) h+='<div class="section-card"><div class="section-card-title">Cambios</div>' + cambios.map(ch=>'<div style="font-size:12px;padding:3px 0;border-bottom:1px dashed var(--border)"><b>' + fmtEur(ch.importe) + '</b> · ' + escH(ch.concepto) + ' <span class="badge ' + (ch.estado==='registrado'?'b-warn':'b-ok') + '">' + ch.estado + '</span>' + (ch.bloqueaObra?' <span class="badge b-err">bloquea</span>':'') + '</div>').join('') + '</div>';
-  const adendas=c.obra.adendas||[];
-  if (adendas.length) h+='<div class="section-card"><div class="section-card-title">Adendas</div>' + adendas.map(a=>'<div style="font-size:12px;padding:3px 0">' + a.id + ' · ' + escH(a.concepto||'') + ' · <b>' + fmtEur(a.delta) + '</b> <span class="badge ' + (a.estado==='firmada'?'b-ok':'b-warn') + '">' + a.estado + '</span></div>').join('') + '</div>';
-  const remates=c.obra.remates||[];
-  if (remates.length) h+='<div class="section-card"><div class="section-card-title">Remates</div>' + remates.map(rr=>'<div class="check-q">' + (rr.estado==='resuelto'?'☑':'☐') + ' ' + escH(rr.texto) + '</div>').join('') + '</div>';
-  h+='<div class="section-card"><div class="section-card-title">Total vigente</div><div style="font-size:13px">Firmado ' + fmtEur(tv.firmado) + ' · Provisional ' + fmtEur(tv.provisional) + ' · <b>Total ' + fmtEur(tv.total) + '</b>' + (tv.desviacionPct?' <span style="color:var(--amber)">(+' + tv.desviacionPct + '%)</span>':'') + '</div><div style="font-size:12px;color:var(--muted);margin-top:4px">La gestión de hitos, cambios y adendas llega en la Fase D.</div></div>';
   return h;
 }
 
@@ -2790,13 +2972,7 @@ function vistaCliente(id){
   }
   else if (c.estado==='en_pausa') accionHtml = '<div class="cv-action"><b>Caso en pausa</b><button class="cv-btn" onclick="accCliente(\'' + id + '\',\'reactivar\')">Reactivar mi solicitud</button></div>';
   else if (c.estado==='caducada') accionHtml = '<div class="cv-action"><b>Tu presupuesto ha caducado</b><button class="cv-btn" onclick="accCliente(\'' + id + '\',\'renovar\')">Pedir presupuesto actualizado</button></div>';
-  else if (c.estado==='en_obra') {
-    const pend = (c.obra.cambios||[]).filter(x=>x.estado==='registrado');
-    accionHtml = '<div class="cv-action"><b>Tu obra en marcha</b>' +
-      pend.map(ch=>'<div style="font-size:12px;padding:4px 0">Cambio: ' + escH(ch.concepto) + ' (' + fmtEur(ch.importe) + ') <button class="abtn abtn-ghost abtn-sm" onclick="accClienteCambio(\'' + id + '\',\'' + ch.id + '\')">No estoy de acuerdo</button></div>').join('') +
-      '<button class="cv-btn ghost" onclick="accCliente(\'' + id + '\',\'pedir_cambios\')">Pedir un cambio</button></div>';
-  }
-  else if (c.estado==='en_remates') accionHtml = '<div class="cv-action"><b>Obra terminada</b><p style="font-size:13px;color:var(--muted);margin:6px 0">Revisa los remates y danos tu conformidad.</p><button class="cv-btn" onclick="toast(\'Conformidad simulada — Fase D\')">Dar conformidad</button></div>';
+  else if (['en_obra','terminada','en_remates','cerrada'].includes(c.estado)) accionHtml = clienteObraHtml(c);
 
   const desglose = '<div class="section-card" style="background:#fff"><div class="section-card-title">Tu presupuesto</div>' +
     (v?'<div class="kv"><span class="k">Versión vigente</span>' + v.id + ' · ' + fmtFecha(v.enviadaAt||v.creadaAt) + '</div>':'') +
@@ -2809,12 +2985,33 @@ function vistaCliente(id){
     '<div class="cliente-view">' + pasos + accionHtml + desglose + '</div>' +
     '<div style="margin-top:14px;text-align:right"><button class="abtn abtn-ghost abtn-sm" onclick="abrirCaso(\'' + id + '\')">← Volver a la ficha</button></div>', true);
 }
+
+function clienteObraHtml(c){
+  const id = c.id; const tv = totalVigente(c); const prog = calcularProgreso(c);
+  const pend = (c.obra.cambios||[]).filter(x => x.estado === 'registrado' || x.estado === 'en_desacuerdo'); const iva = ivaDe(c);
+  const porFirmar = (c.obra.adendas||[]).filter(a => a.estado === 'enviada');
+  const hitos = (c.obra.hitos||[]).map(h => '<div style="font-size:13px;padding:2px 0">' + (h.estado==='hecho'?'✅':h.estado==='en_curso'?'🔧':'⏳') + ' ' + escH(h.nombre) + '</div>').join('');
+  let h = '<div class="cv-action"><b>' + (c.estado==='cerrada' ? 'Tu obra está cerrada' : c.estado==='en_remates' ? 'Obra terminada: revisión y remates' : c.estado==='terminada' ? 'Obra terminada' : 'Tu obra en marcha') + '</b>' +
+    (c.obra.hitos?.length ? '<div class="prog-bar" style="margin:8px 0"><div class="prog-fill" style="width:' + (prog*100) + '%"></div></div><div style="font-size:12px;color:var(--muted);margin-bottom:6px">' + Math.round(prog*100) + ' % completado</div>' + hitos : '') +
+    '<div style="font-size:13px;margin-top:8px">Firmado: <b>' + fmtEur(tv.firmado) + '</b>' + (tv.provisional ? ' · Provisional: <b>' + fmtEur(tv.provisional) + '</b>' : '') + ' · Total: <b>' + fmtEur(tv.total) + '</b></div>';
+  if (pend.length) h += '<div style="margin-top:10px;font-size:12px;color:var(--muted)">Cambios registrados pendientes:</div>' + pend.map(ch => '<div style="font-size:12px;padding:4px 0;border-bottom:1px dashed var(--border)">' + escH(ch.concepto) + ' · <b>' + fmtEur(ch.importe*(1+iva/100)) + '</b> ' + (ch.estado==='en_desacuerdo' ? '<span class="badge b-err">en desacuerdo</span>' : '<button class="abtn abtn-ghost abtn-sm" onclick="accClienteCambio(\'' + id + '\',\'' + ch.id + '\')">No estoy de acuerdo</button>') + '</div>').join('');
+  if (porFirmar.length) h += porFirmar.map(a => '<div class="porque" style="margin-top:10px"><b>Adenda ' + a.id + ' por firmar</b> · ' + fmtEur(a.delta*(1+iva/100)) + ' c/IVA<button class="cv-btn" onclick="accCliente(\'' + id + '\',\'firmar_adenda\',\'' + a.id + '\')">Firmar adenda</button></div>').join('');
+  if (c.estado === 'en_obra') h += '<input id="cv-texto" class="disp-inp" style="width:100%;margin-top:12px;padding:8px" placeholder="Describe el cambio que quieres pedir"><button class="cv-btn ghost" onclick="accCliente(\'' + id + '\',\'pedir_cambios\')">Pedir un cambio</button>';
+  if (['terminada','en_remates'].includes(c.estado)){
+    h += '<div style="margin-top:12px;font-size:13px"><b>Remates</b></div>' + ((c.obra.remates||[]).map(x => '<div style="font-size:13px">' + (x.estado==='resuelto'?'☑':'☐') + ' ' + escH(x.texto) + (x.foto?' 📷':'') + '</div>').join('') || '<div style="font-size:12px;color:var(--muted)">Aún no has indicado remates.</div>');
+    if (c.estado === 'en_remates') h += '<input id="cv-remate" class="disp-inp" style="width:100%;margin-top:8px;padding:8px" placeholder="Indica un remate (con foto)"><button class="cv-btn ghost" onclick="accCliente(\'' + id + '\',\'listar_remate\')">Listar remate con foto</button><button class="cv-btn" onclick="accCliente(\'' + id + '\',\'conformidad\')">Dar mi conformidad</button><div style="font-size:11px;color:var(--muted);margin-top:4px">La conformidad solo es posible cuando todos los remates están resueltos.</div>';
+  }
+  if (c.estado === 'cerrada'){ const cf = c.obra.cierre?.conformidad; h += '<div style="margin-top:10px;font-size:13px;color:var(--ok)">✓ ' + (cf && cf.tipo==='expresa' ? 'Diste tu conformidad el ' + fmtFecha(cf.fecha) : 'Cerrada el ' + fmtFecha(cf?.fecha)) + '. Tu acta de entrega está disponible.</div>'; }
+  return h + '</div>';
+}
 function accCliente(id, accion, franjaIdx){
   const c = DB.casos.find(x=>x.id===id); if(!c) return;
   const datos = {};
   if (accion==='elegir_franja' && franjaIdx!=null) datos.franja = c.visita.franjasOfrecidas[franjaIdx];
   if (accion==='reprogramar' && franjaIdx!=null) datos.franja = franjasLibres(DB.cfg, DB.casos, fechaMasDias(hoy(),1), 14, id)[franjaIdx];
-  if (accion==='pedir_cambios') datos.texto = 'Me gustaría revisar algún acabado';
+  if (accion==='pedir_cambios') datos.texto = (document.getElementById('cv-texto')||{}).value || 'Me gustaría revisar algún acabado';
+  if (accion==='firmar_adenda') datos.id = franjaIdx;
+  if (accion==='listar_remate') datos.texto = (document.getElementById('cv-remate')||{}).value || 'Pequeño detalle por revisar';
   if (accion==='rechazar') datos.motivo = 'Encontré otra oferta';
   try{ aplicarAccionCliente(c, accion, datos); }catch(e){ toast(e.message,'err'); return; }
   toast('Acción del cliente aplicada');
@@ -2823,7 +3020,7 @@ function accCliente(id, accion, franjaIdx){
 }
 function accClienteCambio(id, cambioId){
   const c = DB.casos.find(x=>x.id===id); if(!c) return;
-  const ch = (c.obra.cambios||[]).find(x=>x.id===cambioId); if(ch){ ch.estado='en_desacuerdo'; (c.eventos).push({fecha:hoy(),tipo:'cliente',texto:'El cliente NO está de acuerdo con el cambio: ' + ch.concepto,autor:'cliente'}); }
+  marcarDesacuerdo(c, cambioId);
   toast('Desacuerdo registrado · avisado el reformista'); renderPaginaActual(); vistaCliente(id);
 }
 
@@ -3341,6 +3538,291 @@ function enviarBorradorComoVersion(c, tipo){
 }
 
 // ═══════════════════════════════════════════════════════
+// SECCIÓN 12D: OBRAS (lista + ficha de obra + cierre)
+// ═══════════════════════════════════════════════════════
+const SALUD_LBL = { al_dia:'Al día', en_riesgo:'En riesgo', bloqueada:'Bloqueada' };
+const SALUD_BADGE = { al_dia:'b-ok', en_riesgo:'b-warn', bloqueada:'b-err' };
+const TRIGGER_TXT = { umbral:'Los cambios sin consolidar alcanzan el umbral de adenda', tope:'Un cambio individual supera el tope configurado (adenda inmediata)', hito:'Se ha marcado un hito con cambios pendientes', cobro:'Vas a registrar un cobro con cambios pendientes', manual:'Adenda lanzada manualmente', cierre:'Intentas terminar la obra con cambios pendientes (obligatoria)', bloqueante:'Hay un cambio que bloquea la obra', solicitud_cliente:'El cliente la ha solicitado' };
+const TIPO_CAMBIO = { imprevisto:'Imprevisto', cliente:'Petición del cliente', material_cliente:'Material aportado por el cliente', alcance:'Cambio de alcance' };
+const APROB_LBL = { telefono:'Teléfono', presencial:'Presencial', enlace:'Enlace' };
+const ESTADOS_OBRA = ['aceptada','en_obra','terminada','en_remates','cerrada'];
+let _cbFn = null;
+function confirmarAccion(titulo, texto, fn){
+  _cbFn = fn;
+  openModal('<div class="modal-title">' + escH(titulo) + '</div><p style="font-size:14px;margin-bottom:16px">' + escH(texto) + '</p><div style="display:flex;gap:8px;justify-content:flex-end"><button class="abtn abtn-ghost" onclick="_fichaId?renderFicha():closeAllModals()">Cancelar</button><button class="abtn abtn-primary" onclick="var f=_cbFn;_cbFn=null;f&&f()">Confirmar</button></div>');
+}
+function ivaDe(c){ const v = (c.versiones||[]).find(x => x.id === c.aceptacion?.versionId); return (v?.ivaPct != null ? v.ivaPct : DB.cfg.iva); }
+function ultimaFotoObra(c){
+  const fs = [...(c.obra?.fotos||[]), ...(c.obra?.hitos||[]).flatMap(h => (h.fotos||[]).map(f => Object.assign({ hito:h.nombre }, f)))];
+  return fs.sort((a,b) => String(b.fecha).localeCompare(String(a.fecha)))[0] || null;
+}
+function proximoHito(c){ return (c.obra?.hitos||[]).find(h => h.estado !== 'hecho') || null; }
+function abrirObra(id){ _fichaId = id; _fichaTab = 'obra'; _fichaDiff = null; renderFicha(); }
+function badgeSalud(s){ return '<span class="badge ' + SALUD_BADGE[s] + '">' + SALUD_LBL[s] + '</span>'; }
+function miniBarra(pct, color){ return '<div class="prog-bar" style="min-width:70px"><div class="prog-fill" style="width:' + clamp(pct,0,100) + '%;' + (color?'background:' + color:'') + '"></div></div>'; }
+
+// ── Lista de obras ──
+let obrasF = { estado:'', salud:'', saldo:'' };
+RENDERERS.obras = function(){
+  let casos = DB.casos.filter(c => ESTADOS_OBRA.includes(c.estado));
+  const info = casos.map(c => ({ c, salud: c.obra?.hitos?.length ? saludObra(c, DB.cfg, hoy()) : null, eco: estadoEconomico(c, DB.cobros), prog: calcularProgreso(c) }));
+  let items = info.filter(x => (!obrasF.estado || x.c.estado === obrasF.estado) && (!obrasF.salud || x.salud === obrasF.salud) && (!obrasF.saldo || (obrasF.saldo === 'con' ? x.eco.saldo > 0.005 : x.eco.saldo <= 0.005)));
+  const orden = { bloqueada:0, en_riesgo:1, al_dia:2 }; items.sort((a,b) => (orden[a.salud] ?? 3) - (orden[b.salud] ?? 3));
+  const activas = info.filter(x => ['en_obra','en_remates','terminada'].includes(x.c.estado));
+  const sel = (k, lbl, opts) => '<select onchange="obrasF.' + k + '=this.value;RENDERERS.obras()"><option value="">' + lbl + '</option>' + opts.map(o => '<option value="' + o[0] + '"' + (obrasF[k]===o[0]?' selected':'') + '>' + o[1] + '</option>').join('') + '</select>';
+  const rows = items.map(x => {
+    const c = x.c, cli = clienteDe(c), ph = proximoHito(c), uf = ultimaFotoObra(c);
+    return '<tr onclick="abrirObra(\'' + c.id + '\')" style="cursor:pointer"><td><b>' + escH(cli.nombre) + '</b><br><span style="font-size:11px;color:var(--muted)">' + c.id + ' · ' + escH(direccionDe(c)) + '</span></td><td>' + badgeEstado(c.estado) + '</td>' +
+      '<td style="min-width:110px">' + (c.obra?.hitos?.length ? Math.round(x.prog*100) + '%' + miniBarra(x.prog*100) : '<span style="color:var(--muted);font-size:12px">Sin iniciar</span>') + '</td>' +
+      '<td>' + (x.salud ? badgeSalud(x.salud) : '—') + '</td>' +
+      '<td style="font-size:12px"><b>' + fmtEur0(x.eco.total) + '</b> · cobrado ' + fmtEur0(x.eco.cobrado) + miniBarra(x.eco.total ? x.eco.cobrado / x.eco.total * 100 : 0, 'var(--ok)') + (x.eco.saldo > 0.005 ? '<span style="color:var(--danger)">saldo ' + fmtEur0(x.eco.saldo) + '</span>' : '<span style="color:var(--ok)">sin saldo</span>') + '</td>' +
+      '<td style="font-size:12px">' + (ph ? escH(ph.nombre) + '<br><span style="color:var(--muted)">' + fmtFechaCorta(ph.fechaFinPrevista || ph.fechaPrevista) + '</span>' : '—') + '</td>' +
+      '<td style="font-size:11px;color:var(--muted)">' + (uf ? '<div class="mv-thumb" style="width:64px;height:48px;aspect-ratio:auto;font-size:9px">' + escH(uf.hito || uf.momento || 'Foto') + '</div>' + fmtFechaCorta(uf.fecha) : '—') + '</td></tr>';
+  }).join('');
+  document.getElementById('pg-obras').innerHTML =
+    '<div class="page-hdr"><div><div class="page-title">Obras</div><div class="page-sub">De aceptadas a cerradas · ' + info.length + ' en total</div></div></div>' +
+    '<div class="stat-grid">' + statCard(activas.length, 'Obras en curso', 'En ejecución o remates', 'up') + statCard(info.filter(x => x.salud === 'bloqueada').length, 'Bloqueadas', 'Requieren decisión', info.some(x => x.salud === 'bloqueada') ? 'dn' : 'up') + statCard(fmtEur0(info.reduce((s,x) => s + x.eco.total, 0)), 'Total vigente', 'Suma de obras', 'up') + statCard(fmtEur0(info.reduce((s,x) => s + Math.max(0, x.eco.saldo), 0)), 'Saldo pendiente', 'Por cobrar', 'dn') + '</div>' +
+    '<div class="ctrl-row">' + sel('estado','Todos los estados',ESTADOS_OBRA.map(e => [e, ESTADO_LABEL[e]])) + sel('salud','Toda salud',[['al_dia','Al día'],['en_riesgo','En riesgo'],['bloqueada','Bloqueada']]) + sel('saldo','Cualquier saldo',[['con','Con saldo'],['sin','Sin saldo']]) + '<span class="bandeja-count">' + items.length + ' obra(s)</span></div>' +
+    (items.length ? '<div class="table-wrap"><table><thead><tr><th>Cliente</th><th>Estado</th><th>Progreso</th><th>Salud</th><th>Total vs cobrado</th><th>Próximo hito</th><th>Última foto</th></tr></thead><tbody>' + rows + '</tbody></table></div>' : '<div class="section-card" style="text-align:center;color:var(--muted)">No hay obras con estos filtros.</div>');
+};
+
+// ── Ficha de obra ──
+function fichaObra(c){
+  if (!ESTADOS_OBRA.includes(c.estado)) return '<div class="section-card" style="color:var(--muted)">La obra aún no ha comenzado: el caso debe estar aceptado.</div>';
+  const ro = c.estado === 'cerrada';
+  let h = obraCabecera(c);
+  if (c.estado === 'aceptada'){
+    return h + '<div class="section-card" style="border-color:var(--accent)"><div class="section-card-title" style="color:var(--accent)">Iniciar obra</div><p style="font-size:13px;margin-bottom:10px">Se crearán los hitos tipo de tu configuración (' + DB.cfg.hitosTipo.length + ') con fechas previstas.</p>' +
+      '<div class="inl-field"><label>Fecha de inicio</label><input type="date" id="ob-inicio" value="' + hoy() + '"></div><div style="margin-top:12px"><button class="abtn abtn-primary" onclick="obraIniciar()">Iniciar obra</button></div></div>';
+  }
+  h += obraAvisos(c) + obraHitos(c, ro) + obraGaleria(c, ro) + obraCambios(c, ro) + obraSolicitudes(c) + obraAdendas(c, ro) + obraRemates(c, ro) + obraCierre(c);
+  return h;
+}
+function obraAvisos(c){
+  const rel = evaluarRelojes(c, DB.cfg, hoy()).filter(x => ['pausar_partida','cambio_bloqueante','cambio_pendiente','solicitud_cambio','remates_plazo'].includes(x.tipo));
+  if (!rel.length) return '';
+  return '<div class="section-card" style="border-color:var(--amber);background:#fffaf0"><div class="section-card-title" style="color:var(--amber)">Avisos de la obra</div>' + rel.map(x => '<div style="font-size:12px;padding:3px 0">⚠ ' + escH(x.texto) + '</div>').join('') + '</div>';
+}
+function obraCabecera(c){
+  const tv = totalVigente(c), eco = estadoEconomico(c, DB.cobros);
+  const hay = (c.obra?.hitos||[]).length; const prog = calcularProgreso(c); const salud = hay ? saludObra(c, DB.cfg, hoy()) : null;
+  return '<div class="section-card"><div class="section-card-title">Resumen de la obra</div>' +
+    '<div style="display:flex;gap:14px;align-items:center;flex-wrap:wrap;margin-bottom:10px"><div style="flex:1;min-width:180px"><div style="font-family:\'Cormorant Garamond\',serif;font-size:30px">' + Math.round(prog*100) + '%</div>' + miniBarra(prog*100) + '</div>' +
+      (salud ? '<div>' + badgeSalud(salud) + '</div>' : '') + '<div style="font-size:12px;color:var(--muted)">Inicio: ' + (c.obra?.inicio ? fmtFecha(c.obra.inicio) : 'sin iniciar') + '</div></div>' +
+    '<div class="kv"><span class="k">Aceptada</span>' + fmtEur(tv.aceptada) + '</div>' +
+    '<div class="kv"><span class="k">+ Adendas firmadas</span>' + fmtEur(tv.adendasFirmadas) + '</div>' +
+    '<div class="kv"><span class="k">= Firmado</span><b>' + fmtEur(tv.firmado) + '</b></div>' +
+    '<div class="kv"><span class="k">+ Cambios provisionales</span>' + fmtEur(tv.provisional) + '</div>' +
+    '<div class="kv"><span class="k">Total vigente</span><b style="font-size:16px">' + fmtEur(tv.total) + '</b> <span style="color:' + (tv.desviacionPct > 0 ? 'var(--amber)' : 'var(--muted)') + '">(' + (tv.desviacionPct >= 0 ? '+' : '') + tv.desviacionPct + ' % vs aceptada)</span></div>' +
+    '<div class="kv"><span class="k">Cobrado / saldo</span>' + fmtEur(eco.cobrado) + ' · <b style="color:' + (eco.saldo > 0.005 ? 'var(--danger)' : 'var(--ok)') + '">' + fmtEur(eco.saldo) + '</b> <span class="badge ' + (eco.estado==='cobrado'?'b-ok':eco.estado==='parcial'?'b-warn':'b-err') + '">' + eco.estado + '</span></div>' +
+    (c.estado === 'cerrada' && eco.saldo > 0.005 ? '<div class="mv-aviso" style="font-size:13px">Obra <b>cerrada</b> pero <b>no cobrada</b>: quedan ' + fmtEur(eco.saldo) + ' pendientes. Cerrada y cobrada son estados distintos.</div>' : '') + '</div>';
+}
+function obraIniciar(){ const c = _fc(); const f = document.getElementById('ob-inicio').value || hoy(); try { iniciarObra(c, DB.cfg, f); toast('Obra iniciada'); renderPaginaActual(); renderFicha(); } catch(e){ toast(e.message,'err'); } }
+
+// Hitos
+function obraHitos(c, ro){
+  const hs = c.obra.hitos||[];
+  const rows = hs.map((h,i) => '<tr>' +
+    '<td><input value="' + escH(h.nombre) + '" ' + (ro?'disabled':'') + ' onchange="hitoEdit(\'' + h.id + '\',\'nombre\',this.value)"></td>' +
+    '<td style="width:60px"><input class="num" type="number" min="1" value="' + h.diasEstimados + '" ' + (ro?'disabled':'') + ' onchange="hitoEdit(\'' + h.id + '\',\'dias\',this.value)"></td>' +
+    '<td style="width:130px"><input type="date" value="' + (h.fechaFinPrevista||h.fechaPrevista||'') + '" ' + (ro?'disabled':'') + ' onchange="hitoEdit(\'' + h.id + '\',\'fecha\',this.value)"></td>' +
+    '<td><span class="etiq-chip etiq-' + (h.estado==='hecho'?'ok':h.estado==='en_curso'?'info':'warn') + '">' + h.estado.replace('_',' ') + '</span>' + (h.fechaReal ? '<div style="font-size:10px;color:var(--muted)">' + fmtFechaCorta(h.fechaReal) + '</div>' : '') + ((h.fotos||[]).length ? '<div style="font-size:10px">📷 ' + h.fotos.length + '</div>' : '') + '</td>' +
+    '<td style="white-space:nowrap">' + (ro ? '' : '<button class="abtn abtn-ghost abtn-sm" onclick="hitoEstado(\'' + h.id + '\',\'en_curso\')">En curso</button> <button class="abtn abtn-primary abtn-sm" onclick="hitoHechoModal(\'' + h.id + '\')">Hecho</button> ' +
+      '<span style="cursor:pointer" onclick="hitoMover(\'' + h.id + '\',-1)">▲</span> <span style="cursor:pointer" onclick="hitoMover(\'' + h.id + '\',1)">▼</span> <span style="cursor:pointer;color:var(--danger)" onclick="hitoBorrarAsk(\'' + h.id + '\')">✕</span>') + '</td></tr>').join('');
+  return '<details class="ob-det" open><summary>Hitos (' + hs.filter(x=>x.estado==='hecho').length + '/' + hs.length + ')</summary><table class="lineas-tbl"><thead><tr><th>Hito</th><th>Días</th><th>Fecha prevista</th><th>Estado</th><th></th></tr></thead><tbody>' + rows + '</tbody></table>' +
+    (ro ? '' : '<div style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap"><button class="abtn abtn-ghost abtn-sm" onclick="hitoAnadir()">+ Añadir hito</button><button class="abtn abtn-ghost abtn-sm" onclick="hitoRestaurarTipo()">Restaurar hitos tipo</button></div>') + '</details>';
+}
+function hitoEdit(hid, campo, val){
+  const c = _fc(); const o = c.obra; const h = o.hitos.find(x => x.id === hid); if (!h) return;
+  if (campo === 'nombre') h.nombre = val.trim() || h.nombre;
+  else if (campo === 'dias'){ h.diasEstimados = Math.max(1, Math.round(Number(val)||1)); replanificarHitos(o); }
+  else if (campo === 'fecha' && val){ h.fechaFinPrevista = val; h.fechaPrevista = val; h.fechaInicioPrevista = fechaMasDias(val, -h.diasEstimados); }
+  renderFicha();
+}
+function hitoMover(hid, d){ const c = _fc(); const hs = c.obra.hitos; const i = hs.findIndex(x => x.id === hid); const j = i + d; if (j < 0 || j >= hs.length) return; [hs[i], hs[j]] = [hs[j], hs[i]]; replanificarHitos(c.obra); renderFicha(); }
+function hitoAnadir(){ const c = _fc(); c.obra.hitos.push({ id:nuevoIdSeq(c.obra.hitos,'H'), nombre:'Nuevo hito', diasEstimados:2, estado:'pendiente', fechaReal:null, fotos:[] }); replanificarHitos(c.obra); renderFicha(); }
+function hitoRestaurarTipo(){ const c = _fc(); const hechos = c.obra.hitos.filter(h => h.estado !== 'pendiente'); confirmarAccion('Restaurar hitos tipo', hechos.length ? 'Hay hitos ya iniciados o hechos; se conservarán y se añadirán los tipo que falten.' : 'Se reemplazarán los hitos por los de tu configuración.', () => { const nombres = new Set(c.obra.hitos.map(h => h.nombre)); if (!hechos.length) c.obra.hitos = []; DB.cfg.hitosTipo.forEach((n,i) => { if (!c.obra.hitos.some(h => h.nombre === n)) c.obra.hitos.push({ id:nuevoIdSeq(c.obra.hitos,'H'), nombre:n, diasEstimados:DIAS_HITO_DEF[i]||3, estado:'pendiente', fechaReal:null, fotos:[] }); }); replanificarHitos(c.obra); renderFicha(); }); }
+function hitoBorrarAsk(hid){ const c = _fc(); const h = c.obra.hitos.find(x => x.id === hid); confirmarAccion('Eliminar hito', '¿Eliminar el hito «' + h.nombre + '»?', () => { c.obra.hitos = c.obra.hitos.filter(x => x.id !== hid); replanificarHitos(c.obra); renderFicha(); }); }
+function hitoEstado(hid, estado){ const c = _fc(); marcarHito(c, hid, estado); renderPaginaActual(); renderFicha(); }
+function hitoHechoModal(hid){
+  const c = _fc(); const h = c.obra.hitos.find(x => x.id === hid);
+  openModal('<div class="modal-title">Marcar «' + escH(h.nombre) + '» como hecho</div><div class="inl-field"><label>Fecha real</label><input type="date" id="hh-fecha" value="' + hoy() + '"></div><div class="inl-field"><label>Fotos del hito</label><select id="hh-fotos"><option value="0">Sin fotos</option><option value="1" selected>1 foto</option><option value="2">2 fotos</option><option value="3">3 fotos</option></select></div>' +
+    '<div style="margin-top:14px;display:flex;gap:8px;justify-content:flex-end"><button class="abtn abtn-ghost" onclick="renderFicha()">Cancelar</button><button class="abtn abtn-primary" onclick="hitoHechoOk(\'' + hid + '\')">Marcar hecho</button></div>');
+}
+function hitoHechoOk(hid){
+  const c = _fc(); const fecha = document.getElementById('hh-fecha').value || hoy(); const n = Number(document.getElementById('hh-fotos').value);
+  const h = marcarHito(c, hid, 'hecho', { fecha, fotos:n });
+  const avisos = [];
+  if (debeGenerarAdenda(c, DB.cfg, { contexto:'hito' }).includes('hito')) avisos.push('Hay cambios sin consolidar: conviene generar una adenda (disparador por hito).');
+  const tr = planCobros(c, DB.cfg, DB.cobros).find(t => t.cuando === 'hito:' + h.nombre && t.estado === 'debido');
+  if (tr) avisos.push('Tramo de cobro «' + tr.label + '» debido (' + fmtEur(tr.falta) + '): regístralo en Cobros.');
+  renderPaginaActual(); renderFicha(); avisos.forEach(a => toast(a));
+}
+
+// Galería
+let obraFoto = { momento:'', espacio:'' };
+function obraGaleria(c, ro){
+  const fotos = [...(c.obra.fotos||[]), ...(c.obra.hitos||[]).flatMap(h => (h.fotos||[]).map(f => Object.assign({}, f, { hito:h.nombre })))].filter(f => (!obraFoto.momento || f.momento === obraFoto.momento) && (!obraFoto.espacio || f.espacioId === obraFoto.espacio)).sort((a,b) => String(a.fecha).localeCompare(String(b.fecha)));
+  const esp = c.solicitud.espacios||[];
+  return '<details class="ob-det"><summary>Galería (' + fotos.length + ')</summary><div class="ctrl-row"><select onchange="obraFoto.momento=this.value;renderFicha()"><option value="">Antes / durante / después</option>' + ['antes','durante','despues'].map(m => '<option value="' + m + '"' + (obraFoto.momento===m?' selected':'') + '>' + m + '</option>').join('') + '</select>' +
+    '<select onchange="obraFoto.espacio=this.value;renderFicha()"><option value="">Todas las estancias</option>' + esp.map(e => '<option value="' + e.id + '"' + (obraFoto.espacio===e.id?' selected':'') + '>' + escH(e.nombre||e.tipo) + '</option>').join('') + '</select>' +
+    (ro ? '' : '<select id="gf-mom"><option value="durante">durante</option><option value="antes">antes</option><option value="despues">después</option></select><select id="gf-esp">' + esp.map(e => '<option value="' + e.id + '">' + escH(e.nombre||e.tipo) + '</option>').join('') + '</select><button class="abtn abtn-primary abtn-sm" onclick="obraSubirFoto()">📷 Subir foto</button>') + '</div>' +
+    '<div class="mv-thumbs">' + (fotos.map(f => { const e = esp.find(x => x.id === f.espacioId); return '<div class="mv-thumb">' + escH(f.hito || f.momento || 'foto') + (e ? ' · ' + escH(e.nombre||e.tipo) : '') + '<br>' + fmtFechaCorta(f.fecha) + '</div>'; }).join('') || '<span style="font-size:12px;color:var(--muted)">Sin fotos con este filtro.</span>') + '</div></details>';
+}
+function obraSubirFoto(){ const c = _fc(); c.obra.fotos.push({ id:uid('of'), fecha:hoy(), url:'foto-simulada.jpg', momento:document.getElementById('gf-mom').value, espacioId:document.getElementById('gf-esp').value }); toast('Foto añadida a la galería'); renderFicha(); }
+
+// Cambios
+function obraCambios(c, ro){
+  const cs = c.obra.cambios||[]; const iva = ivaDe(c);
+  const rows = cs.map(ch => {
+    const pend = ch.estado !== 'consolidado';
+    return '<tr><td><b>' + ch.id + '</b><div style="font-size:10px;color:var(--muted)">' + fmtFechaCorta(ch.fecha) + '</div></td><td>' + escH(ch.concepto) + '<div style="font-size:10px;color:var(--muted)">' + (TIPO_CAMBIO[ch.tipo]||ch.tipo||'') + ' · ' + (APROB_LBL[ch.aprobacion]||'') + (ch.foto?' · 📷':'') + '</div>' + (ch.partidaPausada ? '<div class="etiq-chip etiq-bad">partida pausada pendiente de aprobación</div>' : '') + '</td>' +
+      '<td style="text-align:right"><b>' + fmtEur(ch.importe) + '</b><div style="font-size:10px;color:var(--muted)">' + fmtEur(ch.importe * (1 + iva/100)) + ' c/IVA</div></td>' +
+      '<td><span class="badge ' + (ch.estado==='consolidado'?'b-ok':ch.estado==='en_desacuerdo'?'b-err':'b-warn') + '">' + ch.estado.replace('_',' ') + '</span>' + (ch.bloqueaObra && !ch.resuelto && pend ? ' <span class="badge b-err">bloquea</span>' : '') + (ch.urgente ? ' <span class="badge b-warn">urgente</span>' : '') + '</td>' +
+      '<td style="white-space:nowrap">' + (ro || !pend ? '' :
+        '<a class="abtn abtn-ghost abtn-sm" target="_blank" rel="noopener" href="' + waLink(clienteDe(c).tel, fillTpl(PLANTILLAS_MSG.aviso_cambio, varsDe(c, { concepto:ch.concepto, importe:fmtEur(ch.importe*(1+iva/100)) }))) + '">Aviso</a> ' +
+        (ch.bloqueaObra && !ch.resuelto ? '<button class="abtn abtn-primary abtn-sm" onclick="cambioResolverBloqueo(\'' + ch.id + '\')">Resolver bloqueo</button> ' : '') +
+        (ch.estado === 'en_desacuerdo' ? '<button class="abtn abtn-primary abtn-sm" onclick="desacuerdoModal(\'' + ch.id + '\')">Resolver desacuerdo</button>' : '<button class="abtn abtn-ghost abtn-sm" title="Simula la respuesta del cliente" onclick="cambioSimDesacuerdo(\'' + ch.id + '\')">Simular desacuerdo</button>')) + '</td></tr>';
+  }).join('');
+  const pend = cambiosPendientes(c); const sum = r(pend.reduce((s,x) => s + x.importe, 0));
+  return '<details class="ob-det" open><summary>Cambios (' + cs.length + ') · pendientes ' + fmtEur(sum) + ' sin IVA</summary>' +
+    (cs.length ? '<div style="overflow-x:auto"><table class="lineas-tbl"><thead><tr><th>#</th><th>Concepto</th><th style="text-align:right">Importe</th><th>Estado</th><th></th></tr></thead><tbody>' + rows + '</tbody></table></div>' : '<div style="font-size:12px;color:var(--muted)">Sin cambios registrados.</div>') +
+    (ro ? '' : '<div style="margin-top:10px"><button class="abtn abtn-primary abtn-sm" onclick="registrarCambioModal(\'' + c.id + '\')">+ Registrar cambio</button></div>') + '</details>';
+}
+let _rc = { casoId:null, pre:{} };
+function registrarCambioModal(casoId, pre){ _rc = { casoId, pre:pre||{} }; const c = DB.casos.find(x => x.id === casoId); const p = _rc.pre; const iva = ivaDe(c);
+  openModal('<div class="modal-title">Registrar cambio · ' + escH(clienteDe(c).nombre) + '</div>' +
+    '<div class="inl-field"><label>Tipo</label><select id="rc-tipo">' + Object.entries(TIPO_CAMBIO).map(([k,v]) => '<option value="' + k + '"' + (p.tipo===k?' selected':'') + '>' + v + '</option>').join('') + '</select></div>' +
+    '<div class="inl-field"><label>Concepto</label><input id="rc-concepto" value="' + escH(p.concepto||'') + '" placeholder="Qué cambia"></div>' +
+    '<div class="inl-field"><label>Importe sin IVA (con margen; negativo si resta)</label><input id="rc-importe" type="number" step="0.01" value="' + (p.importe||'') + '" oninput="document.getElementById(\'rc-civa\').textContent=fmtEur((Number(this.value)||0)*' + (1+iva/100) + ')"></div>' +
+    '<div class="inl-field"><label>Con IVA ' + iva + ' %</label><span id="rc-civa" style="flex:1">' + fmtEur(0) + '</span></div>' +
+    '<div class="inl-field"><label>Cómo se aprobó</label><select id="rc-aprob">' + Object.entries(APROB_LBL).map(([k,v]) => '<option value="' + k + '">' + v + '</option>').join('') + '</select></div>' +
+    '<label class="check-q"><input type="checkbox" id="rc-bloquea"> ¿Bloquea la obra?</label><label class="check-q"><input type="checkbox" id="rc-urgente"> ¿Urgente?</label><label class="check-q"><input type="checkbox" id="rc-foto"> Con foto adjunta</label>' +
+    '<div class="inl-field"><label>Nota</label><input id="rc-nota" placeholder="Nota o transcripción de audio"></div>' +
+    '<div style="margin-top:14px;display:flex;gap:8px;justify-content:flex-end"><button class="abtn abtn-ghost" onclick="renderFicha()">Cancelar</button><button class="abtn abtn-primary" onclick="confirmarRC()">Registrar y avisar al cliente</button></div>'); }
+function confirmarRC(){
+  const c = DB.casos.find(x => x.id === _rc.casoId); const v = id => document.getElementById(id);
+  const concepto = v('rc-concepto').value.trim(); const importe = Number(v('rc-importe').value);
+  if (!concepto){ toast('Indica el concepto','err'); return; } if (!importe){ toast('Indica un importe distinto de 0','err'); return; }
+  const ch = registrarCambio(c, { tipo:v('rc-tipo').value, concepto, importe, aprobacion:v('rc-aprob').value, bloqueaObra:v('rc-bloquea').checked, urgente:v('rc-urgente').checked, foto:v('rc-foto').checked, nota:v('rc-nota').value });
+  if (_rc.pre.solicitudId){ const sc = c.obra.solicitudesCambio.find(x => x.id === _rc.pre.solicitudId); if (sc){ sc.estado = 'valorada'; sc.cambioId = ch.id; } }
+  const trig = debeGenerarAdenda(c, DB.cfg, {}); const iva = ivaDe(c);
+  const msg = fillTpl(PLANTILLAS_MSG.aviso_cambio, varsDe(c, { concepto:ch.concepto, importe:fmtEur(ch.importe*(1+iva/100)) }));
+  renderPaginaActual();
+  openModal('<div class="modal-title">Cambio ' + ch.id + ' registrado</div><p style="font-size:13px;color:var(--muted)">Aviso informativo para el cliente (el cliente nunca fija el precio):</p>' + msgBloque(msg, clienteDe(c).tel) +
+    (trig.length ? '<div class="mv-aviso" style="font-size:13px">⚠ <b>Disparador de adenda:</b> ' + trig.map(t => escH(TRIGGER_TXT[t]||t)).join('; ') + '.' + (trig.includes('tope') ? ' <b>Adenda inmediata recomendada.</b>' : '') + '</div>' : '') +
+    '<div style="margin-top:14px;text-align:right"><button class="abtn abtn-primary" onclick="renderFicha()">Volver a la obra</button></div>');
+  if (trig.length) toast('Disparador de adenda activo: ' + trig[0]);
+}
+function cambioResolverBloqueo(id){ const c = _fc(); const ch = c.obra.cambios.find(x => x.id === id); ch.resuelto = true; ch.partidaPausada = false; c.eventos.push({ fecha:hoy(), tipo:'cambio', texto:'Bloqueo del cambio ' + id + ' resuelto: la obra continúa', autor:'reformista' }); toast('Bloqueo resuelto'); renderPaginaActual(); renderFicha(); }
+function cambioSimDesacuerdo(id){ const c = _fc(); marcarDesacuerdo(c, id); toast('El cliente no está de acuerdo con ' + id); renderPaginaActual(); renderFicha(); }
+function desacuerdoModal(id){ const c = _fc(); const ch = c.obra.cambios.find(x => x.id === id);
+  openModal('<div class="modal-title">Resolver desacuerdo · ' + id + '</div><p style="font-size:13px;margin-bottom:10px">' + escH(ch.concepto) + ' · ' + fmtEur(ch.importe) + '</p><div class="inl-field"><label>Nuevo importe sin IVA</label><input id="da-imp" type="number" step="0.01" value="' + ch.importe + '"></div><p style="font-size:12px;color:var(--muted)">Hasta que lo resuelvas no se puede consolidar ni terminar la obra.</p>' +
+    '<div style="margin-top:14px;display:flex;gap:8px;justify-content:flex-end"><button class="abtn abtn-ghost" onclick="renderFicha()">Cancelar</button><button class="abtn abtn-ghost" onclick="desacuerdoOk(\'' + id + '\',\'mantener\')">Mantener importe</button><button class="abtn abtn-primary" onclick="desacuerdoOk(\'' + id + '\',\'ajustar\')">Ajustar importe</button></div>'); }
+function desacuerdoOk(id, accion){ const c = _fc(); const imp = accion === 'ajustar' ? document.getElementById('da-imp').value : null; resolverDesacuerdo(c, id, accion, imp); toast('Desacuerdo resuelto'); renderPaginaActual(); renderFicha(); }
+
+// Solicitudes del cliente
+function obraSolicitudes(c){
+  const ss = c.obra.solicitudesCambio||[]; if (!ss.length) return '';
+  return '<details class="ob-det" ' + (ss.some(x => x.estado==='abierta')?'open':'') + '><summary>Solicitudes de cambio del cliente (' + ss.filter(x => x.estado==='abierta').length + ' abiertas)</summary>' + ss.map(sc => '<div class="tl-item" style="align-items:center"><div style="flex:1"><div>' + escH(sc.texto) + '</div><div class="tl-autor">' + fmtFecha(sc.fecha) + ' · ' + sc.estado + (sc.cambioId ? ' → ' + sc.cambioId : '') + '</div></div>' +
+    (sc.estado === 'abierta' ? '<button class="abtn abtn-primary abtn-sm" onclick="solicitudValorar(\'' + sc.id + '\')">Valorar y registrar como cambio</button> <button class="abtn abtn-ghost abtn-sm" onclick="solicitudRechazar(\'' + sc.id + '\')">Rechazar</button>' : '') + '</div>').join('') + '</details>';
+}
+function solicitudValorar(id){ const c = _fc(); const sc = c.obra.solicitudesCambio.find(x => x.id === id); registrarCambioModal(c.id, { concepto:sc.texto, tipo:'cliente', solicitudId:id }); }
+function solicitudRechazar(id){ const c = _fc(); const sc = c.obra.solicitudesCambio.find(x => x.id === id); sc.estado = 'rechazada'; c.eventos.push({ fecha:hoy(), tipo:'cambio', texto:'Solicitud del cliente rechazada: ' + sc.texto, autor:'reformista' }); renderPaginaActual(); renderFicha(); }
+
+// Adendas
+let _adSel = null;
+function obraAdendas(c, ro){
+  const trig = debeGenerarAdenda(c, DB.cfg, {}); const regs = (c.obra.cambios||[]).filter(x => x.estado === 'registrado'); const des = (c.obra.cambios||[]).filter(x => x.estado === 'en_desacuerdo');
+  if (_adSel == null || _adSel.casoId !== c.id) _adSel = { casoId:c.id, ids:regs.map(x => x.id) };
+  _adSel.ids = _adSel.ids.filter(id => regs.some(x => x.id === id));
+  const iva = ivaDe(c); const tv = totalVigente(c); const delta = r(regs.filter(x => _adSel.ids.includes(x.id)).reduce((s,x) => s + x.importe, 0)); const dIva = r(delta * (1 + iva/100));
+  const lista = (c.obra.adendas||[]).map(a => '<div class="tl-item" style="align-items:center"><div style="flex:1"><b>' + a.id + '</b> · ' + escH(a.concepto||'') + ' · ' + fmtEur(a.delta) + ' sin IVA<div class="tl-autor">motivo ' + (a.motivo||'—') + ' · ' + (a.firmadaAt ? 'firmada ' + fmtFecha(a.firmadaAt) : 'enviada ' + fmtFecha(a.enviadaAt)) + '</div></div><span class="badge ' + (a.estado==='firmada'?'b-ok':'b-warn') + '">' + a.estado + '</span>' + (a.estado === 'enviada' ? ' <button class="abtn abtn-ghost abtn-sm" onclick="adendaSimFirma(\'' + a.id + '\')">Simular firma del cliente</button>' : '') + '</div>').join('');
+  return '<details class="ob-det" ' + (trig.length || regs.length ? 'open' : '') + '><summary>Adendas (' + (c.obra.adendas||[]).length + ')' + (trig.length ? ' · <span style="color:var(--danger)">' + trig.length + ' disparador(es)</span>' : '') + '</summary>' +
+    (trig.length ? '<div class="mv-aviso" style="font-size:13px">' + trig.map(t => '⚠ ' + escH(TRIGGER_TXT[t]||t)).join('<br>') + '<div style="font-size:11px;font-weight:400;margin-top:4px">Umbral: ' + fmtEur(umbralAdendaEur(c, DB.cfg)) + ' sin IVA · tope individual ' + fmtEur0(DB.cfg.adendaTopeIndividual) + '</div></div>' : '<div style="font-size:12px;color:var(--muted);margin-bottom:6px">Sin disparadores activos (umbral ' + fmtEur(umbralAdendaEur(c, DB.cfg)) + ' sin IVA).</div>') +
+    (lista || '<div style="font-size:12px;color:var(--muted)">Sin adendas.</div>') +
+    (ro ? '' : '<div class="section-card" style="margin-top:10px"><div class="section-card-title">Constructor de adenda</div>' +
+      (regs.length ? regs.map(x => '<label class="check-q"><input type="checkbox" ' + (_adSel.ids.includes(x.id)?'checked':'') + ' onchange="adSel(\'' + x.id + '\',this.checked)"> <b>' + x.id + '</b> ' + escH(x.concepto) + ' · ' + fmtEur(x.importe) + '</label>').join('') : '<div style="font-size:12px;color:var(--muted)">No hay cambios registrados pendientes de consolidar.</div>') +
+      des.map(x => '<label class="check-q" style="opacity:.6"><input type="checkbox" disabled> <b>' + x.id + '</b> ' + escH(x.concepto) + ' · <span class="badge b-err">en desacuerdo</span> no se puede consolidar</label>').join('') +
+      (regs.length ? '<div class="porque" style="margin-top:8px">Vista previa: adenda ' + fmtEur(delta) + ' sin IVA (' + fmtEur(dIva) + ' c/IVA).<br>Firmado: ' + fmtEur(tv.firmado) + ' → <b>' + fmtEur(r(tv.firmado + dIva)) + '</b> · Provisional: ' + fmtEur(tv.provisional) + ' → <b>' + fmtEur(r(tv.provisional - dIva)) + '</b> · Total vigente: <b>' + fmtEur(tv.total) + '</b> (sin cambio).</div><div style="margin-top:8px"><button class="abtn abtn-primary abtn-sm" ' + (_adSel.ids.length?'':'disabled style="opacity:.5"') + ' onclick="adendaEnviar()">Enviar adenda</button></div>' : '') + '</div>') + '</details>';
+}
+function adSel(id, on){ if (on && !_adSel.ids.includes(id)) _adSel.ids.push(id); if (!on) _adSel.ids = _adSel.ids.filter(x => x !== id); renderFicha(); }
+function adendaEnviar(motivoForzado){
+  const c = _fc(); const trig = debeGenerarAdenda(c, DB.cfg, {}); const motivo = motivoForzado || (trig.includes('tope') ? 'tope' : trig.includes('umbral') ? 'umbral' : 'manual');
+  try { const ad = crearAdenda(c, _adSel.ids, motivo); const msg = fillTpl(PLANTILLAS_MSG.adenda_firmar, varsDe(c, { importe:fmtEur(ad.delta*(1+ivaDe(c)/100)) })); _adSel = null; renderPaginaActual();
+    openModal('<div class="modal-title">Adenda ' + ad.id + ' enviada</div>' + msgBloque(msg, clienteDe(c).tel) + '<div style="margin-top:14px;text-align:right"><button class="abtn abtn-primary" onclick="renderFicha()">Volver a la obra</button></div>');
+  } catch(e){ toast(e.message,'err'); }
+}
+function adendaSimFirma(id){ const c = _fc(); firmarAdenda(c, id); toast('Adenda firmada: cambios consolidados'); renderPaginaActual(); renderFicha(); }
+
+// Remates
+function obraRemates(c, ro){
+  const rs = c.obra.remates||[]; const t = c.obra.cierre?.terminadaAt; const plazo = DB.cfg.rematesPlazoDias; const lim = t ? fechaMasDias(t, plazo) : null;
+  if (!rs.length && !['terminada','en_remates','cerrada'].includes(c.estado)) return '';
+  return '<details class="ob-det" ' + (c.estado==='en_remates'?'open':'') + '><summary>Remates (' + rs.filter(x => x.estado==='abierto').length + ' abiertos)</summary>' + (lim ? '<div style="font-size:12px;color:var(--muted);margin-bottom:6px">Plazo para que el cliente liste remates: hasta ' + fmtFecha(lim) + ' (' + plazo + ' días desde la terminación).</div>' : '') +
+    (rs.map(x => '<div class="check-q" style="justify-content:space-between"><span>' + (x.estado==='resuelto'?'☑':'☐') + ' ' + escH(x.texto) + (x.foto?' 📷':'') + ' <span style="color:var(--muted);font-size:11px">(' + (x.autor||'') + ')</span></span>' + (ro ? '' : '<button class="abtn abtn-ghost abtn-sm" onclick="remateToggle(\'' + x.id + '\')">' + (x.estado==='resuelto'?'Reabrir':'Marcar resuelto') + '</button>') + '</div>').join('') || '<div style="font-size:12px;color:var(--muted)">Sin remates.</div>') +
+    (ro ? '' : '<div class="disp-fr" style="margin-top:8px"><input id="rm-txt" class="disp-inp" placeholder="Nuevo remate" style="flex:1"><label class="ctrl-check"><input type="checkbox" id="rm-foto"> foto</label><button class="abtn abtn-ghost abtn-sm" onclick="remateAnadir()">Añadir</button></div>') + '</details>';
+}
+function remateToggle(id){ const c = _fc(); const x = c.obra.remates.find(r => r.id === id); x.estado = x.estado === 'resuelto' ? 'abierto' : 'resuelto'; c.eventos.push({ fecha:hoy(), tipo:'obra', texto:'Remate «' + x.texto + '» ' + (x.estado==='resuelto'?'resuelto':'reabierto'), autor:'reformista' }); renderPaginaActual(); renderFicha(); }
+function remateAnadir(){ const c = _fc(); const t = document.getElementById('rm-txt').value.trim(); if (!t){ toast('Escribe el remate','err'); return; } c.obra.remates.push({ id:nuevoIdSeq(c.obra.remates,'R'), texto:t, foto:document.getElementById('rm-foto').checked, estado:'abierto', autor:'reformista' }); renderFicha(); }
+
+// Cierre (recorrido)
+function obraCierre(c){
+  const paso = (ok, titulo, cuerpo) => '<div class="cv-step" style="align-items:flex-start"><div class="cv-step-dot ' + (ok?'done':'') + '">' + (ok?'✓':'·') + '</div><div style="flex:1"><b>' + titulo + '</b>' + cuerpo + '</div></div>';
+  const pt = puedeTerminarObra(c); const eco = estadoEconomico(c, DB.cobros);
+  const terminada = ['terminada','en_remates','cerrada'].includes(c.estado);
+  let p1 = '';
+  if (c.estado === 'en_obra'){
+    p1 = '<div style="margin-top:6px"><button class="abtn abtn-primary abtn-sm" ' + (pt.ok?'':'disabled style="opacity:.55"') + ' onclick="obraTerminar()">Terminar obra</button></div>' +
+      (!pt.ok ? '<div class="mv-aviso" style="font-size:13px;font-weight:400">⛔ No se puede terminar: ' + escH(pt.motivo) + (pt.desacuerdos.length ? '' : '<div style="margin-top:6px"><button class="abtn abtn-primary abtn-sm" onclick="adendaDeCierre()">Generar adenda de cierre</button></div>') + '</div>' : '');
+  } else if (c.estado === 'terminada') p1 = '<div style="margin-top:6px"><button class="abtn abtn-primary abtn-sm" onclick="obraAbrirRemates()">Abrir fase de remates</button></div>';
+  else p1 = '<div style="font-size:12px;color:var(--muted)">Terminada el ' + fmtFecha(c.obra.cierre?.terminadaAt) + '</div>';
+  const rAb = (c.obra.remates||[]).filter(x => x.estado === 'abierto').length;
+  const ce = puedeCerrarObra(c, DB.cfg, 'expresa'), cp = puedeCerrarObra(c, DB.cfg, 'plazo'); const conf = c.obra.cierre?.conformidad;
+  let p3 = '';
+  if (conf) p3 = '<div style="font-size:12px">' + (conf.tipo==='expresa' ? '✔ Conformidad expresa del cliente' : '⚠ <b>Cerrada sin conformidad expresa</b> (por plazo)') + ' el ' + fmtFecha(conf.fecha) + '</div>' + (conf.rastro && conf.rastro.length ? '<div style="font-size:11px;color:var(--muted)">Rastro de avisos: ' + conf.rastro.map(x => escH(x)).join(' · ') + '</div>' : '');
+  else if (c.estado === 'en_remates') p3 = '<div style="margin-top:6px;display:flex;gap:8px;flex-wrap:wrap"><button class="abtn abtn-primary abtn-sm" ' + (ce.ok?'':'disabled style="opacity:.55"') + ' onclick="obraConformidad(\'expresa\')">Registrar conformidad del cliente</button><button class="abtn abtn-ghost abtn-sm" ' + (cp.ok?'':'disabled style="opacity:.55"') + ' onclick="obraConformidad(\'plazo\')">Cerrar por plazo</button></div>' +
+    (!ce.ok ? '<div style="font-size:12px;color:var(--amber);margin-top:4px">' + escH(ce.motivo) + '</div>' : '') + (ce.ok && !cp.ok ? '<div style="font-size:12px;color:var(--muted);margin-top:4px">«Cerrar por plazo»: ' + escH(cp.motivo) + '</div>' : '');
+  else p3 = '<div style="font-size:12px;color:var(--muted)">Disponible en la fase de remates.</div>';
+  const acta = (DB.actas||[]).find(a => a.casoId === c.id);
+  const p4 = c.estado === 'cerrada' ? '<div style="margin-top:6px"><button class="abtn abtn-primary abtn-sm" onclick="actaVer(\'' + c.id + '\')">' + (acta ? 'Ver acta ' + acta.id : 'Generar acta de entrega') + '</button></div>' : '<div style="font-size:12px;color:var(--muted)">Se genera al cerrar la obra.</div>';
+  return '<details class="ob-det" open><summary>Cierre de la obra</summary>' +
+    paso(terminada, '1 · Terminar obra', p1) + paso(c.estado==='cerrada' || (terminada && rAb===0 && (c.obra.remates||[]).length>0), '2 · Remates', '<div style="font-size:12px;color:var(--muted)">' + (rAb ? rAb + ' abierto(s)' : 'Sin remates abiertos') + '</div>') +
+    paso(!!conf, '3 · Conformidad', p3) + paso(c.estado==='cerrada' && !!acta, '4 · Acta de entrega', p4) +
+    (c.estado === 'cerrada' ? '<div class="porque" style="margin-top:8px">Estado: <b>cerrada</b> · económico: <b>' + eco.estado + '</b>' + (eco.saldo > 0.005 ? ' · saldo ' + fmtEur(eco.saldo) : '') + '</div>' : '') + '</details>';
+}
+function obraTerminar(){ const c = _fc(); const pt = puedeTerminarObra(c); if (!pt.ok){ toast(pt.motivo,'err'); return; }
+  c.obra.cierre = Object.assign({ conformidad:null, actaId:null }, c.obra.cierre, { terminadaAt:hoy() }); transitar(c, 'terminada', { autor:'reformista', texto:'Obra terminada' }); toast('Obra terminada'); renderPaginaActual(); renderFicha(); }
+function adendaDeCierre(){ const c = _fc(); const regs = c.obra.cambios.filter(x => x.estado === 'registrado'); _adSel = { casoId:c.id, ids:regs.map(x => x.id) }; adendaEnviar('cierre'); }
+function obraAbrirRemates(){ const c = _fc(); transitar(c, 'en_remates', { autor:'reformista', texto:'Fase de remates abierta' }); const msg = fillTpl(PLANTILLAS_MSG.cierre_remates, varsDe(c)); renderPaginaActual();
+  openModal('<div class="modal-title">Fase de remates abierta</div><p style="font-size:13px;color:var(--muted)">Avisa al cliente para que liste los remates:</p>' + msgBloque(msg, clienteDe(c).tel) + '<div style="margin-top:14px;text-align:right"><button class="abtn abtn-primary" onclick="renderFicha()">Volver a la obra</button></div>'); }
+function obraConformidad(tipo){
+  const c = _fc(); const ok = puedeCerrarObra(c, DB.cfg, tipo); if (!ok.ok){ toast(ok.motivo,'err'); return; }
+  const rastro = tipo === 'plazo' ? [...(c.eventos||[]).filter(e => e.tipo === 'mensaje' && e.fecha >= (c.obra.cierre?.terminadaAt||'')).map(e => fmtFechaCorta(e.fecha) + ' ' + e.texto), ...(c.recordatorios||[]).map(x => 'Recordatorio ' + fmtFechaCorta(x.enviadoAt||x.fechaDebida))] : [];
+  c.obra.cierre.conformidad = { tipo, fecha:hoy(), rastro };
+  transitar(c, 'cerrada', { autor: tipo==='expresa' ? 'cliente' : 'reformista', texto: tipo==='expresa' ? 'Conformidad expresa del cliente: obra cerrada' : 'Obra cerrada por plazo, sin conformidad expresa' });
+  toast(tipo==='expresa' ? 'Conformidad registrada' : 'Obra cerrada por plazo (sin conformidad expresa)'); renderPaginaActual(); renderFicha(); }
+function actaVer(id){
+  const c = DB.casos.find(x => x.id === id); let acta = (DB.actas||[]).find(a => a.casoId === id);
+  if (!acta){ acta = crearActa(c, DB.cobros, (DB.actas||[]).length + 1, hoy(), DB.cfg); (DB.actas = DB.actas||[]).push(acta); c.obra.cierre.actaId = acta.id; c.eventos.push({ fecha:hoy(), tipo:'obra', texto:'Generada el acta de entrega ' + acta.id, autor:'reformista' }); }
+  const html = docActa(c, acta);
+  openModal('<div class="doc-wrap">' + html + '</div><div style="margin-top:14px;display:flex;gap:8px;justify-content:flex-end"><button class="abtn abtn-ghost" onclick="renderFicha()">Volver</button><button class="abtn abtn-primary" onclick="imprimirDoc(_docHtml)">Imprimir</button></div>', true);
+  _docHtml = html;
+}
+let _docHtml = '';
+function imprimirDoc(html){ document.getElementById('print-area').innerHTML = html; setTimeout(() => window.print(), 50); }
+function docActa(c, a){
+  const cli = clienteDe(c); const fis = c.fiscal || {};
+  return '<div class="doc"><h1>Acta de entrega de obra</h1><div class="doc-sub">' + escH(DB.cfg.empresa.nombre) + ' · ' + escH(DB.cfg.empresa.cif) + ' · ' + a.id + '</div>' +
+    '<table class="doc-t"><tr><td>Cliente</td><td>' + escH(fis.nombre || cli.nombre) + (fis.nif ? ' · ' + escH(fis.nif) : '') + '</td></tr><tr><td>Obra</td><td>' + c.id + ' · ' + escH(direccionDe(c)) + '</td></tr><tr><td>Fecha del acta</td><td>' + fmtFecha(a.fecha) + '</td></tr><tr><td>Inicio / fin de obra</td><td>' + (a.inicioObra ? fmtFecha(a.inicioObra) : '—') + ' → ' + (a.finObra ? fmtFecha(a.finObra) : '—') + '</td></tr>' +
+    '<tr><td>Conformidad</td><td>' + (a.conformidad ? (a.conformidad.tipo === 'expresa' ? 'Expresa del cliente' : 'Cerrada por plazo, sin conformidad expresa') + ' (' + fmtFecha(a.conformidad.fecha) + ')' : '—') + '</td></tr></table>' +
+    '<h2>Importes</h2><table class="doc-t"><tr><td>Total final (IVA incl.)</td><td><b>' + fmtEur(a.totalFinal) + '</b></td></tr><tr><td>Cobrado</td><td>' + fmtEur(a.cobrado) + '</td></tr><tr><td>Saldo pendiente</td><td>' + fmtEur(a.saldo) + '</td></tr></table>' +
+    '<h2>Documentación adjunta</h2><ul>' + a.documentacion.map(d => '<li>' + escH(d) + '</li>').join('') + '</ul>' +
+    '<h2>Garantía</h2><p>Inicio de la garantía: <b>' + fmtFecha(a.garantiaInicio) + '</b>.</p><p>' + escH(a.textoGarantia) + '</p>' +
+    '<div class="doc-firmas"><div>Por el reformista</div><div>Por el cliente</div></div></div>';
+}
+
+// ═══════════════════════════════════════════════════════
 // SECCIÓN 13: STUBS (fases futuras)
 // ═══════════════════════════════════════════════════════
 function stub(id, icon, title, sub, tags, fase){
@@ -3350,7 +3832,6 @@ function stub(id, icon, title, sub, tags, fase){
     '<div class="stub-sub">' + sub + '</div>' +
     '<div class="stub-tags">' + tags.map(t => '<span class="stub-tag">' + t + '</span>').join('') + '</div></div>';
 }
-RENDERERS.obras = () => stub('obras','🏗','Obras','Panel de obras en curso con hitos, cambios, adendas y partes de trabajo. Los datos y la lógica (progreso, salud, adendas) ya están cargados.',['Hitos','Cambios y adendas','Progreso','Salud de obra'],'Fase D');
 RENDERERS.configuracion = () => stub('configuracion','⚙','Configuración','Ajustes del negocio: márgenes, IVA, zona, visita, plan de cobros, hitos tipo y pesos de calidad. Todo editable sobre la configuración por defecto ya cargada.',['Económico','Zona y visita','Plan de cobros','Pesos de calidad'],'Fase G');
 
 // ═══════════════════════════════════════════════════════
@@ -3385,6 +3866,7 @@ function aplicarRelojesAutomaticos(){
       try {
         if (acc.accion === 'transitar_a_pausa' && c.estado !== 'en_pausa' && puedeTransitar(c, 'en_pausa'))
           transitar(c, 'en_pausa', {autor:'sistema', texto:'Pausado automáticamente (sin respuesta)'});
+        if (acc.accion === 'pausar_partida'){ const ch = (c.obra.cambios||[]).find(x => x.id === acc.cambioId); if (ch && !ch.partidaPausada){ ch.partidaPausada = true; c.eventos.push({ fecha:hoy(), tipo:'sistema', texto:'Partida pausada pendiente de aprobación (cambio ' + ch.id + ' bloqueante >48 h)', autor:'sistema' }); } }
         if (acc.accion === 'marcar_caducada' && c.estado === 'propuesta_enviada' && puedeTransitar(c, 'caducada')){
           transitar(c, 'caducada', {autor:'sistema', texto:'Propuesta caducada automáticamente'});
           const v = c.versiones.find(x => x.estado === 'vigente'); if (v) v.estado = 'caducada';
