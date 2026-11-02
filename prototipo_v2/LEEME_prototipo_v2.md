@@ -1,49 +1,71 @@
 # Prototipo completo v2 — LEEME
 
-> Documento vivo. **Bloques A y B (R-01 a R-11, R-13, R-14, R-15) hechos por el primer agente**; el siguiente continúa en este mismo archivo (R-12, R-16 a R-31, R-32 a R-36 y la parte restante de R-37).
+> **Estado: todos los requisitos R-01 a R-37 implementados** (bloques A y B por el primer agente; bloques C, D y E, R-12 y R-37 por el segundo). Las decisiones tomadas y las limitaciones están en los apartados 6 y 7.
 
 ## 1. Qué es y cómo usarlo
 
-`Prototipo_completo_v2.html` es la carcasa que une cuatro aplicaciones en pestañas: **Configurador** (cliente), **Admin** (reformista, base de datos maestra), **Lite** (visita técnica en móvil) y **Cliente** (su panel). Se genera con:
+`Prototipo_completo_v2.html` es la carcasa que une cuatro aplicaciones en pestañas: **Configurador** (cliente), **Admin** (reformista, base de datos maestra), **Lite** (visita técnica **y modo Obra**, en móvil/tablet) y **Cliente** (su panel). Se genera y se prueba con:
 
 ```bash
 python3 prototipo_v2/build_prototipo.py      # incrusta src/{cfg,adm,lite,cli}.html en src/host.html (+ src/bridge.js)
-node prototipo_v2/test_flujo_v1.js            # flujo completo de punta a punta (51 comprobaciones)
+node prototipo_v2/test_flujo_v1.js            # flujo completo de v1 + bloques A y B (51 comprobaciones)
 node prototipo_v2/test_bloques_ab.js          # integración de los bloques A y B (28 comprobaciones)
-# Dentro del admin (iframe): FR.adm.contentWindow.__tests()   → 346/346
+node prototipo_v2/test_e2e_v2.js              # escenario del apartado 11.2, los 16 pasos (68 comprobaciones)
+E2E_SHOTS=/ruta node prototipo_v2/test_e2e_v2.js   # lo mismo, con capturas del lite en 1360×860, 820×1180 y 400×820 y aviso si hay desbordes
+# Dentro de los iframes: FR.adm.contentWindow.__tests() → 404/404 · FR.lite.contentWindow.__tests() → 49/49 · FR.cli.contentWindow.__tests() → 37/37
 ```
 
-Estructura: `src/cfg.html`, `src/adm.html`, `src/lite.html`, `src/cli.html` (apps), `src/host.html` (carcasa) y `src/bridge.js` (puente `Proto`: `solicitud`, `buildV`, `proyectarCliente`, `proyectarLite`, `lite`, `cli`, `adjuntos`). Los cuatro archivos originales standalone de la raíz no se tocan. El admin guarda la base de datos maestra (`__P.db()`); el cliente y el lite reciben proyecciones.
+Estructura: `src/cfg.html`, `src/adm.html`, `src/lite.html`, `src/cli.html` (apps), `src/host.html` (carcasa) y `src/bridge.js` (puente `Proto`: `solicitud`, `buildV`, `proyectarCliente`, `proyectarLite`, `reabrirEnLite`, `lite`, `cli`, `adjuntos`, `calc`, `obrasLite`, `obraVista`, `liteObra`). Los cuatro archivos originales standalone de la raíz no se tocan. El admin guarda la base de datos maestra (`__P.db()`); el cliente y el lite reciben proyecciones; **el modo Obra del lite lee y escribe directamente sobre la obra del admin** a través del puente (no tiene copia propia).
 
-Reglas heredadas: JS plano sin librerías, sin CDN, HTML de usuario escapado, sin repintar un contenedor mientras se escribe en un input de su interior (los formularios nuevos actualizan progreso/marcas por DOM), reglas de negocio en funciones puras con pruebas en `__tests()`, textos en es-ES.
+Recorrido rápido con los datos de ejemplo: REF-0006 tiene un borrador de la V3 guardado desde el lite (pestaña Presupuesto de su ficha → «Reabrir en el lite»); REF-0010 es una obra bloqueada con plan, hitos e incidencias propios y una duda por resolver; REF-0009 tiene un cambio retirado y uno de cortesía; REF-0011 está en remates sin conformidad. O bien envía una solicitud desde el Configurador y recorre el flujo (es el escenario de `test_e2e_v2.js`).
 
-**Esquema de datos:** `db.meta.version = '3.0'` (admin, en memoria); localStorage del cliente `panelClienteV2` con `ver: 2` (la carcasa borra también las claves `…V1`). El lite sigue en `panelLiteV1` (no ha cambiado todavía).
+Reglas heredadas: JS plano sin librerías ni CDN, HTML de usuario escapado, sin repintar un contenedor mientras se escribe en un input (los campos del lite escriben con `oninput` solo en los totales y con `onchange` el resto; las hojas y formularios se pintan una vez), reglas de negocio en funciones puras con pruebas, textos en es-ES, sin restos de Cloudflare (comprobado).
+
+**Esquema de datos:** `db.meta.version = '3.0'` (admin, en memoria); localStorage del cliente `panelClienteV2` (`ver: 2`) y del lite `panelLiteV2` (`ver: 2`); la carcasa borra también las claves antiguas.
 
 ## 2. Trazabilidad requisito → dónde → cómo se comprueba
 
-Estado: ✅ completo · 🟡 parcial · ⏳ pendiente (siguiente agente).
+Estado: ✅ completo. Las funciones citadas existen con ese nombre en el código real. «e2e» = `test_e2e_v2.js` (el número de paso es el del apartado 11.2 del prompt); «adm / lite / cli» = `__tests()` de cada app.
 
 | ID | Estado | Implementado en | Cómo se comprueba |
 |---|---|---|---|
-| R-01 | ✅ | `cfg.html`: `validarInmueble`, `cpValido`, `irPaso2` (mensajes junto a cada campo); el puente revalida en `Proto.solicitud` | `test_flujo_v1` (CP vacío y CP 99999 bloquean el paso 1); `__tests` «código postal» |
-| R-02 | ✅ | `cfg.html`: payload con `cfg` y `materiales` por espacio, extras, calidad, urgencia, `obraHabitada`, materiales; `BASE_POR_TRABAJO`/`baseTrabajo`; `calcularLocal` añade `key`, `espId`, `base` a cada item. `bridge.js`: `lineasDesdeCalc` (base real, key del trabajo, precio unitario) y `Proto.solicitud` (`caso.solicitud.detalle` + `espacios[].trabajos[] = {key,label,base,detalles}`); `adm.html`: `detallesDeTrabajo` | `test_bloques_ab` (detalle, bases, detalles por trabajo, líneas); `__tests` «detallesDeTrabajo» |
-| R-03 | ✅ | `adm.html`: `calcularHorquilla(total,nivel,pct)` con `cfg.horquillaV1Pct` (5 %), `rangoVersion`, `fmtImporteVersion`, `etiquetaVersion`, `recalcularHorquillas`, ajuste en Presupuesto (config); bandeja, ficha, histórico de versiones, vista del cliente y `accionSugerida` usan el rango solo en la V1. `cfg.html`: «Entre X € y Y €, IVA incluido» (floor/ceil al euro). `cli.html`: `rangoV`; el configurador sincroniza la horquilla del admin en vivo (`Proto.tick`) | `__tests` (A.5: 11.728,39/12.962,95; V2 exacta; recálculo); `test_bloques_ab` (rango en cfg/admin/cliente, V2 exacta, cambio en vivo 5→10 %) |
-| R-04 | ✅ | `cli.html`: `abrirDatos`, `dvFormHtml`, `dvUpd`, `guardarDatos` (siete campos, progreso «N de 5 obligatorios», inquilino + permiso, atajos de año, «Abrir en el mapa»); `adm.html`: `evaluarDatosVivienda`, `aplicarDatosVivienda`, `fusionarDatosVivienda`, `caso.datosVivienda` (+ `vivienda.antiguedad/propietario/comunidad/fechaInicioDeseada/direccion`), discrepancia de «obra habitada», obligatorios configurables (`cfg.viviendaObligatorios`); `esperando_info → en_triaje` al completar | `__tests` (REF-0004 inquilino sin permiso, ≥3 completos y ≥3 incompletos, fechas pasadas, actualización de vivienda); `test_flujo_v1` paso 3 |
-| R-05 | ✅ | `cli.html` `vVisita`: franjas bloqueadas con motivo, formulario dentro de la pantalla, «Completar ahora»; el puente revalida G1 en `Proto.cli('elegirFranja')` | `test_flujo_v1` (bloqueo, formulario en pantalla, rechazo del puente) |
-| R-06 | ✅ | `adm.html`: plantillas del apéndice D (`completa_datos`…), mensaje previo en «Proponer visita» y «Presupuesto sin visita», «Pedir más info» con casillas de campos del R-04, «Pedir al cliente» (`pedirDatosModal`) y «Recordar al cliente» (Modo visita); todo queda en `caso.mensajes` | `test_bloques_ab` (campos en «Pedir info» y mensajes al proponer); `__tests` (plantillas) |
-| R-07 | ✅ | `adm.html`: `visitaRequierePago`, `iniciarReservaVisita`, `estadoReserva`, `liberarReserva`, reloj `reserva_pago`/`reserva_vencida`, `cfg.visita.cobroCuando='al_confirmar'` y `reservaPagoHoras=48`; Agenda distingue «reservada, pendiente de pago»; `cli.html` `vPagoVisita`/`pagarVisita` | `__tests` (reserva, recordatorio a mitad, liberación); `test_bloques_ab` (+24 h recordatorio, +72 h libera y vuelve a `visita_propuesta`); `test_flujo_v1` (pago + confirmación) |
-| R-08 | ✅ | `cli.html` `abrirAceptar`/`fxHtml`/`acCheck` («Datos para tu factura»); `adm.html` validadores `validarDNI/NIE/CIF/NIF`, `evaluarFiscal`, `aplicarFiscal`, `nombreFacturacion`; `caso.fiscal = {tipo,nombre,nif,razonSocial,cif,domicilio,mismaDireccion,usoVivienda,completos}`; sin fecha de nacimiento ni IBAN | `__tests` (apéndice B, normalización, empresa, misma dirección); `test_flujo_v1` paso 5 (bloqueo, NIF inválido, NIF válido) |
-| R-09 | ✅ | `adm.html` `fichaVivienda`/`fichaFacturacion` (chips completos/pendientes, edición, «Pedir al cliente»); `generarProforma` y `paqueteGestoria` exigen facturación (A9, `exigirFacturacion`) | `test_bloques_ab` (chips y bloqueo de proforma/paquete); `__tests` (A9) |
-| R-10 | ✅ | `adm.html`: `caso.mensajes[]` (`escribirMensaje`, `migrarMensajes`, `mensajesNoLeidos`, `conversaciones`), `db.notificaciones` (`notificar`, `sincronizarNotificaciones`, `contadoresMensajes`), apartado **Mensajes** (Conversaciones + Notificaciones, filtros, búsqueda, plantillas, adjuntos, marcar leído, burbuja en la barra lateral y chips en «Urgente hoy»); `bridge.js` `buildV.mensajes`/`Proto.cli('mensaje'|'leerMensajes')`; `cli.html` `vMensajes` (hilo de ambos lados con adjuntos) | `__tests` (migración idempotente, lectura por lado, notificaciones, contadores, ≥4 hilos); `test_bloques_ab` (ida y vuelta admin ↔ cliente con adjunto) |
-| R-11 | ✅ | `cli.html` `abrirAvisoPago`/`avisoPagoOk` (importe, medio, fecha no futura, tramo, justificante obligatorio salvo efectivo, vista previa, aviso si supera lo pendiente); `adm.html` `db.avisosPago`, `crearAvisoPago`, `confirmarAvisoPago`, `rechazarAvisoPago`, cola «Cobros por confirmar» (Obras, Notificaciones, Resumen, ficha Cobros), visor de imagen/PDF, movimientos con 📎 o «sin justificante», `movimiento.justificanteId`; también para el pago de la visita | `__tests` (A3, confirmar/rechazar, efectivo, repetidos); `test_bloques_ab` (rechazo con plantilla, importe distinto con nota); `test_flujo_v1` |
-| R-12 | ⏳ | — (el ZIP «store» con CSV, resumen y justificantes lo hará el siguiente agente; **solo** se ha añadido la exigencia A9 y `movimiento.justificanteId`/`sinJustificante`) | — |
-| R-13 | ✅ | `bridge.js` `Proto.adjuntos` (`put`, `putSync`, `get`, `url`, `meta`, `del`, `lista`, `setMeta`, `sembrar`, `limpiar`, `modo`): IndexedDB con respaldo en memoria y aviso; imágenes a ≤1600 px, máx. 5 MB, JPG/PNG/WebP/HEIC/PDF; el cfg, el admin y el cliente lo usan vía `window.parent.Proto.adjuntos`; en los JSON solo viajan identificadores; se borra al reiniciar/restablecer | `test_bloques_ab` (put/get/del/lista, formatos, 5 MB, compresión a 1600 px, ids en la DB) |
-| R-14 | ✅ | `adm.html`: `puedeCerrarObra('plazo')` siempre `ok:false`; `transitar(...,'cerrada')` solo con `autor:'cliente'`; única vía `registrarConformidadCliente` (llamada solo desde `Proto.cli('conformidad')`); eliminados «Cerrar por plazo», «Registrar conformidad», el botón de la vista del cliente y `obraConformidad`; reloj `reclamar_conformidad` (nunca cierra); chip «Entregada, pendiente de conformidad del cliente» en Obras/Resumen y botón «Reclamar conformidad» (`reclamarConformidad`); `cli.html`: el atajo de la fase 7 del simulador ya no cierra | `test_flujo_v1` (el admin no puede cerrar, reclama, el cliente cierra); `test_bloques_ab` (búsqueda en código de las escrituras a `cierre.conformidad` y a `'cerrada'`); `__tests` |
-| R-15 | ✅ | `adm.html` `requisitos(accion, caso, ctx)` (matrices 5.2 y 5.3 completas), `mapaRequisitosCliente`, `exigir`; `bridge.js` revalida en `Proto.cli` (`ACCION_REQ`, `datosReq`) y en `Proto.lite('enviar')` (A10 + A1); `buildV.requisitos` proyecta el mapa; la UI del cliente y del admin muestran «Te falta: …» y «Completar ahora»; auditoría 5.4 en la sección 3 | `__tests` (una aserción por fila G1–G18 y A1–A11, y las filas añadidas); `test_flujo_v1` (el puente rechaza acciones sin requisitos) |
-| R-16 a R-31 | ⏳ | Lite (visita y obra): siguiente agente. Ya disponibles para él: `caso.solicitud.detalle` y `trabajos[].detalles/base` (R-17, R-19, R-20), `BASE_POR_TRABAJO`, `requisitos('cerrar_visita'\|'enviar_version')`, `Proto.adjuntos` | — |
-| R-32 a R-34 | ⏳ | Plan de cobros con «resto», umbral único y resolver duda en 3 opciones: siguiente agente. (`requisitos('resolver_duda')` ya exige la nota al «mantener» y `desacuerdoOk` la pide) | — |
-| R-35, R-36 | ⏳ | Navegación y configuración esencial/avanzado: siguiente agente. Nota: el admin tiene ahora **9 apartados** (se añadió «Mensajes»; «Cobros» y «Clientes» siguen hasta R-35) | — |
-| R-37 | 🟡 | `__tests()` del admin ampliado (250 → 346), `test_flujo_v1` adaptado (30 → 51) y `test_bloques_ab` (28); este LEEME. Falta completar filas, pruebas y datos de los requisitos pendientes | `node` + `FR.adm.contentWindow.__tests()` |
+| R-01 | ✅ | `cfg.html`: `validarInmueble`, `cpValido`, `irPaso2` (mensajes junto a cada campo); el puente revalida en `Proto.solicitud` | e2e paso 1 (CP vacío bloquea); `test_flujo_v1` (CP 99999); adm «código postal» y apéndice B |
+| R-02 | ✅ | `cfg.html`: payload con `cfg` y `materiales` por espacio, extras, calidad, urgencia, `BASE_POR_TRABAJO`/`baseTrabajo`; `bridge.js`: `lineasDesdeCalc` y `Proto.solicitud` (`caso.solicitud.detalle`, `espacios[].trabajos[] = {key,label,base,detalles}`); `adm.html`: `detallesDeTrabajo` | `test_bloques_ab` (detalle, bases, detalles, líneas); adm `detallesDeTrabajo`; e2e paso 5 (el lite muestra los detalles) |
+| R-03 | ✅ | `adm.html`: `calcularHorquilla(total,nivel,pct)`, `horquillaPct`, `rangoVersion`, `fmtImporteVersion`, `recalcularHorquillas`; `cfg.html`: «Entre X € y Y €»; `cli.html`: `rangoV`; `lite.html`: `etiquetaTramo` (V1 en rango) | adm (A.5, V2 exacta, recálculo); `test_bloques_ab`; e2e paso 1 y paso 16 (5 → 10 % en vivo); lite R-16 |
+| R-04 | ✅ | `cli.html`: `abrirDatos`, `dvFormHtml`, `dvUpd`, `guardarDatos`; `adm.html`: `evaluarDatosVivienda`, `aplicarDatosVivienda`, `fusionarDatosVivienda`, `caso.datosVivienda` | adm (REF-0004 inquilino sin permiso, ≥3 completos y ≥3 incompletos); e2e paso 3 |
+| R-05 | ✅ | `cli.html` `vVisita` (franjas bloqueadas con motivo, formulario en pantalla, «Completar ahora»); `Proto.cli("elegirFranja")` revalida G1 | `test_flujo_v1` paso 3; e2e paso 3 |
+| R-06 | ✅ | `adm.html`: plantillas del apéndice D (`PLANTILLAS_MSG`), mensaje previo, «Pedir más info» con campos, `pedirDatosModal`, `recordarDatosCliente` | `test_bloques_ab`; e2e paso 2 (mensaje «Completa tus datos» con enlace); adm plantillas |
+| R-07 | ✅ | `adm.html`: `visitaRequierePago`, `iniciarReservaVisita`, `estadoReserva`, `liberarReserva`, reloj `reserva_pago`/`reserva_vencida`; `cli.html` `vPagoVisita`/`pagarVisita` | adm (reserva, recordatorio, liberación); `test_bloques_ab` (+24 h / +72 h); e2e pasos 3 y 4 |
+| R-08 | ✅ | `cli.html` `abrirAceptar`/`fxHtml`/`acCheck`; `adm.html` `validarDNI/NIE/CIF/NIF`, `evaluarFiscal`, `aplicarFiscal`; `caso.fiscal` | adm (apéndice B); `test_flujo_v1` paso 5; e2e paso 8 (bloqueado sin facturación, DNI inválido y válido) |
+| R-09 | ✅ | `adm.html` `fichaVivienda`/`fichaFacturacion` (chips), `generarProforma` y `paqueteGestoria` con `exigirFacturacion` (A9) | `test_bloques_ab` (chips y bloqueo); adm A9; e2e paso 14 (el paquete se bloquea sin facturación) |
+| R-10 | ✅ | `adm.html`: `caso.mensajes[]`, `escribirMensaje`, `migrarMensajes`, `notificar`, apartado Mensajes; `bridge.js` `buildV.mensajes`; `cli.html` `vMensajes` | adm (migración idempotente, no leídos, notificaciones, ≥4 hilos); `test_bloques_ab`; e2e paso 15 |
+| R-11 | ✅ | `cli.html` `abrirAvisoPago`/`avisoPagoOk`; `adm.html` `db.avisosPago`, `confirmarAvisoPago`, `rechazarAvisoPago`, cola «Cobros por confirmar», visor | adm (A3, confirmar/rechazar); `test_bloques_ab`; e2e pasos 4 y 9 |
+| R-12 | ✅ | `adm.html`: `crc32`, `crearZip` (almacenado «store»: cabeceras locales, directorio central y registro final escritos a mano), `leerZip`, `dataUrlABytes`, `nombreJustificante`, `paqueteGestoriaDatos`, `paqueteGestoria` (modal con aviso de movimientos sin justificante, «Descargar ZIP» y «por separado» si falla), exige A9 | adm: CRC32 de «123456789» = CBF43926, ida y vuelta con UTF-8 y binario, directorio central, paquete de REF-0009 (2 justificantes) y REF-0008 (aviso), A9; e2e paso 14 (descarga real, firma PK, CRC de todos los archivos, CSV con columna «justificante»); validado también con `zipfile` de Python |
+| R-13 | ✅ | `bridge.js` `Proto.adjuntos` (IndexedDB con respaldo en memoria); cfg, admin, cliente **y lite** lo usan; las fotos del lite guardan solo `adj` (id) | `test_bloques_ab` (put/get/del/lista, formatos, 5 MB, 1600 px, ids en la DB); e2e paso 10 (fotos de hito, incidencia y obra por id) |
+| R-14 | ✅ | `adm.html`: `puedeCerrarObra("plazo")` siempre false, `transitar` a «cerrada» solo con `autor:"cliente"`, única escritura `registrarConformidadCliente`; chip y «Reclamar conformidad» | `test_flujo_v1`; `test_bloques_ab` (búsqueda en código); adm; e2e paso 13 |
+| R-15 | ✅ | `adm.html` `requisitos(accion, caso, ctx)` (matrices 5.2 y 5.3), `mapaRequisitosCliente`, `exigir`; el puente revalida en `Proto.cli`, `Proto.lite("enviar")` y `Proto.liteObra` (hito sin foto, adenda sin cambios); UI «Te falta: …» | adm: una aserción por fila G1–G18 y A1–A11 + cobertura de las 30 acciones; `test_flujo_v1`; e2e paso 10 (el puente rechaza un hito sin foto) |
+| R-16 | ✅ | `lite.html`: `cardVersiones`, `verCambios`, `diffLineas`, `etiquetaTramo`; `bridge.js`: `versionesLite` y `datosLite` (pasan **todas** las versiones con sus líneas) | lite (diff entre versiones, V1 en rango); e2e paso 5 (V1 en rango, V2 y el borrador V3 en la primera pantalla) |
+| R-17 | ✅ | `lite.html`: `describirTrabajo(key, detalles, tipoEspacio)` (electricidad, tabiques, ventanas, demolición, pintura, calefacción, aire, ventilación, cocina, planta, notas), `panelPidioCliente` («Lo que pidió el cliente» + «Verificado en la visita», con la diferencia resaltada), `cardClienteSala` (materiales elegidos); `bridge.js` `estLite` | lite (6 pruebas de `describirTrabajo`); e2e paso 5 (puntos de luz = 5 y tabique «Derribar y levantar · Pladur») |
+| R-18 | ✅ | `lite.html`: `crearTabique`, `cantidadTabiques`, `abrirTabique`/`sheetTabique`/`guardarTabique`/`confirmarTabique`, `cardTabiques` (visible en ambas estancias), «Añadir estancia» reutiliza `crearEst`, pregunta por reponer el acabado; `adm.html` `aplicarVisitaLite` guarda `caso.visita.tabiques` | lite (m², línea con m² medidos); e2e paso 5 (tabique 3 × 2,5 compartido cocina–salón y reposición en la contigua) |
+| R-19 | ✅ | `lite.html`: `superficie`, `difPct`, `cardSuperficie` (ancho × largo, comparación y aviso > 15 %), `medirSup`, `recalcM2` (por base); `adm.html` `superficieAnchoLargo` | adm y lite (A.1: 2,40 × 1,60 = 3,84); e2e paso 5 |
+| R-20 | ✅ | `lite.html`: `calcularParedes`, `paredesDe`, `cantidadPorBase`, `cardParedes` (alto, huecos, reparto por altura de alicatado con atajos y ml hasta el techo, o por %), `setAlto`/`addHueco`/`setReparto`; `adm.html` `calcularParedes` | adm y lite: caso A (11,04 / 7,36) y caso B (10,75 / 7,65), % y un solo acabado; e2e paso 5 (las partidas toman 11,04 y 7,36) |
+| R-21 | ✅ | `lite.html`: `guardarBorrador` (autoguardado con retardo si cambia el contenido + botón), `pack`, `snapshot`, `sheetConflicto`, `mezclarAdminLineas`, restauración con o sin instantánea; `bridge.js` `Proto.lite("borrador")`, `reabrirEnLite`; `adm.html` `guardarBorradorLite`, `lineasDeLite`, `aplicarVisitaLite`, `tocarBorrador` (rev/por/fecha), sección «Borrador V3 (desde la visita)» en la ficha, chip en listas, Resumen y notificación, «Reabrir en el lite» | adm (modelo, ids estables, conflicto con fecha, forzar); lite (`mezclarAdminLineas`); e2e paso 6 (guardar, ficha, Resumen, listas, reabrir, conflicto) |
+| R-22 | ✅ | `lite.html`: `desgloseArbol`, `cardDesglose` (árbol estancia → trabajo → partidas con cantidad, unidad, precio, subtotal y diferencia) y resumen compacto | lite (sumas y diferencia); e2e paso 7 |
+| R-23 | ✅ | `lite.html`: `cardPlan`, `normalizarPlanL`, `importesPlan`, `validarPlanL`, reasignar al eliminar un hito, renombrar actualiza disparadores; `adm.html`: `adjuntarCondicionesVersion` (`caso.planCobros`, `caso.obra.hitosPlan`), `hitosDeCaso`, `importesPlanPrevio`; `cli.html` `planPreHtml` + casilla G6 | adm/lite/cli; e2e pasos 7, 8 y 9 (plan 40/20/40, hito renombrado, el cliente lo ve antes de aceptar, la obra arranca con esos hitos) |
+| R-24 | ✅ | `lite.html`: `cardNegociacion` (margen, IVA, descuento € o %, validez, plazo calculado y editable, imprevistos, redondeo, condiciones; recálculo en vivo sin repintar los campos), `totalesDe(est, aj, neg)`, `boxBeneficio` («Tu beneficio»); `adm.html` `calcularTotalesNeg`; `cli.html` `ajHtml` | adm y lite (totales y beneficio); e2e paso 7 (los totales del cliente y del admin coinciden) |
+| R-25 | ✅ | `lite.html`: `cardDatosCliente`, `recordarCliente` (sin formulario fiscal); `adm.html` `estadoDatosCliente`, `recordarDatosCliente`; el Modo visita del admin ya mostraba solo el estado | adm; e2e paso 5 |
+| R-26 | ✅ | `lite.html`: `selectorModo`, `cambiarModo`, `vObraLista`, `abrirObra`; `bridge.js` `Proto.obrasLite` (en_obra, terminada, en_remates). Cambiar de modo no pierde el estado de la visita | e2e paso 10 |
+| R-27 | ✅ | `lite.html` `obraHitos`, `hitoHechoSheet`/`hitoHechoOk` (foto obligatoria por `cfg.fotoObligatoriaHito`, nota, aviso del tramo que desbloquea); `bridge.js` `Proto.liteObra("hito")` → `marcarHito` con adjuntos; salud recalculada | e2e paso 10 (sin foto el puente lo rechaza; con foto llega al admin —miniatura— y al cliente) |
+| R-28 | ✅ | `lite.html` `obraIncid`, `incSheet`/`incGuardar` (tipos, descripción con nota de voz simulada, fotos, gravedad, bloquea, plazo, coste → abre el cambio precargado, visible); `adm.html` `registrarIncidencia`, `resolverIncidencia`, `obraIncidencias` (subapartado con filtro y resolución), salud y notificación; `cli.html` `incidenciasHtml` | adm (modelo, replanificación, salud); e2e paso 10 |
+| R-29 | ✅ | `adm.html` `importeCambioRapido` (3 modos), `catalogoCambios`, `altaCambioRapido`, nuevo `registrarCambioModal` (sustituye al de ocho campos); `lite.html` `cambioSheet`/`cmGuardar` con el mismo cálculo vía `Proto.calc`, aviso WhatsApp/copiar y disparadores | adm (3 modos, errores); e2e paso 10 (coste 1.000 + 22 % = 1.220 desde el lite) |
+| R-30 | ✅ | `lite.html` `obraCuenta` (total vigente, barra frente al umbral, cobrado, saldo, próximo cobro, cambios y adendas, atajo «Generar adenda» → `Proto.liteObra("adenda")`) | e2e pasos 10 y 11 |
+| R-31 | ✅ | `lite.html` `obraFotos`/`fotoObraSheet` (por estancia y momento); `adm.html` `fotoThumbHtml` en la galería; `cli.html` galería con las fotos reales | e2e paso 10 |
+| R-32 | ✅ | `adm.html`: `planCobros` (intermedios = pct × aceptada; cambios firmados al siguiente tramo sin cobrar; último = resto; lo provisional nunca se cobra), `normalizarPlan`, `validarPlan`, `cfg.cobrarCambiosFirmados` (siguiente / al firmar / al entregar); cliente: `planPagos` desde `planTramos` | adm: los 5 casos del apéndice A.3 y los modos; cli; e2e paso 12 |
+| R-33 | ✅ | `adm.html`: `umbralAdenda` (única función: sin IVA y con IVA), `umbralAdendaEur`, `textoUmbral`, `debeGenerarAdenda`; usada por avisos, constructor de adendas, lite y configuración | adm: A.4 (495,87 / 600,00; dispara a esa cifra); e2e pasos 10, 11 y 16 |
+| R-34 | ✅ | `adm.html`: `resolverDesacuerdo(caso,id,accion,importe,nota)` (ajustar / retirar / mantener con nota), `desacuerdoModal`, aviso con plantilla; estado `retirado`; cliente: etiqueta y resolución | adm (3 opciones, mensaje, no suma); cli; e2e paso 11 |
+| R-35 | ✅ | `adm.html`: 7 apartados (`REDIR_NAV`, pestaña «Cobros y movimientos» en Obras, «Clientes» en Presupuestos, pestaña «Cuenta» de la ficha); `cli.html`: `navActual`, `vCuenta`, Entrega dentro de Obra, barra inferior ≤ 5 | adm; cli; e2e pasos 8 y 16 (pestañas antes y después de aceptar) |
+| R-36 | ✅ | `adm.html`: `CFG_ESENCIAL` (10 secciones), `CFG_AVANZADO`, interruptor `cfgModo`, `cfgPlanDefecto`, nuevos ajustes (`negociacionDef`, `fotoObligatoriaHito`, `cobrarCambiosFirmados`…) y «Restablecer valores por defecto» por grupo | adm; e2e paso 16 |
+| R-37 | ✅ | Este LEEME; `__tests()` de las cuatro apps; `test_flujo_v1.js`, `test_bloques_ab.js`, `test_e2e_v2.js` | Ver apartado 8 |
 
 ## 3. Lógicas de dependencia añadidas (R-15)
 
@@ -79,7 +101,7 @@ Una sola función pura, `requisitos(accion, caso, ctx)` → `{ ok, faltan:[{id,t
 | A8 cerrar obra | **No existe** para el reformista | `requisitos`, `transitar`, UI sin botón |
 | A9 proforma / paquete | Nombre, NIF válido y domicilio fiscal | `generarProforma`, `paqueteGestoria` (`exigirFacturacion`) |
 | A10 cerrar visita | Total > 0; aviso (no bloqueo) si hay estancias sin medir | `mvConfirmarEnvio`, `mvDejarBorrador`, `Proto.lite('enviar')` |
-| A11 resolver duda | «Mantener» exige nota; «retirar» motivo; «ajustar» importe | `desacuerdoOk` (R-34 completará las tres opciones) |
+| A11 resolver duda | «Mantener» exige nota; «retirar» motivo; «ajustar» importe | `desacuerdoOk` (tres opciones, R-34) |
 
 **Huecos encontrados en la auditoría 5.4 y cerrados con el mismo patrón** (acción → requisito → dónde):
 
@@ -95,6 +117,21 @@ Una sola función pura, `requisitos(accion, caso, ctx)` → `{ ok, faltan:[{id,t
 | Iniciar la obra sin señal | A5 | `obraIniciar` |
 | Terminar la obra con hitos pendientes sin darse cuenta | Confirmación expresa (A7) | `obraTerminar` |
 | Proforma/gestoría con datos fiscales vacíos | A9 | `exigirFacturacion` |
+
+**Lógicas de dependencia añadidas en el segundo tramo** (acción → requisito → dónde):
+
+| Acción | Requisito | Dónde se valida |
+|---|---|---|
+| Marcar un hito como hecho (lite) | Al menos una foto (`cfg.fotoObligatoriaHito`, por defecto sí) | `Proto.liteObra("hito")` y la hoja del lite |
+| Registrar un cambio con el formulario rápido | Concepto e importe distinto de 0 | `altaCambioRapido` (lite y admin) |
+| Registrar una incidencia | Descripción obligatoria | `registrarIncidencia` |
+| Resolver una duda | «Mantener» exige nota; «retirar» exige motivo | `requisitos("resolver_duda")`, `resolverDesacuerdo` |
+| Generar una adenda desde el lite | A6 (≥ 1 cambio registrado, sin cambios en duda) | `Proto.liteObra("adenda")` |
+| Enviar la V3 desde el lite | A1 y A10 + **plan de cobros válido** (intermedios ≤ 100 %, hitos existentes) | `Proto.lite("enviar")` |
+| Guardar el borrador desde el lite | Si el admin lo modificó después, aviso con fecha (la última modificación prevalece) | `guardarBorradorLite` (`baseRev` frente a `rev`) |
+| Eliminar un hito que dispara un cobro | Reasignar antes el disparador | `hitoPlanDel` (lite) |
+| Paquete para la gestoría | A9 (facturación completa) y aviso de movimientos sin justificante | `paqueteGestoria` |
+| Operar la obra desde el lite | Obra en `en_obra`, `terminada` o `en_remates` | `Proto.liteObra` |
 
 ## 4. `BASE_POR_TRABAJO` (cfg.html)
 
@@ -155,21 +192,28 @@ La base indica de qué medida depende la cantidad de cada trabajo; las líneas l
 ```js
 caso.solicitud.detalle = { inmueble, extras, calidad, urgencia, obraHabitada, elegiMateriales, materiales, notas, resultado,
                            espacios: { [espId]: { cfg, materiales, notas } } };
-caso.solicitud.espacios[].trabajos[] = { key, label, base, detalles };   // antes: lista de claves (el código admite ambas)
-caso.datosVivienda = { ubicacion:{calle,numero,piso,puerta,cp,localidad}, regimen, permisoPropietario, permisoDocId, contactoPropietario,
-                       anioConstruccion, anioDesconocido, inicio, inicioSinFecha, habitada, fotosExtra:[adjId], comentarios, comunidad, completos, pedidos };
-caso.fiscal    = { tipo, nombre, nif, razonSocial, cif, domicilio:{calle,numero,cp,localidad}, mismaDireccion, usoVivienda, completos };
-caso.mensajes[] = { id, fecha, autor:'cliente'|'reformista'|'sistema', texto, adjuntos:[adjId], tipo:'mensaje'|'aviso_pago'|'otra_fecha'|'sistema', leido:{adm,cli} };
-caso.visita.cobro = { importe, politica, estado:'no_aplica'|'pendiente'|'pendiente_pago'|'justificante_enviado'|'cobrada'|'eximida',
-                      avisoPagoId, reservaIniciadaAt, reservaExpiraAt, recordadaAt };
-db.avisosPago[]    = { id, casoId, tipo:'visita'|'plan', importe, medio, fecha, tramo, concepto, adjuntoId, estado:'pendiente'|'confirmado'|'rechazado', creadoAt, nota, motivo };
-db.notificaciones[] = { id, fecha, casoId, tipo, texto, resuelta, clave, destino };
+caso.solicitud.espacios[].trabajos[] = { key, label, base, detalles };
+caso.datosVivienda = { ubicacion:{…}, regimen, permisoPropietario, permisoDocId, contactoPropietario, anioConstruccion, anioDesconocido, inicio, inicioSinFecha, habitada, fotosExtra:[adjId], comentarios, comunidad, completos, pedidos };
+caso.fiscal    = { tipo, nombre, nif, razonSocial, cif, domicilio:{…}, mismaDireccion, usoVivienda, completos };
+caso.mensajes[] = { id, fecha, autor, texto, adjuntos:[adjId], tipo, leido:{adm,cli} };
+caso.visita.cobro = { importe, politica, estado, avisoPagoId, reservaIniciadaAt, reservaExpiraAt, recordadaAt };
+caso.visita.medidas[espId] = { largo, ancho, alto, huecos:[{tipo,ancho,alto}], reparto:{modo:'altura'|'pct',hAlic,Lt,pct}, aplicada, origen:'lite' };   // R-19, R-20
+caso.visita.tabiques[] = { id, espacioId, contiguaId, longitud, alto, m2, accion, material, trabajoId, reponer };                                      // R-18
+caso.borrador = { origen:'lite', v3id, basadoEn, lineas:[…{liteId,tabiqueId}], ivaPct, margenPct, ajustes, negociacion, medidas, tabiques, hitosPlan, planCobros,
+                  notas, general, fotos:[adjId], respuestas, quitados, totales, pendienteEnvio, snap, rev, por:'lite'|'admin', actualizadoAt } | null;       // R-21
+negociacion = { descuentoModo:'pct'|'eur', descuento, validezDias, plazoSemanas, imprevistosPct, redondeo:0|10|50|100, condiciones };                    // R-24
+version = { …, negociacion, planCobros:[{label,pct,cuando}], hitosPlan:[{nombre,diasEstimados}], tabiques, totales:{…, imprevistos, descuento, ajusteRedondeo, beneficio} };
+caso.planCobros = [{ label, pct, cuando:'aceptacion'|'hito:<nombre>'|'entrega'|'firma' }] | null;     // por caso; si es null, el de configuración. El último tramo es siempre «el resto»
+caso.obra = { …, hitosPlan:[{nombre,diasEstimados}], incidencias:[{ id, fecha, tipo, texto, fotos:[adjId], gravedad, bloquea, diasRetraso, visibleCliente, estado:'abierta'|'resuelta', cambioId, resolucion, voz }],
+              fotos:[{ id, fecha, momento:'antes'|'durante'|'despues', espacioId, adjuntoId }], hitos[].{ fotos:[{adjuntoId,momento}], nota } };
+cambio = { …, estado:'registrado'|'en_desacuerdo'|'consolidado'|'retirado', modoImporte:'final'|'coste_margen'|'partidas', coste, partidas, cortesia, motivoRetiro, notaMantener, resolucion:{accion,nota,fecha}, origen:'lite'|'admin', incidenciaId };
+db.avisosPago[], db.notificaciones[]     // tipos de notificación nuevos: 'incidencia', 'borrador'
 movimiento = { …existente, justificanteId, avisoId, sinJustificante, nota };
-cfg = { …, horquillaV1Pct:5, exigirSenalParaIniciar:true, viviendaObligatorios:[…5 ids…],
-        cobros:{ …, bizum, justificanteObligatorio:{transferencia,bizum,efectivo} }, visita:{ …, cobroCuando:'al_confirmar', reservaPagoHoras:48 } };
+cfg = { …, horquillaV1Pct:5, exigirSenalParaIniciar:true, cobrarCambiosFirmados:'siguiente'|'al_firmar'|'entrega', fotoObligatoriaHito:true, negociacionDef:{…}, empresa:{…, firma},
+        viviendaObligatorios:[…], cobros:{…, justificanteObligatorio:{…}}, visita:{…, cobroCuando, reservaPagoHoras} };
 ```
 
-`buildV(caso)` proyecta además: `versiones[].{total,rango,etiqueta,avisosVisita}`, `visita.cobro`, `datosVivienda(+eval)`, `fiscal(+Eval)`, `requisitos`, `avisosPago`, `pago`, `mensajes` (completos), `horquillaPct`, `tipoVivienda`. El cliente evalúa sus formularios en vivo con las mismas reglas del admin (`Proto.evalVivienda`, `Proto.evalFiscal`).
+`buildV(caso)` proyecta al cliente, además de lo ya descrito: `versiones[].{aj, plan, hitosPlan}`, `plan` (con importes; vista previa antes de aceptar), `planTramos` (después de aceptar, tal cual `planCobros`), `hitosPlan`, `obra.{incidencias, fotosObra, hitos[].fotosAdj}` y `cambios[].{resolucion, cortesia, motivoRetiro}`. `datosLite(caso)` proyecta al lite: todas las versiones con líneas, `est[].{detalle, lineas[].{key,bk,tl,det}}`, `estadoDatos`, `medidas`, `borrador` y `cfg` (hitos, plan, negociación por defecto, foto obligatoria).
 
 ## 6. Decisiones tomadas (ambigüedades menores)
 
@@ -179,32 +223,52 @@ cfg = { …, horquillaV1Pct:5, exigirSenalParaIniciar:true, viviendaObligatorios
 4. **Horquilla:** se guarda `lo`/`hi` exactos (±pct %) y se muestran redondeados hacia fuera. Solo `V1` de tipo `estimacion` es rango; `rangoVersion` es la única fuente para mostrar y para las reglas (`accionSugerida`, calidad del lead). El configurador usa `CFG.HORQUILLA_PCT`, que la carcasa mantiene igual que `horquillaV1Pct` del admin.
 5. **`fiscal.nombre` en empresas** es la persona que firma (G10 compara con `razonSocial` si no hay). La declaración «uso particular» se guarda como `'si'|'no'`.
 6. **Obligatorios del R-04:** cinco (`ubicacion`, `regimen` —que incluye el permiso si es inquilino—, `anioConstruccion`, `inicio`, `habitada`); piso y puerta se exigen solo si la vivienda es un piso. La fecha «no anterior a hoy» se valida al guardar, no al evaluar la completitud (para que un caso no «pierda» sus datos con el paso del tiempo).
-7. **Configuración:** los ajustes nuevos están en los grupos actuales (Presupuesto, Visita, Obra, Cobros); la separación esencial/avanzado es R-36.
+7. **Configuración:** los ajustes nuevos están en los grupos correspondientes; la separación esencial/avanzado (R-36) ya está hecha: ver la decisión 25.
 8. **Cobros por confirmar:** `cfg.cobros.justificanteObligatorio` es por medio. «Confirmar sin justificante» exige nota y marca el movimiento `sinJustificante`.
 9. **Datos de ejemplo (punto 10, parte mía):** 7 casos con vivienda completa y 10 incompletos (REF-0004 inquilino sin permiso); V1 en horquilla y V2/V3 exactas; 2 avisos pendientes (imagen SVG y PDF simulado) y 1 rechazado; movimientos con justificante y uno «sin justificante»; 10 conversaciones (4 con mensajes sin leer por el admin y 3 sin leer por el cliente); 10 notificaciones; REF-0011 `en_remates` sin conformidad. Los marcadores se generan en código (`svgMarcador`, `pdfSimulado`) y se siembran en `Proto.adjuntos` (los datos solo guardan ids). Las fotos de hitos del panel del cliente siguen siendo marcadores SVG generados en el propio panel (no son adjuntos del usuario).
 10. **Simuladores (R-14):** la «Vista del cliente» del admin sigue permitiendo simular aceptar/pedir cambios/etc. pero ya respetando `requisitos`, y no tiene conformidad. En el panel del cliente `abrirSim` ya estaba oculto; se retiró además el cierre del atajo «7 · Obra cerrada» (solo prepara el checklist). Las funciones `sim*` del cliente no se invocan desde la carcasa.
 11. **Cliente:** `S.datos` (nif, acceso, fotos…) se retira; `pendientes()` y el aviso de bienvenida piden los datos de la vivienda. La aceptación escribe `aceptacion.nombre` con el nombre de la firma.
 12. **Pantallas:** el botón «Completar ahora» de la visita desplaza al formulario insertado; en otros contextos abre la hoja «Datos de tu vivienda» (los ids se resuelven dentro de la hoja si está abierta).
+13. **Formulario rápido de cambios (R-29):** la regla (los tres modos de importe, el margen y el catálogo de partidas) vive en el admin (`importeCambioRapido`, `catalogoCambios`, `altaCambioRapido`); el lite la consulta con `Proto.calc`. El modal del admin y la hoja del lite son dos interfaces sobre la misma función. El catálogo de «Por partidas» mezcla los trabajos del admin (mano de obra + material por unidad) y los productos del catálogo.
+14. **Lite v2:** nueva clave `panelLiteV2`. El lite mantiene su catálogo simplificado para «Añadir trabajo»; los trabajos que vienen del admin llevan su `key`, su base real (`bk`) y lo que marcó el cliente (`det`). Los trabajos nuevos del catálogo del lite reciben una base equivalente (`BK_CAT`).
+15. **Tabique medido (R-18):** la línea del trabajo pasa a m² con precio = precio por unidad del cliente ÷ 7,5 (tabique tipo de 3 m × 2,5 m); los tabiques pedidos y aún sin medir cuentan 7,5 m² cada uno. La línea vive solo en la estancia principal (no se duplica); la contigua lo muestra como «Tabique compartido con …». Si se derriba y hay estancia contigua se pregunta por reponer el acabado y se añade la pintura de esa pared.
+16. **Paredes sin medir (R-20):** sin ancho × largo medidos se usa un cuadrado equivalente a los m²; el reparto por defecto es «alicatado hasta 2,10 m» en baños, «hasta 1,20 m» en cocinas y 0 en el resto. Las partidas de pared sin medidas se escalan con √(m²) cuando cambian los m². Las partidas editadas a mano nunca se tocan.
+17. **Sincronización del borrador (R-21):** autoguardado 2,2 s después del último cambio y solo si el contenido cambió (hash). El conflicto se detecta con la revisión (`rev`): cada guardado del lite envía `baseRev`; si el admin modificó el borrador desde entonces (`por:"admin"`), el lite recibe fecha y autor y debe confirmar para sobrescribir. Al reabrir, si no hay instantánea (borradores de ejemplo) el estado se reconstruye desde las líneas del borrador, las medidas, los tabiques, el plan y los ajustes.
+18. **Descuento, imprevistos y redondeo (R-24)** no son líneas del presupuesto (no llevan margen): viajan en `version.negociacion` y `totales`. El panel del cliente usa su propia fórmula (22 % y 21 %): el puente escala los precios de las líneas (`factorCliente`) para que su total coincida con el del admin, y enseña imprevistos, descuento y redondeo como líneas propias (`ajHtml`). `totalV(v)` usa el total del admin cuando existe.
+19. **Plazo de ejecución:** semanas = ⌈días de los hitos ÷ 5⌉ (mínimo 1), editable; si se edita, prevalece el valor manual.
+20. **Plan de cobros del lite:** los porcentajes se aplican sobre el total (IVA incluido) de la V3 enviada; el último tramo es el resto. Al enviar pasa a `caso.planCobros` y `caso.obra.hitosPlan`; al iniciar la obra se crean los hitos del caso y los tramos «al terminar X» dependen de su nombre (renombrar un hito actualiza sus disparadores; eliminar uno que dispara un cobro obliga a reasignarlo).
+21. **Resolver una duda (R-34):** «ajustar a 0 €» es una cortesía registrada (`cortesia:true`, estado `consolidado`: no cobra y no pasa por adenda). El cambio retirado deja `motivoRetiro` y `resolucion`. En el panel del cliente (y en el admin) un cambio en duda sigue contando como provisional.
+22. **Umbral de adenda (R-33):** el modo «importe fijo» se interpreta **sin IVA**; el equivalente con IVA se calcula sobre el importe exacto (12.000 € al 5 % da 495,87 € y 600,00 €, sin redondear dos veces).
+23. **Incidencias (R-28):** una incidencia abierta que bloquea pone la salud en «bloqueada»; una de gravedad alta, en «en riesgo». Los días de retraso se suman al primer hito no terminado y se replanifican las fechas con `replanificarHitos`.
+24. **Navegación (R-35):** `navegarA("cobros")` y `navegarA("clientes")` redirigen a sus nuevas ubicaciones (los enlaces antiguos siguen funcionando); las funciones de Cobros y Clientes escriben en contenedores internos (`#sub-cobros`, `#sub-clientes`). En el cliente, `ir("cambios"|"pagos"|"docs"|"entrega")` lleva a la pestaña nueva (alias `SEC_ALIAS`); con 5 pestañas la barra inferior no necesita «Más».
+25. **Configuración (R-36):** los diez parámetros esenciales se editan en una página; el modo Avanzado conserva el resto de grupos sin duplicar los campos esenciales (desaparece el grupo «Negocio»). La firma de los mensajes es `empresa.firma` (variable `{{firma}}`). El «Restablecer» de cada sección esencial restaura el grupo del que depende.
+26. **Paquete de la gestoría (R-12):** justificante `AAAA-MM-DD_REF_importe.ext` con punto decimal (sufijo `_2` si se repite); la proforma va como HTML (`proforma_PF-nnnn.html`), copia congelada si existe o calculada al momento si no. Los movimientos sin justificante se avisan y se marcan en el CSV.
+27. **Pruebas preexistentes que se corrigen:** del cliente, `el enlace privado lleva el token` (el enlace público es `https://panel…/c/TOKEN`; el hash es interno) y `un cambio en desacuerdo no suma al total` (en el prototipo integrado un cambio en duda sigue siendo provisional, igual que en el admin; lo que no suma es uno **retirado**, que ahora se prueba). Del admin se adaptan `caso 10: provisional` (ahora con la duda C2 de ejemplo) y `resolverDesacuerdo` (nota obligatoria al mantener).
+28. **Datos de ejemplo (punto 10, segundo tramo):** REF-0006 pasa a tener V1 (sustituida) y V2 (vigente) y un borrador V3 del lite con tabique compartido cocina–salón, baño medido (3,84 m², alicatado 11,04 / pintura 7,36), humedad, descuento del 3 % y plan 35/25/resto; REF-0010 tiene hitos y plan propios (40 / 20 / resto), 2 incidencias (una bloqueante abierta y una resuelta) y una duda (C2); REF-0009 suma un cambio retirado (C4) y uno de cortesía (C5). Los marcadores son SVG generados en código.
+29. **Escenario e2e:** se recorre con las funciones reales de cada app (no con un clic en cada botón), salvo la descarga del ZIP, que se hace con el botón real y se valida byte a byte; las capturas se generan con `E2E_SHOTS`.
 
-## 7. Limitaciones conocidas y notas para el siguiente agente
+## 7. Limitaciones conocidas
 
-* `Proto.adjuntos` se vacía en cada carga/reinicio (los datos de ejemplo se reinician igual); en los navegadores sin IndexedDB funciona solo en memoria y avisa.
-* HEIC: se acepta el archivo, pero si el navegador no lo decodifica no se comprime ni se previsualiza (se guarda tal cual).
-* La estimación de la V1 que ve el configurador usa su propio margen (22 %) e IVA (21 %); el admin no los reajusta al cambiar `margen`/`iva` en una V1 ya enviada (comportamiento previo).
-* El cliente calcula los totales con constantes (margen 22 %, IVA 21 %) y el admin con su configuración; si se cambian en Configuración pueden divergir en céntimos (comportamiento previo).
-* `cli.__tests()` falla en 2 pruebas dentro de la carcasa (`el enlace privado lleva el token`, `un cambio en desacuerdo no suma al total`): **ya fallaban antes** de estos cambios (el adaptador sobrescribe `linkPanel`). El lite pasa 25/25.
-* `Proto.lite('borrador')` sigue solo anotando un evento (R-21 pendiente). `Proto.lite('enviar')` ahora revalida A10 y A1 y crea V3 con importe exacto.
-* Para los apartados de R-35: el cliente tiene pestañas Visita/Pagos/Mensajes con la lógica nueva; al reordenar, conservar `data-keep` en los formularios (evita repintar mientras se escribe) y los ids `dv-*`, `fx-*`, `ap-*`, `pv-*`.
-* Pruebas útiles al continuar: `test_flujo_v1.js` (recorre ya R-01…R-14) y `test_bloques_ab.js`.
+* `Proto.adjuntos` se vacía en cada carga/reinicio (los datos de ejemplo se reinician igual); en los navegadores sin IndexedDB funciona solo en memoria y avisa. HEIC se acepta pero no se comprime ni se previsualiza si el navegador no lo decodifica.
+* La nota de voz del lite (incidencias y cambios) es una **transcripción simulada**: no se graba audio. Los envíos de correo y WhatsApp son simulados (enlaces `wa.me` y copiar).
+* La visita del lite es la del **caso activo** de la carcasa (un caso a la vez); el modo Obra lista todas las obras activas del admin. Fuera de la carcasa el lite no funciona.
+* El lite conserva su catálogo simplificado para añadir trabajos nuevos; sus precios no salen del catálogo del admin.
+* El Modo visita del admin (`mv*`) y el lite comparten `caso.borrador`; el modo visita del admin no entiende `negociacion`, `tabiques` ni el plan (los conserva al guardar).
+* El panel del cliente calcula con constantes (22 % / 21 %) y recibe los precios escalados por el puente; si se cambia el margen o el IVA en Configuración pueden aparecer diferencias de céntimos en la suma por estancias (el total siempre es el del admin).
+* La estimación de la V1 que ve el configurador usa su propio margen (22 %) e IVA (21 %); el admin no los reajusta en una V1 ya enviada (comportamiento previo).
+* El ZIP no se comprime (tipo «store»), sin cifrado ni soporte de archivos de más de 4 GB.
+* Las capturas en tres anchos (sin desbordes horizontales) cubren las pantallas nuevas del **lite**; las del admin y del cliente se revisaron en escritorio y móvil de forma manual.
 
 ## 8. Salida de las pruebas (última ejecución)
 
 ```
-admin  __tests()            346/346 pruebas correctas ✓   (250 de v1 + 96 nuevas; 7 de v1 adaptadas por R-03, R-14 y las plantillas nuevas)
-test_flujo_v1.js            RESULT ok=51 ko=0              (30 de v1 + 21 nuevas; los pasos 3 y 5 adaptados por R-04, R-05, R-07, R-08)
+admin  __tests()            404/404 pruebas correctas ✓   (346 previas + 58 de los bloques C–E: apéndices A y B, plan de cobros, umbral, dudas, incidencias, ZIP, borrador, navegación, configuración y datos de ejemplo)
+lite   __tests()            49/49 pruebas correctas ✓     (25 previas + 24 nuevas: superficie, paredes casos A y B, describirTrabajo, tabiques, versiones, desglose, negociación, plan, borrador)
+cli    __tests()            37/37 pruebas correctas ✓     (30 previas, ya sin los 2 fallos antiguos, + 7 nuevas: pestañas, plan con resto, vista previa del plan, líneas de la propuesta, retirado)
+test_flujo_v1.js            RESULT ok=51 ko=0
 test_bloques_ab.js          RESULT ok=28 ko=0
-lite   __tests()            25/25
-cli    __tests()            28/30 (las 2 fallidas ya fallaban en la base)
-Consola de errores: ninguna
+test_e2e_v2.js              RESULT ok=68 ko=0               (escenario completo del apartado 11.2, pasos 1 a 16)
+Consola de errores: ninguna en ninguna de las ejecuciones
 ```
-Pruebas de v1 adaptadas de forma justificada: horquilla (15 % → ±5 %, ya no depende de la incertidumbre), «cerrar por plazo» (ya no existe), reloj `remates_plazo` → `reclamar_conformidad`, número de plantillas (9 → 16).
+
+Pruebas de v1 y del primer tramo adaptadas de forma justificada: horquilla (±5 %), «cerrar por plazo» (ya no existe), reloj `remates_plazo` → `reclamar_conformidad`, número de plantillas (16), `resolverDesacuerdo` (nota obligatoria al mantener), `caso 10: provisional` (con la duda de ejemplo C2) y las dos del cliente descritas en la decisión 27.

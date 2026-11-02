@@ -434,7 +434,7 @@ function incidenciasHtml() {
 function vCuenta() {
   const subs = [['cambios', 'Cambios y adendas'], ['pagos', 'Pagos'], ['docs', 'Documentos']]; if (!subs.some(x => x[0] === UI.cuentaSub)) UI.cuentaSub = 'cambios';
   const cuerpo = { cambios: vCambios, pagos: vPagos, docs: vDocs }[UI.cuentaSub]();
-  return '<h2>Mi cuenta</h2><div class="chips" role="tablist" aria-label="Secciones de la cuenta">' + subs.map(([k, l]) => '<button class="chip ' + (UI.cuentaSub === k ? 'on' : '') + '" role="tab" aria-selected="' + (UI.cuentaSub === k) + '" id="cta-' + k + '" onclick="UI.cuentaSub=\'' + k + '\';render()">' + l + (badgeSec(k) ? ' <span class="badge" style="position:static">' + badgeSec(k) + '</span>' : '') + '</button>').join('') + '</div>' + cuerpo;
+  return '<h2>Mi cuenta</h2><div class="chips" role="tablist" aria-label="Secciones de la cuenta">' + subs.map(([k, l]) => '<button class="chip ' + (UI.cuentaSub === k ? 'on' : '') + '" role="tab" aria-selected="' + (UI.cuentaSub === k) + '" id="cta-' + k + '" onclick="UI.cuentaSub=\'' + k + '\';render()">' + l + (badgeSec(k) ? ' <span class="pill wip" style="margin-left:4px">' + badgeSec(k) + '</span>' : '') + '</button>').join('') + '</div>' + cuerpo;
 }
 function vCambios() {
   const o = S.obra; const tv = totalVigente(S); const pend = o.cambios.filter(c => c.estado === 'pendiente_cliente');
