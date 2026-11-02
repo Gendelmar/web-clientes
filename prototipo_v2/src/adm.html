@@ -1229,8 +1229,8 @@ function umbralAdenda(caso, cfg){
   const iva = ivaAceptado(caso);
   const importe = caso.aceptacion?.importe || (caso.versiones||[]).find(v=>v.estado==='aceptada')?.totales?.total || 0;
   const modo = cfg.adendaModo === 'eur' ? 'eur' : 'pct';
-  const sinIva = modo === 'eur' ? r(cfg.adendaUmbralEur||0) : r(importe / (1 + iva/100) * (cfg.adendaUmbral||5) / 100);
-  return { sinIva, conIva: r(sinIva * (1 + iva/100)), ivaPct: iva, modo };
+  const exacto = modo === 'eur' ? (cfg.adendaUmbralEur||0) : importe / (1 + iva/100) * (cfg.adendaUmbral||5) / 100;
+  return { sinIva: r(exacto), conIva: r(exacto * (1 + iva/100)), ivaPct: iva, modo };
 }
 function umbralAdendaEur(caso, cfg){ return umbralAdenda(caso, cfg).sinIva; }
 function textoUmbral(caso, cfg){ const u = umbralAdenda(caso, cfg); return fmtEur(u.sinIva) + ' sin IVA (' + fmtEur(u.conIva) + ' con IVA)'; }

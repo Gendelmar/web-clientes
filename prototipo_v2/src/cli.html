@@ -205,7 +205,7 @@ function nuevoCaso() {
 // ═══════════════════════════════════════════════════════
 const subL = l => r2(l.cant * l.precio);
 const subEst = e => r2(e.lineas.reduce((s, l) => s + subL(l), 0));
-const totalV = v => fin(v.est.reduce((s, e) => s + subEst(e), 0));
+const totalV = v => v.total != null ? v.total : fin(v.est.reduce((s, e) => s + subEst(e), 0));
 const totalEstF = e => fin(subEst(e));
 // R-03: la V1 se muestra como rango (lo/hi los calcula el admin con su horquilla); V2 en adelante, importe exacto
 const rangoV = v => v.rango ? { lo:v.rango.lo, hi:v.rango.hi } : { lo:Math.floor(totalV(v) * 0.95), hi:Math.ceil(totalV(v) * 1.05) };
@@ -228,6 +228,8 @@ function totalVigente(S) {
 }
 function cobrado(S) { return r2(S.cobros.reduce((s, c) => s + c.importe, 0)); }
 function planPagos(S) {
+  if (S.aceptacion && S.planTramos && S.planTramos.length) return S.planTramos.map(t => ({ label: t.label, pct: t.pct, cuando: t.cuando, importe: t.importe, estado: t.estado === 'cobrado' ? 'pagado' : t.estado === 'debido' ? 'debido' : 'previsto', falta: t.falta, resto: !!t.resto, incluyeCambios: t.incluyeCambios || 0 }));
+  if (!S.aceptacion && S.plan && S.plan.length && S.plan.every(t => t.importe != null)) return S.plan.map(t => ({ ...t, estado: 'previsto', falta: t.importe })); // antes de aceptar: el plan de esta propuesta
   const base = S.aceptacion ? S.aceptacion.total : 0; const pag = cobrado(S); let acum = 0;
   const alc = { aceptacion:!!S.aceptacion, hito2:(S.obra.hitos[1] || {}).estado === 'hecho', entrega:['remates', 'cerrada'].includes(S.fase) };
   return S.plan.map(t => { const imp = r2(base * t.pct / 100); acum = r2(acum + imp); const cub = pag + 0.005 >= acum;
@@ -291,13 +293,13 @@ function avisoPrimero() {
 function centrarFase() { const n = document.querySelector('.step.now'); if (!n) return; const c = n.parentElement; const k = Math.max(1, Math.floor(c.clientWidth / n.getBoundingClientRect().width) - 2); let ref = n; for (let i = 0; i < k && ref.previousElementSibling; i++) ref = ref.previousElementSibling; c.scrollLeft += ref.getBoundingClientRect().left - c.getBoundingClientRect().left; }
 function parseHash() { const h = (location.hash || '').replace(/^#\/?/, '').split('/'); return { r:h[0] || '', tok:h[1] || '', s:h[2] || '' }; }
 let renderedHash = null;
-function ir(s) { const h = '#/c/' + S.token + '/' + s; if (location.hash !== h) location.hash = h; render(); }
+function ir(s) { if (SEC_ALIAS[s]) { UI.cuentaSub = SEC_ALIAS[s][0] === 'cuenta' ? SEC_ALIAS[s][1] : UI.cuentaSub; UI.ancla = SEC_ALIAS[s][1]; s = SEC_ALIAS[s][0]; } const h = '#/c/' + S.token + '/' + s; if (location.hash !== h) location.hash = h; render(); }
 function render() {
   renderedHash = location.hash; const h = parseHash(); const app = $('#app');
   if (h.r === 'c') {
     if (!S || h.tok !== S.token) { app.innerHTML = vInvalido(); return; }
-    sec = h.s || 'inicio'; if (!NAV.find(n => n[0] === sec)) sec = 'inicio';
-    app.innerHTML = vPanel(); window.scrollTo(0, 0); centrarFase(); return;
+    sec = h.s || 'inicio'; if (SEC_ALIAS[sec]) { UI.cuentaSub = SEC_ALIAS[sec][0] === 'cuenta' ? SEC_ALIAS[sec][1] : UI.cuentaSub; UI.ancla = SEC_ALIAS[sec][1]; sec = SEC_ALIAS[sec][0]; } if (!navActual(S).find(n => n[0] === sec)) sec = 'inicio';
+    app.innerHTML = vPanel(); if (UI.ancla === 'entrega' && document.getElementById('entrega-bloque')) { document.getElementById('entrega-bloque').scrollIntoView(); UI.ancla = null; } else { window.scrollTo(0, 0); UI.ancla = null; } centrarFase(); return;
   }
   if (h.r === 'correo' && S) { app.innerHTML = vCorreo(); return; }
   app.innerHTML = vDemo();
@@ -335,7 +337,14 @@ function vCorreo() {
 // ═══════════════════════════════════════════════════════
 // 6. PANEL DEL CLIENTE
 // ═══════════════════════════════════════════════════════
-const NAV = [['inicio', '🏠', 'Inicio'], ['presupuesto', '📄', 'Presupuesto'], ['visita', '📅', 'Visita'], ['obra', '🏗️', 'Obra'], ['cambios', '🔁', 'Cambios'], ['pagos', '💶', 'Pagos'], ['entrega', '✅', 'Entrega'], ['docs', '📁', 'Documentos'], ['mensajes', '💬', 'Mensajes']];
+const NAV = [['inicio', '🏠', 'Inicio'], ['presupuesto', '📄', 'Presupuesto'], ['visita', '📅', 'Visita'], ['obra', '🏗️', 'Obra'], ['cuenta', '💶', 'Cuenta'], ['mensajes', '💬', 'Mensajes']];
+// R-35: antes de aceptar → Inicio · Presupuesto · Visita · Mensajes; tras aceptar → Inicio · Presupuesto · Obra · Cuenta · Mensajes
+const NAV_ANTES = ['inicio', 'presupuesto', 'visita', 'mensajes'], NAV_DESPUES = ['inicio', 'presupuesto', 'obra', 'cuenta', 'mensajes'];
+const despuesDeAceptar = S => !!S.aceptacion || ['aceptada', 'obra', 'remates', 'cerrada'].includes(S.fase);
+const navActual = S => (despuesDeAceptar(S) ? NAV_DESPUES : NAV_ANTES).map(id => NAV.find(n => n[0] === id));
+// Los enlaces y avisos antiguos (cambios, pagos, documentos, entrega) llevan a su pestaña nueva
+const SEC_ALIAS = { cambios: ['cuenta', 'cambios'], pagos: ['cuenta', 'pagos'], docs: ['cuenta', 'docs'], entrega: ['obra', 'entrega'] };
+const SECS_DE = { cuenta: ['cuenta', 'cambios', 'pagos', 'docs'], obra: ['obra', 'entrega'] };
 const FASE_TXT = {
   recibida:['Hemos recibido tu solicitud', 'Tu reformista ya la tiene. Completa los datos que faltan para afinar tu presupuesto.'],
   visita_propuesta:['Elige el día de la visita técnica', 'Tu reformista irá a ver la vivienda para confirmar medidas y ajustar el presupuesto.'],
@@ -347,14 +356,14 @@ const FASE_TXT = {
   cerrada:['Obra cerrada · ¡gracias!', 'Tienes tu acta y la información de la garantía.'],
 };
 function badgeSec(s) {
-  let n = pendientes(S).filter(p => p.sec === s).length; if (s === 'mensajes') n = S.avisos.filter(a => !a.leido).length + mensajesSinLeer();
+  let n = pendientes(S).filter(p => (SECS_DE[s] || [s]).includes(p.sec)).length; if (s === 'mensajes') n = S.avisos.filter(a => !a.leido).length + mensajesSinLeer();
   return n ? '<span class="badge" aria-label="' + n + ' pendientes">' + n + '</span>' : '';
 }
 function vPanel() {
-  const main = { inicio:vInicio, presupuesto:vPresupuesto, visita:vVisita, obra:vObra, cambios:vCambios, pagos:vPagos, entrega:vEntrega, docs:vDocs, mensajes:vMensajes }[sec]();
-  const tabs = NAV.map(n => '<button class="tab ' + (sec === n[0] ? 'on' : '') + '" onclick="ir(\'' + n[0] + '\')" ' + (sec === n[0] ? 'aria-current="page"' : '') + '><i>' + n[1] + '</i>' + n[2] + badgeSec(n[0]) + '</button>').join('');
-  const mob = ['inicio', 'presupuesto', 'obra', 'cambios'].map(id => NAV.find(n => n[0] === id)).map(n => '<button class="tab ' + (sec === n[0] ? 'on' : '') + '" onclick="ir(\'' + n[0] + '\')"><i>' + n[1] + '</i>' + n[2] + badgeSec(n[0]) + '</button>').join('') +
-    '<button class="tab ' + (['visita', 'pagos', 'entrega', 'docs', 'mensajes'].includes(sec) ? 'on' : '') + '" onclick="abrirMas()"><i>☰</i>Más' + (['visita', 'pagos', 'entrega', 'mensajes'].some(s => badgeSec(s)) ? '<span class="badge">!</span>' : '') + '</button>';
+  const main = { inicio:vInicio, presupuesto:vPresupuesto, visita:vVisita, obra:vObra, cuenta:vCuenta, mensajes:vMensajes }[sec]();
+  const NV = navActual(S);
+  const tabs = NV.map(n => '<button class="tab ' + (sec === n[0] ? 'on' : '') + '" onclick="ir(\'' + n[0] + '\')" ' + (sec === n[0] ? 'aria-current="page"' : '') + '><i>' + n[1] + '</i>' + n[2] + badgeSec(n[0]) + '</button>').join('');
+  const mob = NV.slice(0, 5).map(n => '<button class="tab ' + (sec === n[0] ? 'on' : '') + '" onclick="ir(\'' + n[0] + '\')" ' + (sec === n[0] ? 'aria-current="page"' : '') + '><i>' + n[1] + '</i>' + n[2] + badgeSec(n[0]) + '</button>').join('');
   return '<header class="top"><div class="sp"><span class="logo">' + esc(S.reformista.empresa) + '</span><small>Mi reforma · ' + S.ref + '</small></div><button class="simbtn" onclick="abrirSim()" aria-label="Abrir simulador del reformista" title="Simulador del reformista">🧪</button><button class="btn sm" style="background:rgba(255,255,255,.12);color:#fff;border:none" onclick="abrirEnlace()">🔗 Mi enlace</button></header>' +
     '<div class="shell"><nav class="side" aria-label="Secciones">' + tabs + '</nav><main id="main">' + main + '</main></div><nav class="tabbar" aria-label="Secciones">' + mob + '</nav>' +
     '';
@@ -380,6 +389,15 @@ function vInicio() {
 function lineasHtml(e, dif) {
   return e.lineas.map(l => { const d = dif && dif.anadidos.find(x => x.e.id === e.id && x.l.k === l.k) ? 'add' : (dif && dif.modificados.find(x => x.e.id === e.id && x.l.k === l.k) ? 'mod' : ''); return '<div class="ln"><span class="sp">' + esc(l.l) + (d === 'add' ? '<span class="tag add">Nuevo</span>' : d === 'mod' ? '<span class="tag mod">Modificado</span>' : '') + '<div class="muted">' + fnum(l.cant) + ' ' + esc(l.u) + (l.nota ? ' · ' + esc(l.nota) : '') + '</div></span><b>' + eur0(fin(subL(l))) + '</b></div>'; }).join('');
 }
+function ajHtml(v) {
+  const aj = v.aj; if (!aj) return '';
+  const filas = (aj.imprevistos ? '<div class="kv"><span>Imprevistos (' + fnum(aj.imprevistosPct) + ' %)</span><b>' + eur(aj.imprevistos) + '</b></div>' : '') + (aj.descuento ? '<div class="kv"><span>Descuento</span><b style="color:var(--ok)">−' + eur(aj.descuento) + '</b></div>' : '') + (aj.redondeo ? '<div class="kv"><span>Redondeo</span><b>' + (aj.redondeo >= 0 ? '+' : '−') + eur(Math.abs(aj.redondeo)) + '</b></div>' : '');
+  return '<div class="card" id="aj-v"><h3>Condiciones de esta propuesta</h3>' + filas + '<div class="kv"><b>Total</b><b>' + eur(totalV(v)) + '</b></div>' + (aj.validezDias ? '<div class="kv"><span>Validez</span><b>' + aj.validezDias + ' días</b></div>' : '') + (aj.plazoSemanas ? '<div class="kv"><span>Plazo de ejecución estimado</span><b>' + aj.plazoSemanas + ' semana' + (aj.plazoSemanas > 1 ? 's' : '') + '</b></div>' : '') + (aj.condiciones ? '<div class="info" style="margin:8px 0 0"><b>Condiciones especiales:</b> ' + esc(aj.condiciones) + '</div>' : '') + '</div>';
+}
+function planPreHtml(v) {
+  const pl = (v.plan && v.plan.length ? v.plan : (S.plan || [])).filter(t => t.importe != null); if (!pl.length || S.aceptacion) return '';
+  return '<div class="card" id="plan-pre"><h3>Plan de pagos y plazos</h3>' + pl.map(t => '<div class="kv"><span>' + esc(t.label) + ' <span class="muted">(' + (t.resto ? 'el resto' : fnum(t.pct) + ' %') + ' · ' + esc(t.cuando === 'aceptacion' ? 'al aceptar' : t.cuando === 'entrega' ? 'a la entrega' : 'al terminar «' + String(t.cuando).replace(/^hito:/, '') + '»') + ')</span></span><b>' + eur(t.importe) + '</b></div>').join('') + ((v.hitosPlan || []).length ? '<div class="lbl" style="margin-top:10px">Hitos de la obra</div><div class="muted">' + v.hitosPlan.map(h => esc(h.nombre) + ' (' + h.dias + ' d)').join(' · ') + '</div>' : '') + '<div class="muted" style="margin-top:8px">Los cambios firmados durante la obra se sumarán a tu siguiente pago.</div></div>';
+}
 function vPresupuesto() {
   const sel = S.versiones.find(v => v.id === UI.ver) || vigente(S); const est = sel.tipo === 'estimacion'; const t = totalV(sel);
   const idx = S.versiones.indexOf(sel); const dif = idx > 0 ? diffVersiones(S.versiones[idx - 1], sel) : null;
@@ -391,6 +409,7 @@ function vPresupuesto() {
     (ac ? '<div class="good">✓ Aceptaste este presupuesto el ' + ffecha(S.aceptacion.f) + ' (' + esc(S.aceptacion.nombre) + ').</div>' : '') +
     (dif && (dif.anadidos.length + dif.quitados.length + dif.modificados.length) ? '<div class="card"><h3>Qué ha cambiado respecto a ' + S.versiones[idx - 1].id + '</h3>' + dif.anadidos.map(x => '<div class="ln" style="padding:6px 0"><span class="tag add">Nuevo</span><span class="sp"><b>' + esc(x.e.nombre) + '</b> · ' + esc(x.l.l) + '<div class="muted">' + esc(x.l.nota || '') + '</div></span><b>' + eur0(fin(subL(x.l))) + '</b></div>').join('') + dif.quitados.map(x => '<div class="ln" style="padding:6px 0"><span class="tag del">Quitado</span><span class="sp"><b>' + esc(x.e.nombre) + '</b> · ' + esc(x.l.l) + '<div class="muted">' + esc(x.motivo) + '</div></span><b>−' + eur0(fin(subL(x.l))) + '</b></div>').join('') + dif.modificados.map(x => '<div class="ln" style="padding:6px 0"><span class="tag mod">Modificado</span><span class="sp"><b>' + esc(x.e.nombre) + '</b> · ' + esc(x.l.l) + '<div class="muted">' + fnum(x.antes.cant) + ' → ' + fnum(x.l.cant) + ' ' + esc(x.l.u) + (x.l.nota ? ' · ' + esc(x.l.nota) : '') + '</div></span></div>').join('') + '</div>' : '') +
     '<h3>Por estancias</h3>' + sel.est.map(e => '<details class="room-acc"><summary><b class="sp">' + esc(e.nombre) + ' <span class="muted">· ' + fnum(e.m2) + ' m²</span></b><b>' + eur0(totalEstF(e)) + '</b></summary>' + lineasHtml(e, dif) + '</details>').join('') +
+    ajHtml(sel) + planPreHtml(sel) +
     '<div class="muted" style="margin-top:10px">Importes con IVA incluido. Cualquier trabajo adicional que surja durante la obra se te consultará antes y quedará recogido en una adenda que tú firmas.</div>';
 }
 
@@ -403,12 +422,23 @@ function vObra() {
   return '<h2>Mi obra</h2><div class="card"><div class="row"><div class="sp"><div class="lbl">Avance</div><div class="big">' + pr + ' %</div></div><div style="text-align:right"><div class="lbl">Fin previsto</div><b>' + fdia(fin_) + '</b></div></div><div class="progress" style="margin-top:10px"><i style="width:' + pr + '%"></i></div><div class="muted" style="margin-top:6px">Inicio: ' + ffecha(o.inicio) + '</div></div>' +
     '<h3>Hitos</h3><div class="card"><div class="tl">' + o.hitos.map((h, i) => '<div class="it ' + (h.estado === 'hecho' ? 'done' : i === idxNow ? 'now' : '') + '"><div class="row"><b class="sp">' + esc(h.nombre) + '</b><span class="pill ' + (h.estado === 'hecho' ? 'ok' : i === idxNow ? 'wip' : '') + '">' + (h.estado === 'hecho' ? 'Hecho' : i === idxNow ? 'En curso' : 'Pendiente') + '</span></div><div class="muted">' + (h.estado === 'hecho' ? 'Completado el ' + fdia(h.real) : 'Previsto: ' + fdia(h.previsto)) + '</div>' + (h.fotos.length ? '<div class="thumbs">' + h.fotos.map(f => '<button class="thumb" onclick="verFoto(\'' + f.id + '\')" aria-label="Ver foto: ' + esc(f.cap) + '"><img src="' + f.src + '" alt="' + esc(f.cap) + '"><em>' + esc(f.cap) + '</em></button>').join('') + '</div>' : '') + '</div>').join('') + '</div></div>' +
     '<h3>Galería de la obra (' + fotos.length + ')</h3><div class="thumbs" style="margin-bottom:14px">' + (fotos.map(f => '<button class="thumb" onclick="verFoto(\'' + f.id + '\')" aria-label="Ver foto: ' + esc(f.cap) + '"><img src="' + f.src + '" alt="' + esc(f.cap) + '"><em>' + esc(f.cap) + '</em></button>').join('') || '<span class="muted">Aún no hay fotos.</span>') + '</div>' +
-    (['obra', 'aceptada'].includes(S.fase) ? '<div class="card"><h3>¿Quieres algo distinto?</h3><p class="muted" style="margin-bottom:10px">Pide un cambio o haz una consulta. Tu reformista lo valorará y te dirá el coste <b>antes</b> de hacer nada.</p><button class="btn pri blk" onclick="abrirPedirCambioObra()">＋ Pedir un cambio</button></div>' : '');
+    incidenciasHtml() +
+    (['obra', 'aceptada'].includes(S.fase) ? '<div class="card"><h3>¿Quieres algo distinto?</h3><p class="muted" style="margin-bottom:10px">Pide un cambio o haz una consulta. Tu reformista lo valorará y te dirá el coste <b>antes</b> de hacer nada.</p><button class="btn pri blk" onclick="abrirPedirCambioObra()">＋ Pedir un cambio</button></div>' : '') +
+    (['remates', 'cerrada'].includes(S.fase) ? '<div id="entrega-bloque" style="margin-top:18px">' + vEntrega() + '</div>' : '');
+}
+function incidenciasHtml() {
+  const is = (S.obra.incidencias || []); if (!is.length) return '';
+  return '<h3>Incidencias de la obra</h3><div id="incid-cli">' + is.slice().reverse().map(i => '<div class="card"><div class="row"><b class="sp">' + esc(({ retraso: 'Retraso', dano: 'Daño o imprevisto', material: 'Material no disponible', acceso: 'Acceso o comunidad', seguridad: 'Seguridad', otro: 'Incidencia' })[i.tipo] || 'Incidencia') + '</b><span class="pill ' + (i.estado === 'abierta' ? 'wip' : 'ok') + '">' + (i.estado === 'abierta' ? 'Abierta' : 'Resuelta') + '</span></div><div>' + esc(i.texto) + '</div><div class="muted">' + ffecha(i.f) + (i.diasRetraso ? ' · ' + i.diasRetraso + ' día(s) de retraso en el plazo' : '') + (i.bloquea ? ' · <b style="color:var(--danger)">detiene la obra mientras se resuelve</b>' : '') + '</div>' + (i.resolucion ? '<div class="good" style="margin:8px 0 0">' + esc(i.resolucion) + '</div>' : '') + ((i.fotos || []).length ? '<div class="thumbs" style="grid-template-columns:repeat(auto-fill,minmax(90px,1fr))">' + i.fotos.map(adjChip).join('') + '</div>' : '') + '</div>').join('') + '</div>';
 }
 
+function vCuenta() {
+  const subs = [['cambios', 'Cambios y adendas'], ['pagos', 'Pagos'], ['docs', 'Documentos']]; if (!subs.some(x => x[0] === UI.cuentaSub)) UI.cuentaSub = 'cambios';
+  const cuerpo = { cambios: vCambios, pagos: vPagos, docs: vDocs }[UI.cuentaSub]();
+  return '<h2>Mi cuenta</h2><div class="chips" role="tablist" aria-label="Secciones de la cuenta">' + subs.map(([k, l]) => '<button class="chip ' + (UI.cuentaSub === k ? 'on' : '') + '" role="tab" aria-selected="' + (UI.cuentaSub === k) + '" id="cta-' + k + '" onclick="UI.cuentaSub=\'' + k + '\';render()">' + l + (badgeSec(k) ? ' <span class="badge" style="position:static">' + badgeSec(k) + '</span>' : '') + '</button>').join('') + '</div>' + cuerpo;
+}
 function vCambios() {
   const o = S.obra; const tv = totalVigente(S); const pend = o.cambios.filter(c => c.estado === 'pendiente_cliente');
-  const card = c => '<div class="card" style="' + (c.estado === 'pendiente_cliente' ? 'border:2px solid var(--accent)' : '') + '"><div class="row"><b class="sp">' + esc(c.concepto) + '</b><span class="pill ' + ({ pendiente_cliente:'wip', aceptado:'new', en_desacuerdo:'bad', consolidado:'ok' }[c.estado]) + '">' + ({ pendiente_cliente:'Por responder', aceptado:'Aceptado', en_desacuerdo:'En revisión', consolidado:'Firmado' }[c.estado]) + '</span></div><div class="big" style="font-size:28px;margin:4px 0">' + (c.importe < 0 ? '−' : '+') + eur0(Math.abs(conIva(c.importe))) + '</div><div class="muted">' + esc(c.motivo) + ' · ' + ffecha(c.f) + (c.bloquea ? ' · <b style="color:var(--danger)">Necesario para continuar la obra</b>' : '') + '</div>' + (c.comentario ? '<div class="info" style="margin:8px 0 0">Tu comentario: ' + esc(c.comentario) + '</div>' : '') +
+  const card = c => '<div class="card" style="' + (c.estado === 'pendiente_cliente' ? 'border:2px solid var(--accent)' : '') + '"><div class="row"><b class="sp">' + esc(c.concepto) + '</b><span class="pill ' + ({ pendiente_cliente:'wip', aceptado:'new', en_desacuerdo:'bad', consolidado:'ok', retirado:'' }[c.estado]) + '">' + ({ pendiente_cliente:'Por responder', aceptado:'Aceptado', en_desacuerdo:'En revisión', consolidado:c.cortesia ? 'Cortesía' : 'Firmado', retirado:'Retirado' }[c.estado]) + '</span></div><div class="big" style="font-size:28px;margin:4px 0' + (c.estado === 'retirado' ? ';text-decoration:line-through;color:var(--muted)' : '') + '">' + (c.importe < 0 ? '−' : '+') + eur0(Math.abs(conIva(c.importe))) + '</div><div class="muted">' + esc(c.motivo) + ' · ' + ffecha(c.f) + (c.bloquea ? ' · <b style="color:var(--danger)">Necesario para continuar la obra</b>' : '') + '</div>' + (c.comentario ? '<div class="info" style="margin:8px 0 0">Tu comentario: ' + esc(c.comentario) + '</div>' : '') + (c.resolucion ? '<div class="good" style="margin:8px 0 0">Tu reformista ha resuelto tu duda: ' + ({ ajustar:'ha ajustado el importe', retirar:'ha retirado el cambio', mantener:'mantiene el importe' }[c.resolucion.accion] || '') + (c.resolucion.nota ? ' · ' + esc(c.resolucion.nota) : '') + '</div>' : '') +
     (c.estado === 'pendiente_cliente' ? '<div class="row" style="margin-top:12px"><button class="btn ok sp" onclick="aceptarCambio(\'' + c.id + '\')">✓ Estoy de acuerdo</button><button class="btn dng sp" onclick="abrirDesacuerdo(\'' + c.id + '\')">No estoy de acuerdo</button></div>' : '') + '</div>';
   return '<h2>Cambios y adendas</h2>' + (S.aceptacion ? '<div class="card"><div class="kv"><span>Presupuesto aceptado</span><b>' + eur(tv.aceptada) + '</b></div><div class="kv"><span>+ Adendas firmadas</span><b>' + eur(r2(tv.firmado - tv.aceptada)) + '</b></div><div class="kv"><span>+ Cambios por confirmar</span><b>' + eur(tv.provisional) + '</b></div><div class="kv" style="border:none"><b>Total vigente</b><b style="font-size:20px">' + eur(tv.total) + '</b></div></div>' : '<div class="info">Aquí verás los cambios que surjan durante la obra. Nada se cobra sin que tú lo apruebes antes.</div>') +
     (pend.length ? '<h3>Por responder</h3>' + pend.map(card).join('') : '') +
@@ -473,7 +503,7 @@ const head = (t) => '<div class="row" style="margin-bottom:10px"><h3 class="sp" 
 function allFotos() { return [...S.obra.hitos.flatMap(h => h.fotos), ...S.obra.fotos]; }
 function verFoto(id) { const f = allFotos().find(x => x.id === id); if (!f) return; $('#viewer').innerHTML = '<img src="' + f.src + '" alt="' + esc(f.cap) + '"><div class="vb"><span class="sp">' + esc(f.cap) + '</span><button class="btn sm" onclick="cerrarVisor()">Cerrar</button></div>'; $('#viewer').classList.add('on'); }
 function cerrarVisor() { $('#viewer').classList.remove('on'); $('#viewer').innerHTML = ''; }
-function abrirMas() { sheet(head('Más') + ['visita', 'pagos', 'entrega', 'docs', 'mensajes'].map(id => { const n = NAV.find(x => x[0] === id); const b = badgeSec(id); return '<button class="btn blk" style="justify-content:flex-start;margin-bottom:8px" onclick="cerrarSheet();ir(\'' + id + '\')"><span style="font-size:22px">' + n[1] + '</span><span class="sp" style="text-align:left">' + n[2] + '</span>' + (b ? '<span class="pill wip">pendiente</span>' : '') + '</button>'; }).join('')); }
+function abrirMas() { sheet(head('Más') + NAV.map(n => n[0]).filter(id => !navActual(S).some(n => n[0] === id)).map(id => { const n = NAV.find(x => x[0] === id); const b = badgeSec(id); return '<button class="btn blk" style="justify-content:flex-start;margin-bottom:8px" onclick="cerrarSheet();ir(\'' + id + '\')"><span style="font-size:22px">' + n[1] + '</span><span class="sp" style="text-align:left">' + n[2] + '</span>' + (b ? '<span class="pill wip">pendiente</span>' : '') + '</button>'; }).join('')); }
 function abrirEnlace() { const l = linkPanel(S); sheet(head('Tu enlace privado') + '<p class="muted" style="margin-bottom:10px">Con este enlace entras a tu panel durante toda la reforma. Es personal: no lo compartas.</p><input id="lnk" readonly value="' + esc(l) + '" aria-label="Enlace privado" onclick="this.select()"><div class="row" style="margin-top:10px"><button class="btn pri sp" onclick="copiar(\'lnk\')">Copiar enlace</button><button class="btn sp" onclick="cerrarSheet();toast(\'Enlace reenviado a ' + esc(S.cliente.email) + ' (simulado)\')">Reenviármelo al correo</button></div>'); }
 function copiar(id) { const el = $('#' + id); el.select(); try { navigator.clipboard.writeText(el.value).then(() => toast('Copiado')); } catch (e) { document.execCommand('copy'); toast('Copiado'); } }
 function verAviso(id) { const a = S.avisos.find(x => x.id === id); a.leido = true; guardar(); sheet(head('Aviso recibido') + '<div class="chips"><button class="chip ' + (UI.canal === 'email' ? 'on' : '') + '" onclick="UI.canal=\'email\';verAviso(\'' + id + '\')">✉️ Correo</button><button class="chip ' + (UI.canal === 'wa' ? 'on' : '') + '" onclick="UI.canal=\'wa\';verAviso(\'' + id + '\')">💬 WhatsApp</button></div>' + vAviso(a)); const d = $('#sheet .cta'); if (d) d.setAttribute('onclick', 'cerrarSheet()'); render(); sheetKeep(id); }
@@ -509,6 +539,8 @@ const $q = id => document.querySelector('#sheet #' + id) || document.getElementB
 const val = id => { const e = $q(id); return e ? e.value : ''; };
 const chk = id => { const e = $q(id); return !!(e && e.checked); };
 const radio = name => { const e = document.querySelector((document.querySelector('#ov.on') ? '#sheet ' : '') + 'input[name=' + name + ']:checked'); return e ? e.value : null; };
+const adjSrc = id => { const p = PX(); try { return p && p.adjuntos ? p.adjuntos.url(id) : null; } catch (e) { return null; } };
+const nombreEspacio = id => { const v = S.versiones && S.versiones.length ? vigente(S) : null; const e = v && v.est.find(x => x.id === id); return e ? e.nombre : 'Estancia'; };
 function adjChip(id) {
   const m = adjMeta(id) || {}; const u = adjUrl(id); const img = /^image\//.test(m.tipo || '');
   if (img && u) return '<button type="button" class="thumb" onclick="verAdj(\'' + id + '\')" aria-label="Ver imagen adjunta"><img src="' + u + '" alt="' + esc(m.nombre || 'Imagen adjunta') + '"><em>' + esc(m.nombre || '') + '</em></button>';
@@ -677,7 +709,7 @@ function abrirAceptar() {
   sheet(head('Aceptar el presupuesto ' + v.id) + '<div class="card" style="text-align:center"><div class="lbl">Importe total</div><div class="big">' + eur(totalV(v)) + '</div><div class="muted">IVA incluido</div></div>' +
     (viv.length ? '<div class="warn"><b>Antes de aceptar, completa los datos de tu vivienda.</b> Te falta: ' + esc(faltaTxt(viv)) + '.<div style="margin-top:8px"><button class="btn sm pri" onclick="abrirDatos()">Completar ahora</button></div></div>' : '') +
     fxHtml() +
-    '<h3 style="margin-top:6px">Plan de pagos</h3><div class="card">' + pl.map(t => '<div class="kv"><span>' + esc(t.label) + ' <span class="muted">(' + t.pct + ' %)</span></span><b>' + eur(t.importe) + '</b></div>').join('') + '<div class="muted" style="margin-top:6px">Los cambios firmados durante la obra se sumarán a tu siguiente pago.</div></div>' +
+    '<h3 style="margin-top:6px">Plan de pagos</h3><div class="card">' + pl.map(t => '<div class="kv"><span>' + esc(t.label) + ' <span class="muted">(' + (t.resto ? 'el resto' : t.pct + ' %') + ')</span></span><b>' + eur(t.importe) + '</b></div>').join('') + '<div class="muted" style="margin-top:6px">Los cambios firmados se sumarán a tu siguiente pago.</div></div>' +
     '<label class="chk"><input type="checkbox" id="ac-p" onchange="acCheck()"> He revisado el plan de pagos.</label>' +
     '<label class="chk"><input type="checkbox" id="ac-1" onchange="acCheck()"> He revisado el presupuesto estancia por estancia y acepto las condiciones.</label><label class="chk"><input type="checkbox" id="ac-2" onchange="acCheck()"> Entiendo que cualquier cambio durante la obra se me consultará y se recogerá en una adenda que yo firmo.</label>' +
     (tieneAv ? '<div class="info"><b>Avisos de la visita:</b><ul style="padding-left:18px;margin-top:4px">' + avisos.map(x => '<li>' + esc(typeof x === 'string' ? x : x.texto) + '</li>').join('') + '</ul></div><label class="chk"><input type="checkbox" id="ac-av" onchange="acCheck()"> He leído los avisos de la visita.</label>' : '') +
@@ -745,8 +777,8 @@ function vPagos() {
   const tv = totalVigente(S); const pag = cobrado(S); const pl = planPagos(S); const pend = Math.max(0, r2(tv.total - pag)); const avs = (S.avisosPago || []).filter(a => a.tipo !== 'visita');
   const pillA = { pendiente: ['wip', 'En revisión'], confirmado: ['ok', 'Confirmado'], rechazado: ['bad', 'Justificante rechazado'] };
   return '<h2>Pagos</h2><div class="card"><div class="row"><div class="sp"><div class="lbl">Total vigente</div><div class="big">' + eur0(tv.total) + '</div></div><div style="text-align:right"><div class="lbl">Pendiente</div><b style="font-size:22px;color:' + (pend ? 'var(--danger)' : 'var(--ok)') + '">' + eur0(pend) + '</b></div></div><div class="progress" style="margin:10px 0 4px"><i style="width:' + Math.min(100, Math.round(pag / tv.total * 100)) + '%"></i></div><div class="muted">Pagado ' + eur(pag) + '</div></div>' +
-    '<h3>Plan de pagos</h3>' + pl.map(t => '<div class="card"><div class="row"><div class="sp"><b>' + esc(t.label) + '</b><div class="muted">' + t.pct + ' % · ' + eur(t.importe) + '</div></div><span class="pill ' + ({ pagado: 'ok', debido: 'wip', previsto: '' }[t.estado]) + '">' + ({ pagado: 'Pagado', debido: 'Toca pagar', previsto: 'Previsto' }[t.estado]) + '</span></div>' + (t.estado === 'debido' ? '<div class="row" style="margin-top:10px"><button class="btn pri sp" onclick="abrirComoPagar(' + t.falta + ')">Cómo pagar ' + eur0(t.falta) + '</button></div>' : '') + '</div>').join('') +
-    (tv.firmado + tv.provisional > tv.aceptada ? '<div class="info">Además del plan, tienes ' + eur(r2(tv.total - tv.aceptada)) + ' de adendas y cambios que se facturarán cuando los apruebes.</div>' : '') +
+    '<h3>Plan de pagos</h3>' + pl.map(t => '<div class="card"><div class="row"><div class="sp"><b>' + esc(t.label) + '</b><div class="muted">' + (t.resto ? 'El resto · ' : t.pct + ' % · ') + eur(t.importe) + (t.incluyeCambios > 0.005 ? ' · incluye ' + eur(t.incluyeCambios) + ' de cambios firmados' : '') + '</div></div><span class="pill ' + ({ pagado: 'ok', debido: 'wip', previsto: '' }[t.estado]) + '">' + ({ pagado: 'Pagado', debido: 'Toca pagar', previsto: 'Previsto' }[t.estado]) + '</span></div>' + (t.estado === 'debido' ? '<div class="row" style="margin-top:10px"><button class="btn pri sp" onclick="abrirComoPagar(' + t.falta + ')">Cómo pagar ' + eur0(t.falta) + '</button></div>' : '') + '</div>').join('') +
+    (tv.firmado + tv.provisional > tv.aceptada ? '<div class="info">Los cambios firmados se sumarán a tu siguiente pago. Lo que aún no has firmado (' + eur(tv.provisional) + ') no se cobra.</div>' : '') +
     (avs.length ? '<h3>Avisos de pago enviados</h3>' + avs.slice().reverse().map(a => '<div class="card"><div class="row"><div class="sp"><b>' + eur(a.importe) + '</b> · ' + esc(a.medio) + '<div class="muted">' + fdia(a.f) + (a.tramo ? ' · ' + esc(a.tramo) : '') + '</div></div><span class="pill ' + pillA[a.estado][0] + '">' + pillA[a.estado][1] + '</span></div>' + (a.adjuntoId ? '<div class="thumbs" style="grid-template-columns:repeat(auto-fill,minmax(90px,1fr))">' + adjChip(a.adjuntoId) + '</div>' : '') + (a.estado === 'rechazado' ? '<div class="warn" style="margin:8px 0 0">' + esc(a.motivo) + '</div><button class="btn sm pri" style="margin-top:8px" onclick="abrirAvisoPago(' + a.importe + ')">Subir otro justificante</button>' : '') + '</div>').join('') : '') +
     '<h3>Movimientos</h3><div class="card">' + (S.cobros.length ? S.cobros.map(c => '<div class="kv"><span>' + fdia(c.f) + ' · ' + esc(c.concepto) + '<div class="muted">' + esc(c.medio) + (c.justificanteId ? ' · <a href="#" onclick="verAdj(\'' + c.justificanteId + '\');return false" aria-label="Ver justificante">📎 justificante</a>' : '') + '</div></span><b>' + eur(c.importe) + '</b></div>').join('') : '<div class="muted">Sin pagos registrados.</div>') + '</div>' +
     '<div class="row"><button class="btn sp" onclick="abrirAvisoPago()">He hecho un pago</button><button class="btn sp" onclick="imprimirResumen()">🖨 Resumen económico</button></div><div class="muted" style="margin-top:10px">Este resumen es informativo y no sustituye a la factura oficial.</div>';
@@ -915,7 +947,7 @@ window.__tests = function () {
     a('el total incluye margen e IVA', Math.abs(t1 - fin(v1.est.reduce((s, e) => s + subEst(e), 0))) < 0.01 && K > 1.47 && K < 1.48);
     a('R-03 estimación V1: horquilla ±5 % redondeada hacia fuera', rangoV(v1).lo <= Math.floor(t1 * 0.95) && rangoV(v1).hi >= Math.ceil(t1 * 1.05) && rangoV(v1).hi - rangoV(v1).lo >= Math.round(t1 * 0.1) - 2);
     avisoPrimero(); a('el primer aviso incluye rango, datos pedidos y tabla por estancias', S.avisos[0].parrafos.join(' ').includes('estimado') && S.avisos[0].tabla.length === 8 && S.avisos[0].parrafos.some(p => p.includes('ubicación exacta')));
-    a('el enlace privado lleva el token', linkPanel(S).includes('#/c/' + S.token) && S.token.length >= 10);
+    a('el enlace privado lleva el token', linkPanel(S).includes('/c/' + S.token) && S.token.length >= 10);
     a('pendientes iniciales: completar datos', pendientes(S).some(p => p.t === 'Completa los datos de tu vivienda'));
     a('stepper: recibida = paso 0, cerrada = paso 6', stepIdx('recibida') === 0 && stepIdx('cerrada') === 6);
     simPropVisita(); a('proponer visita crea V2 y 4 huecos', S.versiones.length === 2 && S.visita.franjas.length === 4 && S.fase === 'visita_propuesta' && pendientes(S).some(p => p.sec === 'visita'));
@@ -937,7 +969,7 @@ window.__tests = function () {
     a('la adenda agrupa los cambios aceptados', ad.estado === 'por_firmar' && ad.cambios.join() === c1.id && ad.delta === c1.importe);
     ad.estado = 'firmada'; ad.firma = { nombre:'x', f:1 }; c1.estado = 'consolidado';
     const tv = totalVigente(S); a('total vigente = aceptada + adendas firmadas + provisional', tv.firmado === r2(S.aceptacion.total + conIva(c1.importe)) && tv.total === tv.firmado + tv.provisional);
-    simCambio(); const c2 = S.obra.cambios[1]; c2.estado = 'en_desacuerdo'; a('un cambio en desacuerdo no suma al total', totalVigente(S).provisional === 0);
+    simCambio(); const c2 = S.obra.cambios[1]; c2.estado = 'en_desacuerdo'; a('un cambio en desacuerdo sigue siendo provisional (igual que en el admin) y uno retirado no suma', totalVigente(S).provisional === conIva(c2.importe) && (c2.estado = 'retirado') && totalVigente(S).provisional === 0);
     a('terminar obra completa los hitos y abre la revisión final', simTerminar() && S.fase === 'remates' && S.obra.hitos.every(h => h.estado === 'hecho') && S.obra.cierre.items.length === 11);
     a('checklist final: una línea por estancia + 3 generales', S.obra.cierre.items.filter(i => i.id.startsWith('e_')).length === 8 && S.obra.cierre.items.filter(i => i.id.startsWith('g_')).length === 3);
     a('fase remates pide la revisión final', pendientes(S).some(p => p.sec === 'entrega'));
@@ -1030,13 +1062,14 @@ render();
     const dr = (N.dv && (N.dv._draftFotos !== undefined || N.dv._draftPermiso !== undefined)) ? { _draftFotos: N.dv._draftFotos, _draftPermiso: N.dv._draftPermiso } : {};
     N.dv = Object.assign({}, V.datosVivienda, dr.hasOwnProperty('_draftFotos') ? dr : {}); N.fiscal = V.fiscal; N.fiscalEval = V.fiscalEval; N.req = V.requisitos || {}; N.avisosPago = V.avisosPago || []; N.pago = V.pago || N.pago; N.horquillaPct = V.horquillaPct; N.tipoVivienda = V.tipoVivienda;
     N.aceptacion = V.aceptacion;
-    N.plan = V.plan && V.plan.length ? V.plan : N.plan;
+    N.plan = V.plan && V.plan.length ? V.plan : N.plan; N.planTramos = V.planTramos || null; N.hitosPlan = V.hitosPlan || [];
     N.cobros = V.cobros;
     const ob = N.obra, vo = V.obra;
     ob.inicio = vo.inicio;
-    ob.hitos = vo.hitos.map((h, i) => { const ant = (ob.hitos.find(x => x.id === h.id) || {}); const fotos = h.estado === 'hecho' ? ((ant.fotos && ant.fotos.length) ? ant.fotos : hFotos(h, i)) : []; return Object.assign({}, h, { fotos }); });
+    ob.hitos = vo.hitos.map((h, i) => { const ant = (ob.hitos.find(x => x.id === h.id) || {}); const reales = (h.fotosAdj || []).map(id => ({ id: 'ha_' + id, src: adjSrc(id), cap: h.nombre, f: ahora(S) })).filter(f => f.src); const fotos = h.estado === 'hecho' ? (reales.length ? reales : ((ant.fotos && ant.fotos.length) ? ant.fotos : hFotos(h, i))) : []; return Object.assign({}, h, { fotos }); });
     ob.cambios = vo.cambios; ob.adendas = vo.adendas.map(a => { const ant = ob.adendas.find(x => x.id === a.id); return Object.assign({}, a, a.estado === 'firmada' && ant && ant.firma ? { firma: ant.firma } : {}); });
-    ob.solicitudes = vo.solicitudes;
+    ob.solicitudes = vo.solicitudes; ob.incidencias = vo.incidencias || [];
+    ob.fotos = (vo.fotosObra || []).map(f => ({ id: 'fo_' + f.id, src: adjSrc(f.adjuntoId), cap: ({ antes: 'Antes', durante: 'Durante', despues: 'Después' }[f.momento] || 'Obra') + (f.espacioId ? ' · ' + nombreEspacio(f.espacioId) : ''), f: f.f })).filter(f => f.src);
     ob.remates = vo.remates.map(r => { const l = (ob.remates.find(x => x.id === r.id || (r.localId && x.id === r.localId)) || {}); return Object.assign({ f: ahora(S) }, l, r); });
     // checklist final
     if (vo.cierre) {

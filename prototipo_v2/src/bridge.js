@@ -140,8 +140,11 @@ Proto.solicitud = function (payload, ref, calc) {
 
 /* ---------- 2. Admin → Cliente (proyección) ---------- */
 function franjaCli(f) { return { t: ms(f.fecha), h: String(f.franja).replace('-', ' – ') }; }
+/* El panel del cliente calcula con margen 22 % e IVA 21 %: se escalan sus precios para que, con SU fórmula, coincida con el total del admin
+   (el descuento, los imprevistos y el redondeo viajan aparte, en `aj`, para enseñarlos como líneas propias) */
+function factorCliente(v) { const t = v.totales || {}; const m = t.subtotal > 0 ? (t.margen || 0) / t.subtotal : 0.22; return (1 + m) * (1 + (v.ivaPct != null ? v.ivaPct : 21) / 100) / (1.22 * 1.21); }
 function estCliente(caso, v) {
-  const esps = caso.solicitud.espacios; const out = [];
+  const esps = caso.solicitud.espacios; const out = []; const kf = factorCliente(v);
   const byEsp = {}; v.lineas.forEach(l => { (byEsp[l.espacioId] = byEsp[l.espacioId] || []).push(l); });
   const orden = esps.map(e => e.id).concat(Object.keys(byEsp).filter(id => !esps.some(e => e.id === id)));
   orden.forEach(id => {
@@ -151,7 +154,7 @@ function estCliente(caso, v) {
     out.push({
       id, tipo: TIPO_CLI[e.tipo] || 'pasillo', nombre: e.nombre || e.tipo, m2: e.m2 || 0,
       quitados: (v.quitados && v.quitados[id]) || undefined,
-      lineas: ls.map(l => { let k = l.key + (l.tipo === 'mat' ? '~m' : ''); if (usadas[k]) k += '#' + usadas[k]; usadas[k] = (usadas[k] || 0) + 1; return { k, l: l.concepto, u: l.unidad || 'ud', cant: l.cantidad, precio: l.precio, nota: l.nota || '' }; })
+      lineas: ls.map(l => { let k = l.key + (l.tipo === 'mat' ? '~m' : ''); if (usadas[k]) k += '#' + usadas[k]; usadas[k] = (usadas[k] || 0) + 1; return { k, l: l.concepto, u: l.unidad || 'ud', cant: l.cantidad, precio: Math.abs(kf - 1) < 1e-6 ? l.precio : Math.round(l.precio * kf * 10000) / 10000, nota: l.nota || '' }; })
     });
   });
   return out;
@@ -166,7 +169,7 @@ function buildV(caso) {
     const g = a.rangoVersion(v);
     return { id: v.id, tipo: v.tipo === 'propuesta' ? 'propuesta' : 'estimacion', fecha: ms(v.enviadaAt || v.creadaAt || a.hoy()), total: v.totales.total, rango: g.exacto ? null : { lo: g.lo, hi: g.hi }, etiqueta: a.etiquetaVersion(v, caso), avisosVisita: (v.avisosVisita || v.avisos || []).slice(),
       estado: v.estado === 'vigente' ? 'vigente' : v.estado === 'aceptada' ? 'aceptada' : 'sustituida', est: estCliente(caso, v),
-      aj: v.negociacion ? { descuento: v.totales.descuento || 0, imprevistos: v.totales.imprevistos || 0, imprevistosPct: v.negociacion.imprevistosPct || 0, redondeo: v.totales.ajusteRedondeo || 0, validezDias: v.negociacion.validezDias || null, plazoSemanas: v.negociacion.plazoSemanas || null, condiciones: v.negociacion.condiciones || '' } : null,
+      aj: v.negociacion ? { descuento: r2((v.totales.descuento || 0) * (1 + (v.ivaPct != null ? v.ivaPct : 21) / 100)), imprevistos: r2((v.totales.imprevistos || 0) * (1 + (v.ivaPct != null ? v.ivaPct : 21) / 100)), imprevistosPct: v.negociacion.imprevistosPct || 0, redondeo: v.totales.ajusteRedondeo || 0, validezDias: v.negociacion.validezDias || null, plazoSemanas: v.negociacion.plazoSemanas || null, condiciones: v.negociacion.condiciones || '' } : null,
       plan: v.planCobros ? a.importesPlanPrevio(v.planCobros, v.totales.total).map(t => ({ label: t.label, pct: t.pct, cuando: t.cuando, importe: t.importe, resto: t.resto })) : null, hitosPlan: (v.hitosPlan || []).map(h => ({ nombre: h.nombre, dias: h.diasEstimados })) };
   });
   const vi = caso.visita || {};
