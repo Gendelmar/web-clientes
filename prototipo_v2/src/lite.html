@@ -1,0 +1,1474 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#18100a">
+<title>Panel Lite v1 — Revisión en visita técnica</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=Cormorant+Garamond:wght@500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --cream:#f4efe6;--stone:#e5ddd0;--warm:#c4b49a;--terra:#8a5c38;--deep:#18100a;--ink:#1c140d;
+  --accent:#c96f28;--accent-d:#a9561a;--light:#faf7f2;--muted:#6f6150;--ok:#2f6b45;--danger:#a03030;--amber:#8a5a00;
+  --border:#ddd5c5;--r:14px;--bar:76px;
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html{-webkit-text-size-adjust:100%}
+body{font-family:'DM Sans',system-ui,sans-serif;background:var(--cream);color:var(--ink);min-height:100vh;font-size:16px;line-height:1.35}
+button,input,select,textarea{font-family:inherit;font-size:inherit;color:inherit}
+button{cursor:pointer;border:none;background:none}
+:focus-visible{outline:3px solid var(--accent-d);outline-offset:2px}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+
+/* ── Cabecera ── */
+.top{position:sticky;top:0;z-index:30;background:var(--deep);color:#fff;display:flex;align-items:center;gap:6px;padding:8px 10px;padding-top:max(8px,env(safe-area-inset-top))}
+.top .back{min-width:48px;min-height:48px;border-radius:12px;background:rgba(255,255,255,.1);color:#fff;font-size:15px;padding:0 12px;display:inline-flex;align-items:center;gap:4px}
+.top .tt{flex:1;min-width:0}
+.top .tt b{display:block;font-family:'Cormorant Garamond',serif;font-size:21px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.top .tt small{display:block;font-size:12px;color:var(--warm);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ver{background:var(--accent-d);color:#fff;border-radius:20px;padding:5px 11px;font-size:12px;font-weight:600;white-space:nowrap}
+.ver.env{background:var(--ok)}
+.save{font-size:11px;color:#9ad1a8;white-space:nowrap;min-width:64px;text-align:right}
+.save.err{color:#ffb3b3}
+
+/* ── Estructura ── */
+#app{max-width:1180px;margin:0 auto}
+main{padding:14px 14px calc(var(--bar) + 26px)}
+.cols{display:block}
+.pane-list{display:block}.pane-room{display:block}
+body[data-view=room] .pane-list{display:none}
+body[data-view=hub] .pane-room{display:none}
+@media(min-width:980px){
+  .cols{display:grid;grid-template-columns:380px 1fr;gap:18px;align-items:start}
+  body[data-view=room] .pane-list,body[data-view=hub] .pane-list,body[data-view=room] .pane-room,body[data-view=hub] .pane-room{display:block}
+  .pane-list{position:sticky;top:76px;max-height:calc(100vh - 170px);overflow-y:auto}
+  .only-narrow{display:none!important}
+}
+@media(max-width:979px){.only-wide{display:none!important}}
+
+/* ── Componentes ── */
+.card{background:#fff;border:1px solid var(--border);border-radius:var(--r);padding:14px;margin-bottom:12px}
+.card h3,.h{font-family:'Cormorant Garamond',serif;font-size:22px;font-weight:600;color:var(--terra);margin-bottom:6px}
+.lbl{font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);font-weight:600;margin-bottom:6px}
+.btn{min-height:48px;padding:0 18px;border-radius:12px;font-weight:600;display:inline-flex;align-items:center;justify-content:center;gap:8px;border:2px solid var(--border);background:#fff}
+.btn.pri{background:var(--accent-d);border-color:var(--accent-d);color:#fff}
+.btn.ok{background:var(--ok);border-color:var(--ok);color:#fff}
+.btn.dng{color:var(--danger);border-color:#e3b4b4}
+.btn.blk{width:100%}
+.btn[disabled]{opacity:.5}
+.row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.sp{flex:1}
+.muted{color:var(--muted);font-size:13px}
+.pill{display:inline-block;padding:3px 10px;border-radius:20px;font-size:12px;font-weight:600;background:var(--stone);color:var(--muted)}
+.pill.ok{background:#dff1e5;color:var(--ok)}.pill.wip{background:#fff1d6;color:var(--amber)}.pill.env{background:#dff1e5;color:var(--ok)}.pill.new{background:#e6edf8;color:#1d4b8a}
+.chip{display:inline-flex;align-items:center;min-height:44px;padding:0 14px;border:1.5px solid var(--border);border-radius:20px;background:#fff;font-size:14px;margin:0 6px 6px 0}
+.progress{height:8px;background:var(--stone);border-radius:6px;overflow:hidden}
+.progress>i{display:block;height:100%;background:var(--ok);transition:width .25s}
+.field{display:block;margin-bottom:10px}
+.field>span{display:block;font-size:12px;color:var(--muted);margin-bottom:3px}
+input:where(:not([type=checkbox]):not([type=radio]):not([type=file]):not([type=hidden])),select,textarea{width:100%;min-height:48px;padding:10px 12px;border:1.5px solid var(--border);border-radius:12px;background:#fff}
+textarea{min-height:84px;resize:vertical}
+input:focus,select:focus,textarea:focus{border-color:var(--accent);outline:none}
+
+/* ── Inicio ── */
+.hero{text-align:center;padding:20px 8px 6px}
+.hero h1{font-family:'Cormorant Garamond',serif;font-size:34px;color:var(--terra)}
+.hero p{color:var(--muted)}
+.big-total{font-family:'Cormorant Garamond',serif;font-size:34px;font-weight:600;line-height:1}
+.kv{display:flex;justify-content:space-between;gap:10px;padding:6px 0;border-bottom:1px dashed var(--border);font-size:15px}
+
+/* ── Estancias (lista) ── */
+.room{display:flex;align-items:center;gap:12px;width:100%;text-align:left;background:#fff;border:1.5px solid var(--border);border-radius:var(--r);padding:12px;margin-bottom:10px;min-height:76px}
+.room.cur{border-color:var(--accent);box-shadow:0 0 0 2px rgba(201,111,40,.18)}
+.room .ico{font-size:26px;width:44px;height:44px;border-radius:12px;background:var(--stone);display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.room.done .ico{background:#dff1e5}
+.room b{display:block;font-size:16px}
+.room .meta{display:flex;gap:8px;flex-wrap:wrap;font-size:12px;color:var(--muted);margin-top:2px}
+.room .amt{text-align:right;font-weight:600;white-space:nowrap}
+.room .amt small{display:block;font-weight:400;font-size:11px}
+.dlt-up{color:var(--danger)}.dlt-dn{color:var(--ok)}
+
+/* ── Detalle de estancia ── */
+.rhead{display:flex;gap:8px;align-items:center;margin-bottom:10px}
+.rhead input{font-family:'Cormorant Garamond',serif;font-size:24px;font-weight:600;min-height:52px;border-color:transparent;background:transparent;padding:0 6px}
+.rhead input:focus{background:#fff;border-color:var(--accent)}
+.nav{min-width:48px;min-height:48px;border-radius:12px;background:#fff;border:1.5px solid var(--border);font-size:20px}
+.stepper{display:inline-flex;align-items:stretch;border:1.5px solid var(--border);border-radius:12px;background:#fff;overflow:hidden}
+.stepper button{min-width:48px;min-height:48px;font-size:22px;font-weight:600;color:var(--terra)}
+.stepper input{width:72px;min-height:48px;border:none;border-radius:0;text-align:center;font-weight:600;padding:0 4px}
+.stepper.sm button{min-width:44px;min-height:44px}.stepper.sm input{width:64px;min-height:44px}
+.work{background:#fff;border:1.5px solid var(--border);border-radius:var(--r);margin-bottom:10px;overflow:hidden}
+.work.ok{border-color:#9fd0b0;background:#f6fbf7}
+.work-top{display:flex;gap:12px;align-items:flex-start;padding:12px}
+.chk{width:48px;height:48px;border-radius:50%;border:2.5px solid var(--warm);background:#fff;font-size:24px;color:#fff;flex-shrink:0;display:flex;align-items:center;justify-content:center}
+.work.ok .chk{background:var(--ok);border-color:var(--ok)}
+.work-t{flex:1;min-width:0}
+.work-t b{display:block;font-size:16px;line-height:1.25}
+.tag{display:inline-block;font-size:11px;font-weight:600;border-radius:8px;padding:2px 7px;margin-right:4px;background:var(--stone);color:var(--muted)}
+.tag.add{background:#dfeaf8;color:#1d4b8a}.tag.mod{background:#fff1d6;color:var(--amber)}
+.work-sub{font-weight:600;white-space:nowrap;text-align:right;font-size:15px}
+.work-sub small{display:block;font-weight:400;font-size:11px;color:var(--muted)}
+.work-act{display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding:0 12px 12px}
+.work-edit{padding:0 12px 12px;display:none}
+.work.open .work-edit{display:block}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.grid2>*{min-width:0}
+.sheet{overflow-x:hidden}
+.cat-i b{min-width:0}
+.quit{background:#faf0f0;border:1.5px dashed #e3b4b4;border-radius:var(--r);padding:10px;margin-bottom:10px}
+.quit .q{display:flex;gap:10px;align-items:center;padding:6px 0;text-decoration:none}
+.quit .q span{flex:1;text-decoration:line-through;color:var(--muted)}
+.cm{background:var(--light);border:1px solid var(--border);border-radius:12px;padding:10px 12px;margin-bottom:8px;display:flex;gap:8px;align-items:flex-start}
+.cm p{flex:1;white-space:pre-wrap;word-break:break-word}
+.cm small{display:block;color:var(--muted);font-size:11px}
+.x{min-width:44px;min-height:44px;border-radius:10px;color:var(--danger);font-size:18px}
+.thumbs{display:grid;grid-template-columns:repeat(auto-fill,minmax(104px,1fr));gap:8px;margin-top:8px}
+.thumb{position:relative;aspect-ratio:1;border-radius:12px;overflow:hidden;background:var(--stone);border:1px solid var(--border);padding:0}
+.thumb img{width:100%;height:100%;object-fit:cover;display:block}
+.thumb em{position:absolute;left:0;right:0;bottom:0;background:rgba(0,0,0,.55);color:#fff;font-size:11px;font-style:normal;padding:3px 6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.addph{display:inline-flex}
+.addph input{position:absolute;width:1px;height:1px;opacity:0}
+
+/* ── Barra inferior ── */
+.bar{position:fixed;left:0;right:0;bottom:0;z-index:30;background:var(--deep);color:#fff;padding:10px 14px;padding-bottom:max(10px,env(safe-area-inset-bottom));display:flex;align-items:center;gap:12px}
+.bar .tot{flex:1;min-width:0}
+.bar small{display:block;font-size:11px;color:var(--warm)}
+.bar b{font-family:'Cormorant Garamond',serif;font-size:26px;font-weight:600;line-height:1}
+.bar .d{font-size:12px;margin-left:6px}
+.bar .btn{min-height:50px}
+
+/* ── Hojas, visor y avisos ── */
+.ov{position:fixed;inset:0;z-index:50;background:rgba(10,6,2,.55);display:none}
+.ov.on{display:block}
+.sheet{position:absolute;left:0;right:0;bottom:0;max-height:92vh;overflow-y:auto;background:var(--cream);border-radius:20px 20px 0 0;padding:16px 14px calc(18px + env(safe-area-inset-bottom));max-width:720px;margin:0 auto}
+@media(min-width:760px){.sheet{bottom:auto;top:50%;transform:translateY(-50%);border-radius:20px;max-height:86vh}}
+.sheet .grab{width:44px;height:5px;background:var(--warm);border-radius:4px;margin:0 auto 10px}
+.cat-i{display:flex;align-items:center;gap:10px;width:100%;text-align:left;min-height:56px;padding:8px 12px;border:1.5px solid var(--border);border-radius:12px;background:#fff;margin-bottom:8px}
+.cat-i b{flex:1;font-weight:500}
+.cat-i small{color:var(--muted);white-space:nowrap}
+.viewer{position:fixed;inset:0;z-index:60;background:#000;display:none;flex-direction:column}
+.viewer.on{display:flex}
+.viewer img{flex:1;min-height:0;object-fit:contain;width:100%}
+.viewer .vb{padding:12px;background:#111;display:flex;gap:10px;align-items:center}
+.viewer .vb input{flex:1;background:#222;border-color:#444;color:#fff}
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(var(--bar) + 14px);z-index:70;background:var(--deep);color:#fff;padding:12px 16px;border-radius:14px;box-shadow:0 6px 24px rgba(0,0,0,.35);display:none;align-items:center;gap:14px;max-width:92vw}
+.toast.on{display:flex}
+.toast button{color:#ffd9a8;font-weight:700;min-height:44px;padding:0 6px}
+.warn{background:#fff6e0;border:1.5px solid #e6c16b;color:#6a4a00;border-radius:12px;padding:10px 12px;margin-bottom:12px;font-size:14px}
+.info{background:#e9f0fa;border:1.5px solid #b8cdea;color:#1d3f70;border-radius:12px;padding:10px 12px;margin-bottom:12px;font-size:13px}
+.diff{padding:6px 0;border-bottom:1px dashed var(--border);font-size:14px;display:flex;gap:8px}
+.diff i{font-style:normal;font-weight:700;width:20px;text-align:center}
+.diff .a{color:#1d4b8a}.diff .q{color:var(--danger)}.diff .m{color:var(--amber)}
+.msgbox{width:100%;min-height:180px;font-size:14px}
+@media(prefers-reduced-motion:reduce){*{transition:none!important}}
+/* ── V2: modos, versiones, medidas, desglose, obra ── */
+.saves{display:flex;flex-direction:column;align-items:flex-end;min-width:64px}.saves .save{min-width:0;text-align:right;line-height:1.2}
+.modos{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:2px 0 8px}
+.modo{min-height:76px;border-radius:var(--r);border:2px solid var(--border);background:#fff;font-weight:700;font-size:17px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px}
+.modo span{font-size:26px}.modo em{font-style:normal;background:var(--accent-d);color:#fff;border-radius:10px;padding:0 7px;font-size:12px;margin-left:4px}
+.modo.on{border-color:var(--accent);background:#fff1e3;box-shadow:0 0 0 2px rgba(201,111,40,.18)}
+.ver-row{display:flex;gap:10px;align-items:center;flex-wrap:wrap;padding:10px 0;border-bottom:1px dashed var(--border)}.ver-row:last-child{border-bottom:none}
+.ver-row .btn{min-height:44px;font-size:13px;padding:0 12px}.ver-imp{text-align:right;white-space:nowrap}
+.chip.sel{border-color:var(--accent);background:#fff1e3;font-weight:600}
+.pidio{margin:0 12px 12px;padding:10px;background:var(--light);border:1px dashed var(--warm);border-radius:12px}
+.pidio .kv:last-of-type{border-bottom:none}.pidio .field{margin:6px 0}
+.resumen-par{margin-top:10px;padding:8px 10px;background:var(--light);border-radius:12px}
+.tree{border:1px solid var(--border);border-radius:12px;margin-bottom:6px;background:#fff}.tree>summary{display:flex;justify-content:space-between;gap:8px;padding:10px 12px;cursor:pointer;min-height:44px;align-items:center}
+.tree>summary span{white-space:nowrap}.tree.t2{margin:0 8px 6px;background:var(--light)}.tree-p{display:flex;justify-content:space-between;gap:8px;padding:6px 12px;font-size:13px;border-top:1px dashed var(--border)}.tree-p small{color:var(--muted)}
+.tramo{padding:8px 0;border-bottom:1px dashed var(--border)}
+.pill.bad{background:#f9dcdc;color:var(--danger)}
+.otabs{display:flex;gap:6px;overflow-x:auto;margin:0 0 12px;padding-bottom:2px}.otab{min-height:46px;padding:0 14px;border-radius:12px;border:1.5px solid var(--border);background:#fff;font-weight:600;white-space:nowrap}
+.otab.on{background:var(--deep);color:#fff;border-color:var(--deep)}.otab em{font-style:normal;background:var(--danger);color:#fff;border-radius:10px;padding:0 6px;font-size:11px;margin-left:3px}
+.hito{padding:10px 0;border-bottom:1px dashed var(--border)}.hito:last-child{border-bottom:none}.ico-h{font-size:24px;width:34px;text-align:center}
+.inc{padding:10px 0;border-bottom:1px dashed var(--border)}.inc.resuelta{opacity:.7}
+details.mas>summary{min-height:44px;display:flex;align-items:center;cursor:pointer;font-weight:600;color:var(--terra)}
+.hito-fila input{min-width:0}
+@media(max-width:520px){.ver-row .btn{width:100%}.ver-imp{margin-left:auto}}
+</style>
+</head>
+<body data-view="home">
+<a href="#main" class="sr">Saltar al contenido</a>
+<div id="app"></div>
+<div class="ov" id="ov" role="dialog" aria-modal="true" aria-label="Ventana"><div class="sheet" id="sheet"></div></div>
+<div class="viewer" id="viewer" role="dialog" aria-modal="true" aria-label="Foto"></div>
+<div class="toast" id="toast" role="status" aria-live="polite"><span id="toast-t"></span><button id="toast-u" type="button" hidden>Deshacer</button></div>
+<script>
+'use strict';
+// ═══════════════════════════════════════════════════════
+// 1. UTILIDADES
+// ═══════════════════════════════════════════════════════
+const LS_KEY = 'panelLiteV2';
+const r2 = v => Math.round((Number(v) || 0) * 100) / 100;
+const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]));
+const uid = p => (p || 'id') + Math.random().toString(36).slice(2, 8) + Date.now().toString(36).slice(-3);
+const NF2 = new Intl.NumberFormat('de-DE', { minimumFractionDigits:2, maximumFractionDigits:2 });
+const NF0 = new Intl.NumberFormat('de-DE', { maximumFractionDigits:0 });
+const eur = v => NF2.format(r2(v)) + ' €';
+const eur0 = v => NF0.format(Math.round(v)) + ' €';
+const num = v => { const n = Number(String(v).replace(',', '.')); return isFinite(n) ? n : 0; };
+const fmtNum = v => String(Math.round(v * 100) / 100).replace('.', ',');
+const hhmm = d => new Date(d).toLocaleTimeString('es-ES', { hour:'2-digit', minute:'2-digit' });
+const fecha = d => new Date(d).toLocaleDateString('es-ES', { day:'2-digit', month:'short', year:'numeric' });
+
+// ═══════════════════════════════════════════════════════
+// 2. CATÁLOGO DE TRABAJOS (reforma integral estándar)
+//    p = precio unitario sin IVA ni margen (mano de obra + material, calidad media)
+//    b = base de la cantidad: m2 · pared · ml · mlm (muebles) · ud · fijo
+// ═══════════════════════════════════════════════════════
+const TIPOS = {
+  pasillo:    { n:'Pasillo / entrada', i:'🚪' },
+  salon:      { n:'Salón-comedor',     i:'🛋️' },
+  cocina:     { n:'Cocina',            i:'🍳' },
+  bano:       { n:'Baño',              i:'🚿' },
+  habitacion: { n:'Dormitorio',        i:'🛏️' },
+  otro:       { n:'Otra estancia',     i:'📐' },
+};
+const CAT = [
+  { k:'demolicion',   l:'Demolición y retirada de escombros',  u:'m²', b:'m2',    p:28,  t:['cocina','bano','pasillo'] },
+  { k:'solado',       l:'Suelo cerámico / porcelánico',        u:'m²', b:'m2',    p:52,  t:['cocina','bano','pasillo'] },
+  { k:'tarima',       l:'Tarima flotante',                      u:'m²', b:'m2',    p:38,  t:['salon','habitacion','pasillo'] },
+  { k:'alicatado',    l:'Alicatado de paredes',                 u:'m²', b:'pared', p:46,  t:['cocina','bano'] },
+  { k:'gotele',       l:'Quitar gotelé y alisar paredes',       u:'m²', b:'pared', p:14,  t:['salon','habitacion','pasillo'] },
+  { k:'pint_pared',   l:'Pintura de paredes',                   u:'m²', b:'pared', p:8.7, t:['salon','habitacion','pasillo','cocina'] },
+  { k:'pint_techo',   l:'Pintura de techo',                     u:'m²', b:'m2',    p:9.2, t:['salon','habitacion','pasillo','cocina','bano'] },
+  { k:'rodapie',      l:'Rodapié',                              u:'ml', b:'ml',    p:10.5,t:['salon','habitacion','pasillo'] },
+  { k:'falso_techo',  l:'Falso techo de pladur',                u:'m²', b:'m2',    p:30,  t:['salon','pasillo','bano'] },
+  { k:'tabique',      l:'Tabique de pladur',                    u:'m²', b:'pared', p:32,  t:[] },
+  { k:'electricidad', l:'Instalación eléctrica de la estancia', u:'ud', b:'fijo',  p:{ salon:720, cocina:980, bano:560, habitacion:420, pasillo:320, otro:400 }, t:['salon','cocina','bano','habitacion','pasillo'] },
+  { k:'font_bano',    l:'Fontanería de baño',                   u:'ud', b:'fijo',  p:1420,t:['bano'] },
+  { k:'font_cocina',  l:'Fontanería de cocina',                 u:'ud', b:'fijo',  p:480, t:['cocina'] },
+  { k:'impermeab',    l:'Impermeabilización',                   u:'ud', b:'fijo',  p:260, t:['bano'] },
+  { k:'sanitarios',   l:'Inodoro, lavabo y grifería',           u:'ud', b:'fijo',  p:500, t:['bano'] },
+  { k:'ducha',        l:'Plato de ducha y mampara',             u:'ud', b:'fijo',  p:650, t:['bano'] },
+  { k:'mueble_bano',  l:'Mueble de baño con espejo',            u:'ud', b:'fijo',  p:480, t:['bano'] },
+  { k:'muebles_coc',  l:'Muebles y encimera de cocina',         u:'ml', b:'mlm',   p:480, t:['cocina'] },
+  { k:'puerta',       l:'Puerta interior',                      u:'ud', b:'ud',    p:330, t:['habitacion','salon','cocina','bano','pasillo'] },
+  { k:'ventana',      l:'Ventana de PVC con rotura de puente',  u:'ud', b:'ud',    p:620, t:['salon','habitacion','cocina'] },
+  { k:'armario',      l:'Armario empotrado',                    u:'ud', b:'ud',    p:380, t:['habitacion'] },
+  { k:'radiador',     l:'Radiador',                             u:'ud', b:'ud',    p:190, t:['salon','habitacion','pasillo'] },
+  { k:'humedades',    l:'Tratamiento de humedades',             u:'ud', b:'fijo',  p:380, t:[] },
+  { k:'microcemento', l:'Microcemento',                         u:'m²', b:'pared', p:70,  t:[] },
+  { k:'limpieza',     l:'Limpieza final de obra',               u:'ud', b:'fijo',  p:120, t:[] },
+];
+const CATK = Object.fromEntries(CAT.map(c => [c.k, c]));
+const COMENT_RAPIDOS = ['Humedades visibles', 'Hay que picar el suelo', 'Posible muro de carga', 'Instalación antigua', 'El cliente duda del acabado', 'Acceso difícil para escombros'];
+
+function precioBase(c, tipo) { return typeof c.p === 'object' ? (c.p[tipo] != null ? c.p[tipo] : (c.p.otro || 400)) : c.p; }
+function qtyBase(b, m2) {
+  m2 = Math.max(0, Number(m2) || 0);
+  if (b === 'm2') return r2(m2);
+  if (b === 'pared') return r2(Math.sqrt(m2) * 4 * 2.4);
+  if (b === 'ml') return r2(Math.sqrt(m2) * 4 * 0.9);
+  if (b === 'mlm') return Math.max(3, Math.round(m2 * 0.5));
+  return 1;
+}
+const BK_CAT = { alicatado:'m2_pared_alicatado', pint_pared:'m2_pared_pintura', gotele:'m2_pared', tabique:'m2_pared', microcemento:'m2_pared', pint_techo:'m2_techo', falso_techo:'m2_techo', rodapie:'ml_rodapie' };
+function nuevoTrabajo(k, est, origen) {
+  const c = CATK[k]; const cant = qtyBase(c.b, est.m2); const precio = precioBase(c, est.tipo);
+  return { id:uid('t'), k, key:k, l:c.l, u:c.u, b:c.b, bk:BK_CAT[k] || (c.b === 'm2' ? 'm2_suelo' : undefined), tl:'mo', cant, precio, origen:origen || 'visita', confirmado:false, quitado:false, manual:false, nota:'', base: origen === 'cliente' ? { cant, precio } : null, ver:null };
+}
+
+// ═══════════════════════════════════════════════════════
+// 3. CASO DE EJEMPLO: reforma integral estándar (piso de 85 m²)
+// ═══════════════════════════════════════════════════════
+const PEDIDO_CLIENTE = {
+  pasillo:    ['tarima', 'pint_pared', 'pint_techo', 'rodapie', 'puerta'],
+  salon:      ['tarima', 'gotele', 'pint_pared', 'pint_techo', 'rodapie', 'electricidad', 'radiador', 'falso_techo'],
+  cocina:     ['demolicion', 'solado', 'alicatado', 'muebles_coc', 'font_cocina', 'electricidad', 'pint_techo'],
+  bano:       ['demolicion', 'solado', 'alicatado', 'font_bano', 'sanitarios', 'ducha', 'mueble_bano', 'electricidad', 'pint_techo'],
+  habitacion: ['tarima', 'pint_pared', 'pint_techo', 'rodapie', 'electricidad', 'puerta', 'radiador'],
+};
+const ESTANCIAS_EJEMPLO = [
+  ['pasillo', 'Pasillo y entrada', 9], ['salon', 'Salón-comedor', 26], ['cocina', 'Cocina', 11],
+  ['bano', 'Baño principal', 6.5], ['bano', 'Baño secundario', 4.5],
+  ['habitacion', 'Dormitorio principal', 14], ['habitacion', 'Dormitorio 2', 10.5], ['habitacion', 'Dormitorio 3', 8],
+];
+function estanciaDesde(tipo, nombre, m2, claves, origen) {
+  const e = { id:uid('e'), tipo, nombre, m2, m2Est:m2, med:null, revisada:false, origenEst:origen || 'cliente', trabajos:[], comentarios:[], fotos:[] };
+  (claves || []).forEach(k => e.trabajos.push(nuevoTrabajo(k, e, origen === 'visita' ? 'visita' : 'cliente')));
+  return e;
+}
+function semilla() {
+  const S = {
+    ver:2, creado:Date.now(),
+    caso:{ ref:'REF-2041', cliente:{ nombre:'Laura Martín', tel:'612 345 678', email:'laura.martin@ejemplo.es' }, direccion:'C/ Alcalá 245, 4.º B · 28027 Madrid', m2Total:85, tipo:'Reforma integral · piso de 85 m²' },
+    ajustes:{ margen:22, iva:21 },
+    v2:null,
+    v3:{ id:'V3', estado:'borrador', pendienteEnvio:false, guardadaAt:null, enviadaAt:null, canal:null },
+    hist:[],
+    est:ESTANCIAS_EJEMPLO.map(([t, n, m]) => estanciaDesde(t, n, m, PEDIDO_CLIENTE[t], 'cliente')),
+    general:'', ui:{ view:'home', room:null },
+  };
+  const tot = totalesDe(S.est, S.ajustes);
+  S.v2 = { id:'V2', total:tot.total, subtotal:tot.subtotal, fecha:Date.now() - 2 * 86400000 };
+  return S;
+}
+
+// ═══════════════════════════════════════════════════════
+// 4. LÓGICA (funciones puras)
+// ═══════════════════════════════════════════════════════
+function subLinea(t) { return t.quitado ? 0 : r2((Number(t.cant) || 0) * (Number(t.precio) || 0)); }
+function subEst(e) { return r2(e.trabajos.reduce((s, t) => s + subLinea(t), 0)); }
+function finalDe(sub, aj) { return r2(sub * (1 + aj.margen / 100) * (1 + aj.iva / 100)); }
+function diffV3(S) {
+  const o = { anadidos:[], quitados:[], modificados:[] };
+  S.est.forEach(e => e.trabajos.forEach(t => {
+    if (t.origen === 'visita') { if (!t.quitado) o.anadidos.push({ e, t }); }
+    else if (t.quitado) o.quitados.push({ e, t });
+    else if (t.base && (t.cant !== t.base.cant || t.precio !== t.base.precio)) o.modificados.push({ e, t });
+  }));
+  return o;
+}
+function estadoEst(e) {
+  const vivos = e.trabajos.filter(t => !t.quitado); const ok = vivos.filter(t => t.confirmado).length;
+  if (e.revisada) return 'revisada';
+  return ok > 0 || e.comentarios.length || e.fotos.length ? 'curso' : 'pendiente';
+}
+function progreso(S) {
+  const rev = S.est.filter(e => e.revisada).length;
+  let tt = 0, tc = 0; S.est.forEach(e => e.trabajos.forEach(t => { if (!t.quitado) { tt++; if (t.confirmado) tc++; } }));
+  return { revisadas:rev, total:S.est.length, trabajos:tt, confirmados:tc, pct:S.est.length ? Math.round(rev / S.est.length * 100) : 0 };
+}
+function mensajeCliente(S) {
+  const tot = totalesDe(S.est, S.ajustes, S.neg).total; const d = diffV3(S); const delta = r2(tot - S.v2.total);
+  const lineas = [];
+  d.anadidos.forEach(x => lineas.push('+ ' + x.e.nombre + ': ' + x.t.l));
+  d.quitados.forEach(x => lineas.push('− ' + x.e.nombre + ': ' + x.t.l));
+  d.modificados.forEach(x => lineas.push('~ ' + x.e.nombre + ': ' + x.t.l));
+  const fotos = S.est.reduce((s, e) => s + e.fotos.length, 0);
+  return 'Hola ' + S.caso.cliente.nombre.split(' ')[0] + ', tras la visita técnica a tu vivienda (' + S.caso.direccion.split('·')[0].trim() + ') te paso el presupuesto actualizado ' + S.v3.id + ' (' + S.caso.ref + '): ' + eur(tot) + ' (IVA incl.), ' + (delta >= 0 ? '+' : '−') + eur(Math.abs(delta)) + ' respecto a la ' + S.v2.id + (S.hist.length ? ' que te envié (' : ' que solicitaste (') + eur(S.v2.total) + ').' +
+    (lineas.length ? '\n\nCambios tras la visita:\n' + lineas.slice(0, 8).join('\n') + (lineas.length > 8 ? '\n… y ' + (lineas.length - 8) + ' más' : '') : '\n\nSin cambios sobre lo que pediste.') +
+    (fotos ? '\n\nHe adjuntado ' + fotos + ' foto(s) de la visita por estancias.' : '') +
+    '\n\nPuedes verlo y aceptarlo aquí: [enlace al presupuesto — pendiente de conectar]';
+}
+const etqBase = () => (S.hist.length ? 'enviada anteriormente' : 'pedido del cliente');
+function pendientes(S) { return S.est.filter(e => !e.revisada); }
+
+// ═══════════════════════════════════════════════════════
+// V2 · A. LÓGICA PURA (R-16 a R-25, R-29): sin DOM, cubierta por __tests()
+// ═══════════════════════════════════════════════════════
+const clampN = (v, a, b) => Math.min(b, Math.max(a, v));
+const PCT = v => fmtNum(v) + ' %';
+
+// R-19 · superficie por ancho × largo (apéndice A.1)
+function superficie(ancho, largo) { return r2((Number(ancho) || 0) * (Number(largo) || 0)); }
+function difPct(medido, estimado) { return estimado > 0 ? r2((medido - estimado) / estimado * 100) : 0; }
+
+// R-20 · paredes: perímetro, brutas, huecos, netas y reparto alicatado / pintura (apéndice A.2)
+function calcularParedes(p) {
+  p = p || {}; const ancho = Number(p.ancho) || 0, largo = Number(p.largo) || 0, alto = Number(p.alto) || 0;
+  const perimetro = r2(2 * (ancho + largo)); const brutas = r2(perimetro * alto);
+  const huecos = r2((p.huecos || []).reduce((s, h) => s + (Number(h.ancho) || 0) * (Number(h.alto) || 0), 0));
+  const netas = r2(Math.max(0, brutas - huecos)); const rp = p.reparto || { modo: 'altura', hAlic: 0, Lt: 0 }; const ac = p.acabados || { alic: true, pint: true };
+  let alic, pint;
+  if (ac.alic && !ac.pint) { alic = netas; pint = 0; }
+  else if (!ac.alic && ac.pint) { alic = 0; pint = netas; }
+  else if (rp.modo === 'pct') { const pc = clampN(Number(rp.pct) || 0, 0, 100) / 100; alic = r2(netas * pc); pint = r2(netas * (1 - pc)); }
+  else {
+    const Lt = clampN(Number(rp.Lt) || 0, 0, perimetro), ha = clampN(Number(rp.hAlic) || 0, 0, alto);
+    const alicB = Lt * alto + (perimetro - Lt) * ha, pintB = (perimetro - Lt) * (alto - ha); const den = alicB + pintB; const cuota = den > 0 ? alicB / den : 0;
+    alic = r2(Math.max(0, alicB - huecos * cuota)); pint = r2(Math.max(0, pintB - huecos * (1 - cuota)));
+  }
+  return { perimetro, brutas, huecos, netas, alic, pint, pctAlic: netas > 0 ? r2(alic / netas * 100) : 0, pctPint: netas > 0 ? r2(pint / netas * 100) : 0 };
+}
+function geometria(e) {
+  const m = e.med || {}; const lado = Math.sqrt(Math.max(0, Number(e.m2) || 0)); const medido = m.ancho > 0 && m.largo > 0;
+  const reparto = m.reparto || { modo: 'altura', hAlic: e.tipo === 'bano' ? 2.1 : e.tipo === 'cocina' ? 1.2 : 0, Lt: 0 };
+  return { ancho: medido ? m.ancho : lado, largo: medido ? m.largo : lado, alto: m.alto > 0 ? m.alto : 2.5, huecos: m.huecos || [], reparto, medido };
+}
+function acabadosDe(e) { const v = e.trabajos.filter(t => !t.quitado); return { alic: v.some(t => t.bk === 'm2_pared_alicatado'), pint: v.some(t => t.bk === 'm2_pared_pintura') }; }
+function paredesDe(e) { const g = geometria(e); return calcularParedes(Object.assign({}, g, { acabados: acabadosDe(e) })); }
+function cantidadPorBase(t, e) {
+  const bk = t.bk; if (!bk) return null;
+  if (bk === 'm2_suelo' || bk === 'm2_techo') return r2(e.m2);
+  const g = geometria(e);
+  if (bk === 'ml_rodapie') return r2(Math.max(0, 2 * (g.ancho + g.largo) - g.huecos.filter(h => h.tipo === 'puerta').reduce((s, h) => s + (Number(h.ancho) || 0), 0)));
+  if (bk.indexOf('m2_pared') === 0) { const P = paredesDe(e); return bk === 'm2_pared_pintura' ? P.pint : bk === 'm2_pared_alicatado' ? P.alic : P.netas; }
+  return null;
+}
+// Recalcula las partidas no editadas a mano (las de base «ud», «fijo» y «ml» no se tocan)
+function recalcM2(e, anterior) {
+  e.trabajos.forEach(t => {
+    if (t.manual || t.quitado) return;
+    if (t.bk) {
+      let q = null;
+      if (t.bk === 'm2_suelo' || t.bk === 'm2_techo') q = r2(e.m2);
+      else if (e.med && e.med.activa) q = cantidadPorBase(t, e);
+      else if (anterior > 0 && anterior !== e.m2 && (t.bk.indexOf('m2_pared') === 0 || t.bk === 'ml_rodapie')) q = r2(t.cant * Math.sqrt(e.m2 / anterior));
+      if (q !== null) t.cant = q;
+    } else if (['m2', 'pared', 'ml', 'mlm'].includes(t.b)) t.cant = qtyBase(t.b, e.m2);
+  });
+}
+
+// R-17 · lo que marcó el cliente, en lenguaje legible, para todos los trabajos con subconfiguración
+const ACCION_TAB = { demoler: 'Derribar', demoler_levantar: 'Derribar y levantar', solo_levantar: 'Solo levantar nuevo' };
+const ACCION_ALIAS = { tirar: 'demoler', levantar: 'solo_levantar' };
+const accionNorm = a => ACCION_ALIAS[a] || a || 'demoler_levantar';
+const MAT_TAB = { pladur: 'Pladur', ladrillo: 'Ladrillo', bloque: 'Bloque', madera: 'Madera' };
+const DEMO_EST = { vacia: 'Vacía / sin muebles', vacio: 'Vacía / sin muebles', con_muebles: 'Con muebles', habitada: 'Vivienda habitada' };
+const APERT = { abatible: 'Abatible', corredera: 'Corredera', oscilobatiente: 'Oscilobatiente', fija: 'Fija', oscilo: 'Oscilobatiente', basculante: 'Basculante' };
+const CANT_ETQ = {
+  renovar_electricidad: 'Puntos de luz, enchufes y mecanismos', puntos_de_luz: 'Puntos de luz y enchufes', renovar_fontaneria: 'Puntos de agua', radiadores: 'Radiadores', radiador_toallero: 'Radiadores toalleros', suelo_radiante: 'Zonas de suelo radiante', instalar_caldera: 'Calderas',
+  ac_pared: 'Equipos de aire acondicionado de pared', ac_split: 'Equipos split', ventilador_techo: 'Ventiladores de techo', extractor_ventilacion: 'Extractores', cambiar_puerta: 'Puertas', cambiar_ventana: 'Ventanas', redistribucion_tabiques: 'Tabiques', tirar_pared: 'Paredes a tirar',
+  abrir_hueco: 'Huecos', instalar_ducha: 'Duchas', instalar_banera: 'Bañeras', instalar_inodoro: 'Inodoros', instalar_lavabo: 'Lavabos', instalar_mueble: 'Muebles de baño', instalar_espejo: 'Espejos', instalar_campana: 'Campanas', instalar_fregadero: 'Fregaderos', pergola_toldo: 'Pérgolas o toldos', montaje_muebles: 'Muebles a montar'
+};
+const ML_ETQ = { instalar_muebles: 'Muebles de cocina', encimera: 'Encimera', armario_empotrado: 'Armario empotrado', cambiar_barandilla: 'Barandilla' };
+const PLANTA_ETQ = { baja: 'Planta baja', primera: 'Primera planta', sotano: 'Sótano', ultima: 'Última planta' };
+function describirTrabajo(key, det, tipoEspacio) {
+  det = det || {}; const out = []; const add = (e, v) => { if (v !== undefined && v !== null && v !== '') out.push([e, String(v)]); };
+  if (det.cantUd != null) add(CANT_ETQ[key] || 'Cantidad pedida', fmtNum(det.cantUd) + (key === 'renovar_electricidad' || key === 'puntos_de_luz' ? ' puntos' : ' ud'));
+  if (det.mlOvr != null) add((ML_ETQ[key] || 'Metros indicados') + ' (longitud)', fmtNum(det.mlOvr) + ' ml');
+  (det.tabiquesConfig || []).forEach((t, i) => add('Tabique ' + (i + 1), (ACCION_TAB[accionNorm(t.accion)] || t.accion) + (t.material && accionNorm(t.accion) !== 'demoler' ? ' · ' + (MAT_TAB[t.material] || t.material) : '') + (t.ml ? ' · ' + fmtNum(t.ml) + ' ml' : '')));
+  if ((det.ventanasConfig || []).length) { add('Ventanas', det.ventanasConfig.length + ' ud'); det.ventanasConfig.forEach((v, i) => add('Ventana ' + (i + 1), [APERT[v.apertura] || v.apertura, v.material, v.vidrio ? 'vidrio ' + v.vidrio : '', (v.vidrioPlus || []).join(', ')].filter(Boolean).join(' · ') + (v.ancho ? ' · ' + fmtNum(v.ancho) + ' m' : ''))); }
+  if (det.demolicionEstado) add('Estado de la estancia', DEMO_EST[det.demolicionEstado] || det.demolicionEstado);
+  if ((det.demolicionEstados || []).length) add('Estado de la estancia', det.demolicionEstados.map(x => DEMO_EST[x] || x).join(' + '));
+  if (det.pinturaConMuebles != null) add('Pintura', det.pinturaConMuebles ? 'Con muebles en la estancia' : 'Estancia vacía');
+  if (det.plantaEspacio != null) add('Planta', PLANTA_ETQ[det.plantaEspacio] || det.plantaEspacio);
+  if (det.obraCompleta != null) add('Obra completa', det.obraCompleta ? 'Sí' : 'No');
+  if (det.notas) add('Notas del cliente', det.notas);
+  return out;
+}
+// Cantidad "verificable" de un trabajo (lo que el reformista comprueba en la visita): cantUd o metros indicados
+function cantidadPedida(det) { det = det || {}; return det.cantUd != null ? { campo: 'cantUd', valor: Number(det.cantUd) } : det.mlOvr != null ? { campo: 'mlOvr', valor: Number(det.mlOvr) } : null; }
+const TRAB_TABIQUE_L = ['redistribucion_tabiques', 'tirar_pared', 'abrir_hueco'];
+
+// R-18 · tabique medido (queda como elemento compartido entre dos estancias)
+function crearTabique(o) {
+  const longitud = r2(Number(o.longitud) || 0), alto = r2(Number(o.alto) || 0);
+  return { id: o.id || uid('tb'), espacioId: o.espacioId, contiguaId: o.contiguaId || null, longitud, alto, m2: r2(longitud * alto), accion: o.accion || 'demoler_levantar', material: o.material || 'pladur', trabajoId: o.trabajoId || null, reponer: !!o.reponer };
+}
+const REF_TABIQUE_M2 = 7.5; // tabique "tipo" (3 m × 2,5 m) con el que se pasa el precio por ud del cliente a €/m²
+function cantidadTabiques(tabiques, trabajoId, nPedidos) {
+  const med = (tabiques || []).filter(t => t.trabajoId === trabajoId); const m2 = r2(med.reduce((s, t) => s + t.m2, 0));
+  const sinMedir = Math.max(0, (Number(nPedidos) || 1) - med.length);
+  return { medidos: med.length, m2: r2(m2 + sinMedir * REF_TABIQUE_M2), medidosM2: m2, sinMedir };
+}
+
+// R-16 · diff entre dos listas de líneas (versiones ya enviadas o el borrador)
+function diffLineas(a, b) {
+  const clave = l => (l.esp || '') + '|' + l.k; const ma = new Map((a || []).map(l => [clave(l), l])), mb = new Map((b || []).map(l => [clave(l), l]));
+  const anadidas = [...mb.keys()].filter(k => !ma.has(k)).map(k => mb.get(k));
+  const quitadas = [...ma.keys()].filter(k => !mb.has(k)).map(k => ma.get(k));
+  const cambiadas = [...ma.keys()].filter(k => mb.has(k) && (ma.get(k).cant !== mb.get(k).cant || ma.get(k).precio !== mb.get(k).precio)).map(k => ({ de: ma.get(k), a: mb.get(k) }));
+  return { anadidas, quitadas, cambiadas };
+}
+function lineasDeEst(est) { const o = []; est.forEach(e => e.trabajos.forEach(t => { if (!t.quitado) o.push({ esp: e.id, k: t.k, l: t.l, u: t.u, cant: t.cant, precio: t.precio, tl: t.tl || 'mo' }); })); return o; }
+function etiquetaTramo(v) { return v.rango ? 'entre ' + eur0(v.rango.lo) + ' y ' + eur0(v.rango.hi) : eur(v.total); }
+
+// R-24 · totales con los ajustes de negociación (misma regla que calcularTotalesNeg del admin)
+function totalesDe(est, aj, neg) {
+  neg = neg || {}; const subtotal = r2(est.reduce((s, e) => s + subEst(e), 0));
+  const margen = r2(subtotal * aj.margen / 100); const base0 = r2(subtotal + margen);
+  const imprevistos = r2(base0 * (Number(neg.imprevistosPct) || 0) / 100); const bruto = r2(base0 + imprevistos); const dto = Math.max(0, Number(neg.descuento) || 0);
+  const descuento = neg.descuentoModo === 'eur' ? r2(Math.min(bruto, dto)) : r2(bruto * Math.min(100, dto) / 100);
+  const base = r2(bruto - descuento); const iva = r2(base * aj.iva / 100); const totalBruto = r2(base + iva);
+  const R = Number(neg.redondeo) || 0; const total = R ? r2(Math.round(totalBruto / R) * R) : totalBruto;
+  const beneficioAntes = r2(bruto - subtotal), beneficio = r2(base - subtotal);
+  return { subtotal, margen, imprevistos, descuento, base, iva, ajusteRedondeo: r2(total - totalBruto), total, coste: subtotal, beneficioAntes, beneficio, beneficioPct: subtotal > 0 ? r2(beneficio / subtotal * 100) : 0, beneficioAntesPct: subtotal > 0 ? r2(beneficioAntes / subtotal * 100) : 0 };
+}
+function plazoCalculado(hitos) { const d = (hitos || []).reduce((s, h) => s + (Number(h.dias) || 0), 0); return Math.max(1, Math.ceil(d / 5)); }
+const NEG_DEF = { descuentoModo: 'pct', descuento: 0, validezDias: 30, plazoManual: null, imprevistosPct: 0, redondeo: 0, condiciones: '' };
+
+// R-23 · hitos y plan de cobros de la propuesta (el último tramo es siempre «el resto»)
+function normalizarPlanL(plan) {
+  const p = (plan || []).map(t => Object.assign({}, t, { pct: Number(t.pct) || 0 })); if (!p.length) return p;
+  const suma = r2(p.slice(0, -1).reduce((s, t) => s + t.pct, 0)); p[p.length - 1].pct = r2(Math.max(0, 100 - suma)); return p;
+}
+function importesPlan(plan, total) {
+  const p = normalizarPlanL(plan); let ac = 0;
+  return p.map((t, i) => { const imp = i < p.length - 1 ? r2(total * t.pct / 100) : r2(Math.max(0, total - ac)); ac = r2(ac + imp); return Object.assign({}, t, { importe: imp, resto: i === p.length - 1 }); });
+}
+function validarPlanL(plan, hitos) {
+  const errores = []; const p = plan || []; const nombres = new Set((hitos || []).map(h => h.nombre));
+  if (!p.length) errores.push('El plan necesita al menos un tramo');
+  const suma = r2(p.slice(0, -1).reduce((s, t) => s + (Number(t.pct) || 0), 0)); if (suma > 100) errores.push('Los tramos intermedios suman ' + suma + ' %: no pueden superar el 100 %');
+  p.forEach(t => { if (String(t.cuando).indexOf('hito:') === 0 && !nombres.has(String(t.cuando).slice(5))) errores.push('El tramo «' + t.label + '» depende de un hito que ya no existe: reasígnalo'); });
+  return { ok: !errores.length, errores };
+}
+function planesParaReasignar(plan, nombreHito) { return (plan || []).filter(t => t.cuando === 'hito:' + nombreHito); }
+
+// R-22 · árbol de desglose: estancia → trabajo → partidas (mano de obra, materiales, extras) con subtotales y diferencia frente a la versión anterior
+const TIPO_PARTIDA = { mo: 'Mano de obra', mat: 'Materiales', extra: 'Extras' };
+function desgloseArbol(est, aj) {
+  return est.map(e => {
+    const grupos = new Map();
+    e.trabajos.forEach(t => { if (t.quitado) return; const g = (t.key || t.k) + (t.origen === 'visita' && !t.key ? '|' + t.id : ''); if (!grupos.has(g)) grupos.set(g, []); grupos.get(g).push(t); });
+    const trabajos = [...grupos.entries()].map(([g, ts]) => {
+      const mo = ts.find(t => (t.tl || 'mo') !== 'mat') || ts[0];
+      const partidas = ts.map(t => ({ id: t.id, tipo: TIPO_PARTIDA[t.tl || 'mo'] || 'Extras', l: t.l, u: t.u, cant: t.cant, precio: finalDe(t.precio, aj), subtotal: finalDe(subLinea(t), aj), delta: t.base ? r2(finalDe(subLinea(t), aj) - finalDe(r2(t.base.cant * t.base.precio), aj)) : finalDe(subLinea(t), aj) }));
+      return { key: g, nombre: String(mo.l).replace(/ · M\.O\.$/, ''), subtotal: r2(partidas.reduce((s, p) => s + p.subtotal, 0)), delta: r2(partidas.reduce((s, p) => s + p.delta, 0)), partidas };
+    });
+    const quitadosDelta = r2(e.trabajos.filter(t => t.quitado && t.base).reduce((s, t) => s - finalDe(r2(t.base.cant * t.base.precio), aj), 0));
+    return { id: e.id, nombre: e.nombre, subtotal: r2(trabajos.reduce((s, t) => s + t.subtotal, 0)), delta: r2(trabajos.reduce((s, t) => s + t.delta, 0) + quitadosDelta), trabajos };
+  });
+}
+
+// R-18/R-28 · reconciliación de un borrador editado en el admin con el estado del lite (por id de línea)
+function mezclarAdminLineas(S0, lineas) {
+  lineas = lineas || []; const usadas = new Set(); const porLite = new Map(lineas.filter(l => l.liteId).map(l => [l.liteId, l])); const porId = new Map(lineas.map(l => [l.id, l]));
+  const clave = (l, esp) => esp + '|' + (l.key || l.k) + '|' + (l.tipo || l.tl || 'mo');
+  const porClave = new Map(); lineas.forEach(l => { const k = clave(l, l.espacioId); if (!porClave.has(k)) porClave.set(k, []); porClave.get(k).push(l); });
+  S0.est.forEach(e => {
+    e.trabajos = e.trabajos.filter(t => {
+      let l = porLite.get(t.id) || (t.lineaId && porId.get(t.lineaId)); if (!l) { const c = (porClave.get(clave(t, e.id)) || []).filter(x => !usadas.has(x)); l = c[0]; }
+      if (!l) { if (t.origen === 'visita') return false; t.quitado = true; return true; }
+      usadas.add(l); t.cant = l.cantidad; t.precio = l.precio; t.l = l.concepto; if (l.bloqueada) t.manual = true; if (l.nota) t.nota = l.nota; if (l.tabiqueId) t.tab = l.tabiqueId; t.quitado = false; return true;
+    });
+  });
+  lineas.filter(l => !usadas.has(l)).forEach(l => {
+    const e = S0.est.find(x => x.id === l.espacioId) || S0.est[0]; if (!e) return;
+    e.trabajos.push({ id: l.liteId || uid('t'), k: l.key, key: l.key, l: l.concepto, u: l.unidad, b: 'fijo', bk: l.base, tl: l.tipo || 'mo', cant: l.cantidad, precio: l.precio, origen: 'visita', confirmado: false, quitado: false, manual: true, nota: l.nota || '', base: null, det: null, tab: l.tabiqueId || null, ver: null });
+  });
+  return S0;
+}
+
+// ═══════════════════════════════════════════════════════
+// 5. ESTADO Y GUARDADO (solo en este dispositivo)
+// ═══════════════════════════════════════════════════════
+const $ = s => document.querySelector(s);
+function cargar() { try { const j = localStorage.getItem(LS_KEY); if (!j) return null; const o = JSON.parse(j); return o && o.ver === 2 && o.est ? o : null; } catch (e) { return null; } }
+let S = cargar() || semilla();
+let saveT = null, saveErr = false, savedAt = S.v3.guardadaAt || null, lastKey = '', undoFn = null, toastT = null;
+const UI = { openW:null, catQ:'', anadirEst:null, sinEnviar:false };
+function guardarYa() {
+  clearTimeout(saveT); saveT = null;
+  try { savedAt = Date.now(); S.v3.guardadaAt = savedAt; localStorage.setItem(LS_KEY, JSON.stringify(S)); saveErr = false; }
+  catch (e) { saveErr = true; if (!guardarYa.avisado) { guardarYa.avisado = true; setTimeout(() => toast('⚠ No hay espacio para guardar. Quita fotos o exporta antes de salir.'), 50); } }
+  pintaGuardado();
+}
+function guardar() { clearTimeout(saveT); saveT = setTimeout(guardarYa, 150); }
+function pintaGuardado() { const el = $('#sv'); if (!el) return; el.className = 'save' + (saveErr ? ' err' : ''); el.textContent = saveErr ? 'Sin guardar' : (savedAt ? 'Guardado ' + hhmm(savedAt) : ''); }
+window.addEventListener('beforeunload', () => { if (saveT) guardarYa(); });
+document.addEventListener('visibilitychange', () => { if (document.hidden && saveT) guardarYa(); });
+
+const editable = () => S.v3.estado !== 'enviada';
+function mut(fn) {
+  if (!editable()) { toast('La ' + S.v3.id + ' ya está enviada. Crea una nueva versión para editarla.'); return false; }
+  fn(); guardar(); render(); return true;
+}
+const est = id => S.est.find(e => e.id === id);
+const trab = (e, id) => e.trabajos.find(t => t.id === id);
+function curRoom() { return est(S.ui.room) || S.est[0]; }
+
+// ═══════════════════════════════════════════════════════
+// 6. PANTALLAS
+// ═══════════════════════════════════════════════════════
+function bar() {
+  const t = totalesDe(S.est, S.ajustes, S.neg).total; const d = r2(t - S.v2.total);
+  return '<div class="bar"><div class="tot"><small>' + S.v3.id + ' · total con IVA</small><b>' + eur0(t) + '</b><span class="d ' + (d > 0 ? 'dlt-up' : 'dlt-dn') + '" style="color:' + (d > 0 ? '#ffb18a' : '#9ad1a8') + '">' + (d >= 0 ? '+' : '−') + eur0(Math.abs(d)) + ' vs ' + S.v2.id + '</span></div>' +
+    '<button class="btn pri" onclick="ir(\'send\')">' + (editable() ? 'Terminar y enviar →' : 'Ver resumen →') + '</button></div>';
+}
+
+
+function deltaEst(e) {
+  const baseSub = r2(e.trabajos.filter(t => t.base).reduce((s, t) => s + t.base.cant * t.base.precio, 0));
+  return r2(finalDe(subEst(e), S.ajustes) - finalDe(baseSub, S.ajustes));
+}
+const ESTADO_LBL = { pendiente:['Pendiente', ''], curso:['En curso', 'wip'], revisada:['Revisada ✓', 'ok'] };
+function vList() {
+  const p = progreso(S); const cur = curRoom();
+  return '<div class="card"><div class="row" style="margin-bottom:6px"><b class="sp">' + p.revisadas + ' de ' + p.total + ' estancias revisadas</b><span class="muted">' + p.pct + ' %</span></div><div class="progress"><i style="width:' + p.pct + '%"></i></div></div>' +
+    S.est.map(e => {
+      const st = estadoEst(e); const vivos = e.trabajos.filter(t => !t.quitado).length; const dl = deltaEst(e); const ti = TIPOS[e.tipo] || TIPOS.otro;
+      return '<button class="room ' + (st === 'revisada' ? 'done ' : '') + (S.ui.view !== 'hub' && cur.id === e.id ? 'cur' : '') + '" onclick="ir(\'room\',\'' + e.id + '\')" aria-label="Abrir ' + esc(e.nombre) + '">' +
+        '<span class="ico">' + (st === 'revisada' ? '✅' : ti.i) + '</span><span class="sp" style="min-width:0"><b>' + esc(e.nombre) + '</b><span class="meta"><span>' + fmtNum(e.m2) + ' m²</span><span>' + vivos + ' trabajos</span>' + (e.fotos.length ? '<span>📷 ' + e.fotos.length + '</span>' : '') + (e.comentarios.length ? '<span>💬 ' + e.comentarios.length + '</span>' : '') + '</span>' +
+        '<span class="pill ' + ESTADO_LBL[st][1] + '" style="margin-top:4px">' + ESTADO_LBL[st][0] + '</span></span>' +
+        '<span class="amt">' + eur0(finalDe(subEst(e), S.ajustes)) + (dl ? '<small class="' + (dl > 0 ? 'dlt-up' : 'dlt-dn') + '">' + (dl > 0 ? '+' : '−') + eur0(Math.abs(dl)) + '</small>' : '') + '</span></button>';
+    }).join('') +
+    (editable() ? '<button class="btn blk" onclick="abrirNuevaEst()">＋ Añadir estancia</button>' : '') +
+    '<div class="card" style="margin-top:12px"><div class="lbl">Observaciones generales de la visita</div><textarea aria-label="Observaciones generales" onchange="setGeneral(this.value)" placeholder="Acceso, plazos, preferencias del cliente…">' + esc(S.general) + '</textarea></div>';
+}
+
+function vWork(e, t) {
+  const aj = S.ajustes; const mod = t.origen !== 'visita' && t.base && (t.cant !== t.base.cant || t.precio !== t.base.precio);
+  const abierto = UI.openW === t.id;
+  return '<div class="work ' + (t.confirmado ? 'ok ' : '') + (abierto ? 'open' : '') + '" id="w-' + t.id + '">' +
+    '<div class="work-top"><button class="chk" aria-pressed="' + t.confirmado + '" aria-label="' + (t.confirmado ? 'Desmarcar' : 'Confirmar') + ' ' + esc(t.l) + '" onclick="chk(\'' + e.id + '\',\'' + t.id + '\')">' + (t.confirmado ? '✓' : '') + '</button>' +
+    '<div class="work-t"><b>' + esc(t.l) + '</b><div style="margin:3px 0">' + (t.origen === 'visita' ? '<span class="tag add">Añadido en la visita</span>' : '<span class="tag">Pedido por el cliente</span>') + (mod ? '<span class="tag mod">Modificado</span>' : '') + '</div>' +
+    '<div class="muted">' + eur(finalDe(t.precio, aj)) + ' / ' + esc(t.u) + ' (IVA incl.)' + (t.nota ? ' · 📝 ' + esc(t.nota) : '') + '</div></div>' +
+    '<div class="work-sub">' + eur0(finalDe(subLinea(t), aj)) + '<small>' + fmtNum(t.cant) + ' ' + esc(t.u) + '</small></div></div>' +
+    '<div class="work-act"><div class="stepper sm" role="group" aria-label="Cantidad"><button onclick="qty(\'' + e.id + '\',\'' + t.id + '\',-1)" aria-label="Menos">−</button><input inputmode="decimal" value="' + fmtNum(t.cant) + '" aria-label="Cantidad en ' + esc(t.u) + '" onchange="qtySet(\'' + e.id + '\',\'' + t.id + '\',this.value)"><button onclick="qty(\'' + e.id + '\',\'' + t.id + '\',1)" aria-label="Más">＋</button></div>' +
+    '<button class="btn" onclick="toggleEdit(\'' + t.id + '\')" aria-expanded="' + abierto + '">✎ Editar</button><button class="btn dng" onclick="quitar(\'' + e.id + '\',\'' + t.id + '\')" aria-label="Quitar ' + esc(t.l) + '">🗑 Quitar</button>' + (esTrabTabique(t) && editable() ? '<button class="btn" onclick="abrirTabique(\'' + e.id + '\',\'' + t.id + '\')">📏 Medir tabique</button>' : '') + '</div>' +
+    panelPidioCliente(e, t) +
+    '<div class="work-edit"><label class="field"><span>Descripción del trabajo</span><input type="text" value="' + esc(t.l) + '" onchange="editW(\'' + e.id + '\',\'' + t.id + '\',\'l\',this.value)"></label>' +
+    '<div class="grid2"><label class="field"><span>Precio unitario (sin IVA ni margen)</span><input inputmode="decimal" value="' + fmtNum(t.precio) + '" onchange="editW(\'' + e.id + '\',\'' + t.id + '\',\'precio\',this.value)"></label>' +
+    '<label class="field"><span>Unidad</span><select onchange="editW(\'' + e.id + '\',\'' + t.id + '\',\'u\',this.value)">' + ['m²', 'ml', 'ud'].map(u => '<option' + (t.u === u ? ' selected' : '') + '>' + u + '</option>').join('') + '</select></label></div>' +
+    '<label class="field"><span>Nota del trabajo (opcional)</span><input type="text" value="' + esc(t.nota) + '" placeholder="Ej.: el cliente quiere porcelánico 60×60" onchange="editW(\'' + e.id + '\',\'' + t.id + '\',\'nota\',this.value)"></label>' +
+    (t.base ? '<button class="btn" onclick="restaurarValores(\'' + e.id + '\',\'' + t.id + '\')">↺ Volver a lo que pidió el cliente</button>' : '') + '</div></div>';
+}
+
+function vRoom(e) {
+  const idx = S.est.indexOf(e); const vivos = e.trabajos.filter(t => !t.quitado); const quitados = e.trabajos.filter(t => t.quitado);
+  const ok = vivos.filter(t => t.confirmado).length; const ultima = idx === S.est.length - 1; const ro = !editable();
+  const comentarios = e.comentarios.map(c => '<div class="cm"><p>' + esc(c.t) + '<small>' + hhmm(c.f) + '</small></p>' + (ro ? '' : '<button class="x" aria-label="Borrar comentario" onclick="comDel(\'' + e.id + '\',\'' + c.id + '\')">✕</button>') + '</div>').join('');
+  return (ro ? '<div class="warn">La ' + S.v3.id + ' ya está enviada: solo lectura. Crea una nueva versión desde el Inicio para seguir editando.</div>' : '') +
+    '<div class="rhead"><button class="nav" aria-label="Estancia anterior" onclick="roomStep(-1)" ' + (idx === 0 ? 'disabled style="opacity:.4"' : '') + '>‹</button><input aria-label="Nombre de la estancia" value="' + esc(e.nombre) + '" onchange="setNombre(\'' + e.id + '\',this.value)" ' + (ro ? 'disabled' : '') + '><button class="nav" aria-label="Estancia siguiente" onclick="roomStep(1)" ' + (ultima ? 'disabled style="opacity:.4"' : '') + '>›</button></div>' +
+    cardClienteSala(e) + cardSuperficie(e, ro) + cardParedes(e, ro) + cardTabiques(e) +
+    '<div class="row" style="margin:6px 0 10px"><h3 class="sp" style="margin:0">Trabajos · ' + ok + '/' + vivos.length + ' confirmados</h3>' + (ro || ok === vivos.length ? '' : '<button class="btn" onclick="confirmarTodo(\'' + e.id + '\')">✓ Confirmar todo</button>') + '</div>' +
+    '<div class="progress" style="margin-bottom:12px"><i style="width:' + (vivos.length ? Math.round(ok / vivos.length * 100) : 0) + '%"></i></div>' +
+    (vivos.length ? vivos.map(t => vWork(e, t)).join('') : '<div class="card muted" style="text-align:center">Esta estancia no tiene trabajos. Añade los que haga falta.</div>') +
+    (ro ? '' : '<button class="btn pri blk" style="margin-bottom:12px" onclick="abrirAnadir(\'' + e.id + '\')">＋ Añadir trabajo</button>') +
+    (quitados.length ? '<div class="quit"><div class="lbl">Quitados de esta estancia (' + quitados.length + ')</div>' + quitados.map(t => '<div class="q"><span>' + esc(t.l) + '</span>' + (ro ? '' : '<button class="btn" onclick="restaurar(\'' + e.id + '\',\'' + t.id + '\')">↺ Restaurar</button>') + '</div>').join('') + '</div>' : '') +
+    '<div class="card"><h3>💬 Comentarios de la estancia</h3>' + (ro ? '' : '<div>' + COMENT_RAPIDOS.map(c => '<button class="chip" onclick="comAdd(\'' + e.id + '\',this.dataset.t)" data-t="' + esc(c) + '">' + esc(c) + '</button>').join('') + '</div>' +
+      '<textarea id="com-' + e.id + '" aria-label="Nuevo comentario" placeholder="Escribe una observación de esta estancia…"></textarea><button class="btn blk" style="margin-top:8px" onclick="comAddTxt(\'' + e.id + '\')">Añadir comentario</button><div style="height:10px"></div>') +
+      (comentarios || '<div class="muted">Sin comentarios todavía.</div>') + '</div>' +
+    '<div class="card"><h3>📷 Fotos de la estancia (' + e.fotos.length + ')</h3>' + (ro ? '' : '<div class="row"><label class="btn pri addph" style="position:relative">📷 Hacer foto<input type="file" accept="image/*" capture="environment" aria-label="Hacer foto con la cámara" onchange="fotosAdd(\'' + e.id + '\',this)"></label><label class="btn addph" style="position:relative">🖼 Elegir de la galería<input type="file" accept="image/*" multiple aria-label="Elegir fotos de la galería" onchange="fotosAdd(\'' + e.id + '\',this)"></label></div>') +
+      '<div class="thumbs">' + e.fotos.map(f => '<button class="thumb" onclick="verFoto(\'' + e.id + '\',\'' + f.id + '\')" aria-label="Ver foto ' + esc(f.cap || '') + '"><img src="' + fsrc(f) + '" alt="Foto de ' + esc(e.nombre) + '">' + (f.cap ? '<em>' + esc(f.cap) + '</em>' : '') + '</button>').join('') + '</div>' + (e.fotos.length ? '' : '<div class="muted" style="margin-top:6px">Sin fotos todavía.</div>') + '</div>' +
+    (ro ? '' : '<div class="row" style="margin-bottom:10px"><button class="btn ok sp" onclick="revisadaYSiguiente(\'' + e.id + '\')">' + (e.revisada ? '✓ Revisada · ' : 'Marcar revisada · ') + (ultima ? 'ir al resumen' : 'siguiente estancia') + ' →</button>' + (e.revisada ? '<button class="btn" onclick="toggleRev(\'' + e.id + '\')">Reabrir</button>' : '') + '</div>' +
+      (e.origenEst === 'visita' ? '<button class="btn dng blk" onclick="delEst(\'' + e.id + '\')">Eliminar esta estancia</button>' : ''));
+}
+
+
+function vSent() {
+  const t = totalesDe(S.est, S.ajustes, S.neg);
+  return '<div class="card" style="text-align:center"><div style="font-size:44px">✅</div><h3>' + S.v3.id + ' enviada</h3><div class="big-total">' + eur(t.total) + '</div><p class="muted">' + fecha(S.v3.enviadaAt) + ' · ' + hhmm(S.v3.enviadaAt) + ' · vía ' + esc(S.v3.canal || '—') + ' (simulado)</p></div>' +
+    '<div class="info">Este prototipo no está conectado: el cliente no recibe nada realmente. El mensaje se preparó para copiarlo o abrirlo en WhatsApp.</div>' +
+    '<div style="display:grid;gap:10px"><button class="btn blk" onclick="ir(\'send\')">Ver resumen enviado</button><button class="btn pri blk" onclick="crearNueva()">Crear ' + nextId() + ' para seguir editando</button><button class="btn blk" onclick="ir(\'home\')">Volver al inicio</button></div>';
+}
+
+let _verSig = null;
+function nextId() { return 'V' + (parseInt(S.v3.id.slice(1), 10) + 1); }
+
+// ═══════════════════════════════════════════════════════
+// 7. NAVEGACIÓN Y AVISOS
+// ═══════════════════════════════════════════════════════
+function ir(view, room) { S.ui.view = view; if (room) S.ui.room = room; if (view === 'room' && !est(S.ui.room)) S.ui.room = S.est[0].id; guardar(); render(); }
+function roomStep(d) { const i = S.est.indexOf(curRoom()) + d; if (i < 0 || i >= S.est.length) return; ir('room', S.est[i].id); window.scrollTo(0, 0); }
+function toast(msg, undo) {
+  const el = $('#toast'), u = $('#toast-u'); $('#toast-t').textContent = msg;
+  if (undo) { u.hidden = false; u.onclick = () => { undo(); hideToast(); guardar(); render(); }; } else { u.hidden = true; u.onclick = null; }
+  el.classList.add('on'); clearTimeout(toastT); toastT = setTimeout(hideToast, undo ? 6500 : 2800);
+}
+function hideToast() { $('#toast').classList.remove('on'); }
+function sheet(html) { $('#sheet').innerHTML = '<div class="grab"></div>' + html; $('#ov').classList.add('on'); UI.prevFocus = document.activeElement; setTimeout(() => { const f = $('#sheet input,#sheet textarea,#sheet button'); if (f && !f.matches('textarea')) f.blur && 0; }, 0); }
+function cerrarSheet() { $('#ov').classList.remove('on'); $('#sheet').innerHTML = ''; if (UI.prevFocus && document.body.contains(UI.prevFocus)) { try { UI.prevFocus.focus(); } catch (e) {} } }
+$('#ov').addEventListener('click', e => { if (e.target.id === 'ov') cerrarSheet(); });
+document.addEventListener('keydown', e => { if (e.key === 'Escape') { if ($('#viewer').classList.contains('on')) cerrarVisor(); else if ($('#ov').classList.contains('on')) cerrarSheet(); } });
+
+// ═══════════════════════════════════════════════════════
+// 8. ACCIONES SOBRE TRABAJOS
+// ═══════════════════════════════════════════════════════
+function chk(eid, tid) { mut(() => { const t = trab(est(eid), tid); t.confirmado = !t.confirmado; const e = est(eid); if (!t.confirmado) e.revisada = false; }); }
+function confirmarTodo(eid) { mut(() => { est(eid).trabajos.forEach(t => { if (!t.quitado) t.confirmado = true; }); }); }
+function qty(eid, tid, d) { mut(() => { const t = trab(est(eid), tid); t.cant = Math.max(0, r2((Number(t.cant) || 0) + d)); t.manual = true; t.confirmado = false; }); }
+function qtySet(eid, tid, v) { mut(() => { const t = trab(est(eid), tid); t.cant = Math.max(0, r2(num(v))); t.manual = true; }); }
+function editW(eid, tid, campo, v) {
+  mut(() => { const t = trab(est(eid), tid);
+    if (campo === 'precio') { t.precio = Math.max(0, r2(num(v))); t.manual = true; }
+    else if (campo === 'l') t.l = String(v).trim() || t.l;
+    else t[campo] = v; });
+}
+function toggleEdit(tid) { UI.openW = UI.openW === tid ? null : tid; render(); }
+function restaurarValores(eid, tid) { mut(() => { const t = trab(est(eid), tid); if (t.base) { t.cant = t.base.cant; t.precio = t.base.precio; t.manual = false; recalcM2(est(eid)); } }); }
+function quitar(eid, tid) {
+  if (!editable()) { mut(() => {}); return; }
+  const e = est(eid), t = trab(e, tid); let deshacer;
+  if (t.origen === 'visita') { const i = e.trabajos.indexOf(t); e.trabajos.splice(i, 1); deshacer = () => { e.trabajos.splice(i, 0, t); }; }
+  else { t.quitado = true; deshacer = () => { t.quitado = false; }; }
+  guardar(); render(); toast('«' + t.l + '» quitado', deshacer);
+}
+function restaurar(eid, tid) { mut(() => { const t = trab(est(eid), tid); t.quitado = false; t.confirmado = false; }); }
+function setNombre(eid, v) { mut(() => { est(eid).nombre = String(v).trim() || est(eid).nombre; }); }
+function m2Set(eid, v) { mut(() => { const e = est(eid); const ant = e.m2; e.m2 = Math.max(0.5, r2(num(v))); if (e.med) { e.med.ancho = 0; e.med.largo = 0; } recalcM2(e, ant); }); }
+function m2Step(eid, d) { m2Set(eid, est(eid).m2 + d); }
+function setGeneral(v) { if (!editable()) return; S.general = v; guardar(); }
+function toggleRev(eid) { mut(() => { const e = est(eid); e.revisada = !e.revisada; }); }
+function revisadaYSiguiente(eid) {
+  if (!editable()) { mut(() => {}); return; }
+  const e = est(eid); e.revisada = true; e.trabajos.forEach(t => { if (!t.quitado) t.confirmado = true; });
+  const i = S.est.indexOf(e); guardar();
+  if (i < S.est.length - 1) { toast('«' + e.nombre + '» revisada'); ir('room', S.est[i + 1].id); window.scrollTo(0, 0); }
+  else { toast(pendientes(S).length ? 'Última estancia. Aún quedan ' + pendientes(S).length + ' por revisar.' : 'Todas las estancias revisadas ✓'); ir('send'); }
+}
+
+// ── Añadir trabajo ──
+function abrirAnadir(eid) { UI.anadirEst = eid; UI.catQ = ''; sheetAnadir(); }
+function sheetAnadir() {
+  const e = est(UI.anadirEst); const q = UI.catQ.trim().toLowerCase();
+  const filtra = c => !q || c.l.toLowerCase().includes(q);
+  const sug = CAT.filter(c => c.t.includes(e.tipo) && filtra(c)), otros = CAT.filter(c => !c.t.includes(e.tipo) && filtra(c));
+  const item = c => { const ya = e.trabajos.some(t => t.k === c.k && !t.quitado); return '<button class="cat-i" onclick="anadir(\'' + c.k + '\')"><b>' + esc(c.l) + '</b>' + (ya ? '<span class="pill">ya incluido</span>' : '') + '<small>' + eur(finalDe(precioBase(c, e.tipo), S.ajustes)) + '/' + c.u + '</small></button>'; };
+  $('#sheet').innerHTML = '<div class="grab"></div><div class="row" style="margin-bottom:8px"><h3 class="sp" style="margin:0">Añadir a ' + esc(e.nombre) + '</h3><button class="btn" onclick="cerrarSheet()">Cerrar</button></div>' +
+    '<input type="text" id="catq" placeholder="Buscar trabajo…" aria-label="Buscar trabajo" value="' + esc(UI.catQ) + '" oninput="UI.catQ=this.value;listaCat()" style="margin-bottom:10px"><div id="catlist">' + listaCatHtml(e, sug, otros, item) + '</div>';
+  $('#ov').classList.add('on');
+}
+function listaCatHtml(e, sug, otros, item) {
+  return (sug.length ? '<div class="lbl">Habituales para ' + esc((TIPOS[e.tipo] || TIPOS.otro).n.toLowerCase()) + '</div>' + sug.map(item).join('') : '') + (otros.length ? '<div class="lbl" style="margin-top:8px">Otros trabajos</div>' + otros.map(item).join('') : '') +
+    '<div class="card" style="margin-top:10px"><h3>Trabajo personalizado</h3><label class="field"><span>Descripción</span><input type="text" id="cu-l" placeholder="Ej.: Refuerzo de viga"></label><div class="grid2"><label class="field"><span>Cantidad</span><input id="cu-c" inputmode="decimal" value="1"></label><label class="field"><span>Unidad</span><select id="cu-u"><option>ud</option><option>m²</option><option>ml</option></select></label></div><label class="field"><span>Precio unitario (sin IVA ni margen)</span><input id="cu-p" inputmode="decimal" placeholder="0"></label><button class="btn pri blk" onclick="anadirCustom()">Añadir trabajo personalizado</button></div>';
+}
+function listaCat() {
+  const e = est(UI.anadirEst); const q = UI.catQ.trim().toLowerCase(); const filtra = c => !q || c.l.toLowerCase().includes(q);
+  const item = c => { const ya = e.trabajos.some(t => t.k === c.k && !t.quitado); return '<button class="cat-i" onclick="anadir(\'' + c.k + '\')"><b>' + esc(c.l) + '</b>' + (ya ? '<span class="pill">ya incluido</span>' : '') + '<small>' + eur(finalDe(precioBase(c, e.tipo), S.ajustes)) + '/' + c.u + '</small></button>'; };
+  $('#catlist').innerHTML = listaCatHtml(e, CAT.filter(c => c.t.includes(e.tipo) && filtra(c)), CAT.filter(c => !c.t.includes(e.tipo) && filtra(c)), item);
+}
+function anadir(k) { const e = est(UI.anadirEst); if (!editable()) { cerrarSheet(); mut(() => {}); return; } const t = nuevoTrabajo(k, e, 'visita'); e.trabajos.push(t); e.revisada = false; UI.openW = t.id; cerrarSheet(); guardar(); render(); toast('Añadido: ' + t.l); setTimeout(() => { const el = document.getElementById('w-' + t.id); if (el) el.scrollIntoView({ block:'center' }); }, 30); }
+function anadirCustom() {
+  const l = $('#cu-l').value.trim(); const c = num($('#cu-c').value), p = num($('#cu-p').value);
+  if (!l) { toast('Escribe la descripción del trabajo'); return; } if (!(c > 0)) { toast('Indica una cantidad mayor que 0'); return; }
+  const e = est(UI.anadirEst); const t = { id:uid('t'), k:'custom', l, u:$('#cu-u').value, b:'fijo', cant:r2(c), precio:r2(p), origen:'visita', confirmado:false, quitado:false, manual:true, nota:'', base:null };
+  e.trabajos.push(t); e.revisada = false; cerrarSheet(); guardar(); render(); toast('Añadido: ' + l);
+}
+
+// ── Estancias nuevas ──
+let _ne = { tipo:'habitacion' };
+function abrirNuevaEst() { _ne = { tipo:'habitacion' }; sheetNuevaEst(); }
+function sheetNuevaEst() {
+  sheet('<div class="row" style="margin-bottom:8px"><h3 class="sp" style="margin:0">Añadir estancia</h3><button class="btn" onclick="cerrarSheet()">Cerrar</button></div><div class="lbl">Tipo</div><div>' + Object.entries(TIPOS).map(([k, v]) => '<button class="chip" style="' + (_ne.tipo === k ? 'border-color:var(--accent);background:#fff1e3;font-weight:600' : '') + '" onclick="_ne.tipo=\'' + k + '\';sheetNuevaEst()">' + v.i + ' ' + v.n + '</button>').join('') + '</div>' +
+    '<label class="field"><span>Nombre</span><input type="text" id="ne-n" value="' + esc(TIPOS[_ne.tipo].n) + '"></label><label class="field"><span>Superficie (m²)</span><input id="ne-m" inputmode="decimal" value="8"></label><label class="check" style="display:flex;gap:10px;align-items:center;min-height:48px"><input type="checkbox" id="ne-p" checked style="width:26px;height:26px"> Precargar los trabajos habituales</label><button class="btn pri blk" style="margin-top:8px" onclick="crearEst()">Crear estancia</button>');
+}
+function crearEst() {
+  const n = $('#ne-n').value.trim() || TIPOS[_ne.tipo].n; const m = Math.max(1, num($('#ne-m').value) || 8); const pre = $('#ne-p').checked;
+  const e = estanciaDesde(_ne.tipo, n, m, pre ? (PEDIDO_CLIENTE[_ne.tipo] || []) : [], 'visita'); e.trabajos.forEach(t => { t.origen = 'visita'; t.base = null; });
+  if (_ne.volver === 'tabique' && typeof _tb !== 'undefined' && _tb) { mut(() => { S.est.push(e); }); _tb.contigua = e.id; _ne.volver = null; sheetTabique(); return; }
+  mut(() => { S.est.push(e); S.ui.room = e.id; S.ui.view = 'room'; }); cerrarSheet();
+}
+function delEst(eid) {
+  const e = est(eid); sheet('<h3>Eliminar «' + esc(e.nombre) + '»</h3><p class="muted" style="margin-bottom:12px">Se perderán sus trabajos, comentarios y fotos.</p><div class="row"><button class="btn sp" onclick="cerrarSheet()">Cancelar</button><button class="btn dng sp" onclick="delEstOk(\'' + eid + '\')">Eliminar</button></div>');
+}
+function delEstOk(eid) { cerrarSheet(); mut(() => { S.est = S.est.filter(e => e.id !== eid); S.ui.room = S.est[0].id; S.ui.view = 'hub'; }); }
+
+// ── Comentarios ──
+function comAdd(eid, txt) { txt = String(txt || '').trim(); if (!txt) { toast('Escribe un comentario'); return; } mut(() => { est(eid).comentarios.push({ id:uid('c'), t:txt, f:Date.now() }); }); }
+function comAddTxt(eid) { const ta = $('#com-' + eid); comAdd(eid, ta.value); }
+function comDel(eid, cid) { mut(() => { const e = est(eid); e.comentarios = e.comentarios.filter(c => c.id !== cid); }); }
+
+// ── Fotos ──
+function comprimir(file) {
+  return new Promise((res, rej) => {
+    const url = URL.createObjectURL(file); const img = new Image();
+    img.onload = () => { const M = 1100; let w = img.naturalWidth, h = img.naturalHeight; const k = Math.min(1, M / Math.max(w, h)); w = Math.round(w * k); h = Math.round(h * k);
+      const c = document.createElement('canvas'); c.width = w; c.height = h; c.getContext('2d').drawImage(img, 0, 0, w, h); URL.revokeObjectURL(url); res(c.toDataURL('image/jpeg', 0.65)); };
+    img.onerror = () => { URL.revokeObjectURL(url); rej(new Error('imagen no válida')); }; img.src = url;
+  });
+}
+async function fotosAdd(eid, input) {
+  const files = [...input.files]; input.value = ''; if (!files.length) return;
+  if (!editable()) { mut(() => {}); return; }
+  const e = est(eid); let n = 0;
+  for (const f of files) { try { const url = await comprimir(f); e.fotos.push(Object.assign({ id:uid('f'), cap:'', f:Date.now() }, guardarFoto(url, { casoId:S.casoId, nombre:f.name || 'foto-visita.jpg' }))); n++; } catch (err) { toast('No se pudo añadir una de las fotos'); } }
+  if (n) { guardarYa(); render(); toast(n + ' foto' + (n > 1 ? 's' : '') + ' añadida' + (n > 1 ? 's' : '') + ' a ' + e.nombre); }
+}
+let _vf = null;
+function verFoto(eid, fid) {
+  const e = est(eid), f = e.fotos.find(x => x.id === fid); _vf = { eid, fid };
+  $('#viewer').innerHTML = '<img src="' + fsrc(f) + '" alt="Foto de ' + esc(e.nombre) + '"><div class="vb"><input type="text" id="vcap" aria-label="Pie de foto" placeholder="Pie de foto (ej.: humedad en techo)" value="' + esc(f.cap) + '" ' + (editable() ? '' : 'disabled') + ' onchange="capFoto(this.value)">' + (editable() ? '<button class="btn dng" onclick="delFoto()">🗑</button>' : '') + '<button class="btn" onclick="cerrarVisor()">Cerrar</button></div>';
+  $('#viewer').classList.add('on');
+}
+function cerrarVisor() { $('#viewer').classList.remove('on'); $('#viewer').innerHTML = ''; render(); }
+function capFoto(v) { const f = est(_vf.eid).fotos.find(x => x.id === _vf.fid); f.cap = v.trim(); guardar(); }
+function delFoto() { const e = est(_vf.eid); e.fotos = e.fotos.filter(x => x.id !== _vf.fid); guardar(); cerrarVisor(); toast('Foto eliminada'); }
+
+// ═══════════════════════════════════════════════════════
+// 9. ENVÍO, BORRADOR Y VERSIONES
+// ═══════════════════════════════════════════════════════
+function abrirEnvio() {
+  if (!editable()) return;
+  const pend = pendientes(S);
+  if (pend.length && !UI.sinEnviar) {
+    sheet('<h3>Faltan estancias por revisar</h3><p class="muted" style="margin-bottom:10px">' + pend.map(e => esc(e.nombre)).join(', ') + '.</p><div style="display:grid;gap:10px"><button class="btn pri blk" onclick="cerrarSheet();ir(\'room\',\'' + pend[0].id + '\')">Revisar «' + esc(pend[0].nombre) + '»</button><button class="btn blk" onclick="UI.sinEnviar=true;abrirEnvio()">Enviar igualmente</button><button class="btn blk" onclick="cerrarSheet()">Cancelar</button></div>');
+    return;
+  }
+  UI.sinEnviar = false;
+  sheet('<div class="row" style="margin-bottom:8px"><h3 class="sp" style="margin:0">Enviar ' + S.v3.id + ' al cliente</h3><button class="btn" onclick="cerrarSheet()">Cerrar</button></div><div class="info">Prototipo sin conexión: el mensaje se prepara para enviarlo tú (WhatsApp o copiar). Nada se envía automáticamente.</div>' + sinMedirAviso() +
+    '<label class="field"><span>Mensaje (editable)</span><textarea id="msg" class="msgbox">' + esc(mensajeCliente(S)) + '</textarea></label>' +
+    '<div style="display:grid;gap:10px"><button class="btn pri blk" onclick="enviarWA()">💬 Abrir WhatsApp con el mensaje</button><div class="row"><button class="btn sp" onclick="copiarMsg()">📋 Copiar mensaje</button><button class="btn sp" onclick="correoSim()">✉ Simular correo</button></div>' +
+    '<button class="btn ok blk" onclick="confirmarEnvio()">✓ Ya lo he enviado: marcar ' + S.v3.id + ' como enviada</button><button class="btn blk" onclick="cerrarSheet();guardarYSalir()">Mejor lo guardo y lo envío desde casa</button></div>');
+}
+function sinMedirAviso() { const sm = S.est.filter(e => !(e.med && e.med.activa)); return sm.length ? '<div class="warn">Aviso: ' + sm.length + ' estancia(s) sin medir (' + sm.map(e => esc(e.nombre)).join(', ') + '). Puedes enviar igualmente.</div>' : ''; }
+function enviarWA() { const tel = S.caso.cliente.tel.replace(/\D/g, ''); window.open('https://wa.me/34' + tel + '?text=' + encodeURIComponent($('#msg').value), '_blank', 'noopener'); S.v3.canalIntento = 'WhatsApp'; }
+function copiarMsg() {
+  const t = $('#msg').value; const ok = () => toast('Mensaje copiado');
+  if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(t).then(ok, () => { $('#msg').select(); document.execCommand('copy'); ok(); });
+  else { $('#msg').select(); document.execCommand('copy'); ok(); }
+}
+function correoSim() { S.v3.canalIntento = 'Correo'; toast('Correo simulado: se enviaría a ' + S.caso.cliente.email); }
+function crearNueva() {
+  const id = nextId(); S.v3 = { id, estado:'borrador', pendienteEnvio:false, guardadaAt:null, enviadaAt:null, canal:null };
+  S.v2 = { id:S.hist.length ? S.hist[S.hist.length - 1].id : S.v2.id, total:S.hist.length ? S.hist[S.hist.length - 1].total : S.v2.total, fecha:Date.now() };
+  S.est.forEach(e => { e.revisada = false; e.trabajos.forEach(t => { t.confirmado = false; if (!t.quitado) t.base = { cant:t.cant, precio:t.precio }; t.origen = t.origen === 'visita' && !t.quitado ? 'cliente' : t.origen; }); e.trabajos = e.trabajos.filter(t => !t.quitado); });
+  S.ui.view = 'hub'; guardarYa(); render(); toast('Nueva versión ' + id + ' en borrador (compara con la ' + S.v2.id + ' enviada)');
+}
+
+// ═══════════════════════════════════════════════════════
+// 10. AJUSTES Y REINICIO
+// ═══════════════════════════════════════════════════════
+function abrirAjustes() {
+  const bytes = (localStorage.getItem(LS_KEY) || '').length; const ro = !editable();
+  sheet('<div class="row" style="margin-bottom:8px"><h3 class="sp" style="margin:0">Ajustes</h3><button class="btn" onclick="cerrarSheet()">Cerrar</button></div>' +
+    '<label class="field"><span>Cliente</span><input type="text" id="aj-n" value="' + esc(S.caso.cliente.nombre) + '"></label><label class="field"><span>Teléfono (WhatsApp)</span><input type="tel" id="aj-t" value="' + esc(S.caso.cliente.tel) + '"></label><label class="field"><span>Dirección de la vivienda</span><input type="text" id="aj-d" value="' + esc(S.caso.direccion) + '"></label>' +
+    '<div class="grid2"><label class="field"><span>Margen (%)</span><input id="aj-m" inputmode="decimal" value="' + S.ajustes.margen + '" ' + (ro ? 'disabled' : '') + '></label><label class="field"><span>IVA (%)</span><input id="aj-i" inputmode="decimal" value="' + S.ajustes.iva + '" ' + (ro ? 'disabled' : '') + '></label></div>' +
+    '<p class="muted" style="margin-bottom:10px">Cambiar margen o IVA recalcula la ' + S.v3.id + '. La ' + S.v2.id + ' queda con el importe que vio el cliente.</p><button class="btn pri blk" onclick="guardarAjustes()">Guardar ajustes</button><p class="muted" style="margin-top:10px">Espacio usado en este dispositivo: ' + Math.round(bytes / 1024) + ' KB (límite aprox. 5.000 KB).</p>');
+}
+function guardarAjustes() {
+  S.caso.cliente.nombre = $('#aj-n').value.trim() || S.caso.cliente.nombre; S.caso.cliente.tel = $('#aj-t').value.trim() || S.caso.cliente.tel; S.caso.direccion = $('#aj-d').value.trim() || S.caso.direccion;
+  if (editable()) { S.ajustes.margen = Math.min(100, Math.max(0, num($('#aj-m').value))); S.ajustes.iva = Math.min(100, Math.max(0, num($('#aj-i').value))); }
+  cerrarSheet(); guardarYa(); render(); toast('Ajustes guardados');
+}
+function confirmarReset() { sheet('<h3>Restablecer el ejemplo</h3><p class="muted" style="margin-bottom:12px">Se borrarán tus cambios, comentarios y fotos y volverá la reforma de ejemplo.</p><div class="row"><button class="btn sp" onclick="cerrarSheet()">Cancelar</button><button class="btn dng sp" onclick="resetOk()">Restablecer</button></div>'); }
+function resetOk() { try { localStorage.removeItem(LS_KEY); } catch (e) {} S = semilla(); savedAt = null; UI.openW = null; cerrarSheet(); render(); toast('Ejemplo restablecido'); }
+
+// ═══════════════════════════════════════════════════════
+// 11. PRUEBAS INTERNAS  (consola: __tests())
+// ═══════════════════════════════════════════════════════
+window.__tests = function () {
+  let ok = 0, tot = 0; const fails = []; const a = (d, c) => { tot++; if (c) ok++; else { fails.push(d); console.error('✗ ' + d); } };
+  const T = semilla(); const aj = T.ajustes;
+  a('cantidad por m²', qtyBase('m2', 12) === 12); a('cantidad de pared ≈ 4√m²×2,4', qtyBase('pared', 16) === 38.4);
+  a('cantidad de rodapié ≈ 4√m²×0,9', qtyBase('ml', 16) === 14.4); a('muebles de cocina mínimo 3 ml', qtyBase('mlm', 2) === 3 && qtyBase('mlm', 12) === 6); a('ud/fijo = 1', qtyBase('ud', 50) === 1 && qtyBase('fijo', 50) === 1);
+  a('precio de electricidad depende de la estancia', precioBase(CATK.electricidad, 'cocina') === 980 && precioBase(CATK.electricidad, 'habitacion') === 420);
+  a('caso de ejemplo: 8 estancias (reforma integral estándar)', T.est.length === 8 && T.est.filter(e => e.tipo === 'bano').length === 2 && T.est.filter(e => e.tipo === 'habitacion').length === 3);
+  const tt = totalesDe(T.est, aj);
+  a('total = (subtotal + margen) × IVA', tt.base === r2(tt.subtotal + tt.margen) && tt.total === r2(tt.base + tt.iva) && tt.iva === r2(tt.base * 0.21));
+  a('V2 del ejemplo coincide con el cálculo', T.v2.total === tt.total && tt.total > 20000 && tt.total < 60000);
+  a('sin cambios: el diff está vacío', (() => { const d = diffV3(T); return !d.anadidos.length && !d.quitados.length && !d.modificados.length; })());
+  const sal = T.est.find(e => e.tipo === 'salon'); const ft = sal.trabajos.find(t => t.k === 'falso_techo'); const t0 = totalesDe(T.est, aj).total;
+  ft.quitado = true; const t1 = totalesDe(T.est, aj).total;
+  a('quitar un trabajo baja el total y aparece en «quitados»', t1 < t0 && diffV3(T).quitados.length === 1);
+  ft.quitado = false; const nt = nuevoTrabajo('humedades', sal, 'visita'); sal.trabajos.push(nt);
+  a('añadir un trabajo sube el total y aparece en «añadidos»', totalesDe(T.est, aj).total > t0 && diffV3(T).anadidos.length === 1);
+  a('un trabajo añadido en visita no tiene base del cliente', nt.base === null && nt.origen === 'visita');
+  const tar = sal.trabajos.find(t => t.k === 'tarima'); tar.cant += 2;
+  a('editar una cantidad se detecta como «modificado»', diffV3(T).modificados.some(x => x.t.id === tar.id));
+  const total1 = totalesDe(T.est, aj).total; sal.trabajos.pop(); tar.cant -= 2;
+  a('al deshacer los cambios vuelve el total de la V2', totalesDe(T.est, aj).total === T.v2.total && total1 > T.v2.total);
+  const hab = T.est.find(e => e.tipo === 'habitacion'); const tarH = hab.trabajos.find(t => t.k === 'tarima'); const pH = hab.trabajos.find(t => t.k === 'pint_pared');
+  pH.manual = true; pH.cant = 99; hab.m2 = 20; recalcM2(hab);
+  a('al cambiar los m² se recalculan las partidas por m² no editadas', tarH.cant === 20 && pH.cant === 99);
+  a('subtotal de estancia = suma de sus trabajos vivos', subEst(hab) === r2(hab.trabajos.reduce((s, t) => s + subLinea(t), 0)));
+  hab.revisada = true; a('progreso cuenta las estancias revisadas', progreso(T).revisadas === 1 && progreso(T).total === 8);
+  a('estado de la estancia: revisada / en curso / pendiente', estadoEst(hab) === 'revisada' && estadoEst(T.est[0]) === 'pendiente' && (T.est[0].trabajos[0].confirmado = true) && estadoEst(T.est[0]) === 'curso');
+  a('pendientes = no revisadas', pendientes(T).length === 7);
+  a('mensaje al cliente incluye total, V2 y cambios', (() => { const m = mensajeCliente(T); return m.includes('V3') && m.includes('V2') && /Cambios tras la visita/.test(m) && m.includes('[enlace'); })());
+  a('finalDe aplica margen e IVA', finalDe(100, { margen:22, iva:21 }) === 147.62);
+  a('formato de euros con miles', eur(1234.5) === '1.234,50 €' && eur0(12500) === '12.500 €');
+  a('guardado: el estado sobrevive a JSON', (() => { const c = JSON.parse(JSON.stringify(T)); return totalesDe(c.est, c.ajustes).total === totalesDe(T.est, aj).total; })());
+  a('el catálogo tiene trabajos para cada tipo habitual', ['salon', 'cocina', 'bano', 'habitacion', 'pasillo'].every(t => CAT.some(c => c.t.includes(t))));
+
+  // ── V2 · R-16 a R-25 (apéndice A) ──
+  a('R-19 A.1 ancho × largo = 2,40 × 1,60 = 3,84 m²; aviso si difiere más del 15 % de la estimación', superficie(2.4, 1.6) === 3.84 && superficie(0, 3) === 0 && difPct(3.84, 6) === -36 && Math.abs(difPct(6.5, 6)) < 15 && Math.abs(difPct(7, 6)) > 15);
+  const dA = { ancho: 1.6, largo: 2.4, alto: 2.5, huecos: [{ ancho: 0.8, alto: 2 }] };
+  const PA = calcularParedes(Object.assign({}, dA, { reparto: { modo: 'altura', hAlic: 1.5, Lt: 0 } })), PB = calcularParedes(Object.assign({}, dA, { reparto: { modo: 'altura', hAlic: 1.2, Lt: 1.6 } }));
+  a('R-20 A.2 caso A: netas 18,40 · alicatado 11,04 m² (60 %) · pintura 7,36 m² (40 %)', PA.perimetro === 8 && PA.brutas === 20 && PA.huecos === 1.6 && PA.netas === 18.4 && PA.alic === 11.04 && PA.pint === 7.36 && PA.pctAlic === 60 && PA.pctPint === 40);
+  a('R-20 A.2 caso B (altura 1,20 y 1,60 ml hasta el techo): alicatado 10,75 · pintura 7,65 (suman 18,40)', PB.alic === 10.75 && PB.pint === 7.65 && Math.abs(PB.alic + PB.pint - 18.4) < 0.011);
+  a('R-20 reparto por %: 60 % = caso A; un solo acabado usa el 100 % de las netas; los huecos se descuentan', calcularParedes(Object.assign({}, dA, { reparto: { modo: 'pct', pct: 60 } })).alic === 11.04 && calcularParedes(Object.assign({}, dA, { acabados: { alic: true, pint: false } })).alic === 18.4 && calcularParedes({ ancho: 2, largo: 2, alto: 2, huecos: [{ ancho: 9, alto: 9 }] }).netas === 0);
+  const mkE = (m2, tr) => ({ id: 'ex', tipo: 'bano', nombre: 'Baño', m2, m2Est: m2, med: null, revisada: false, comentarios: [], fotos: [], trabajos: tr.map((t, i) => Object.assign({ id: 'x' + i, k: t[0], key: t[0], l: t[0], u: t[2] || 'm²', b: 'fijo', bk: t[1], tl: 'mo', cant: 5, precio: 10, origen: 'cliente', confirmado: false, quitado: false, manual: false, nota: '', base: { cant: 5, precio: 10 } }, t[3] || {})) });
+  { const e = mkE(6, [['suelo', 'm2_suelo'], ['alic', 'm2_pared_alicatado'], ['pint', 'm2_pared_pintura'], ['techo', 'm2_techo'], ['rod', 'ml_rodapie', 'ml'], ['paredes', 'm2_pared'], ['luz', 'ud', 'ud'], ['manual', 'm2_suelo', 'm²', { manual: true, cant: 99 }]]);
+    const ant = e.m2; e.med = { ancho: 1.6, largo: 2.4, alto: 2.5, huecos: [{ tipo: 'puerta', ancho: 0.8, alto: 2 }], reparto: { modo: 'altura', hAlic: 1.5, Lt: 0 }, activa: true }; e.m2 = superficie(1.6, 2.4); recalcM2(e, ant); const g = k => e.trabajos.find(t => t.k === k).cant;
+    a('R-19/R-20 al medir se recalculan las partidas por base (suelo, techo, alicatado, pintura, rodapié, paredes netas)', g('suelo') === 3.84 && g('techo') === 3.84 && g('alic') === 11.04 && g('pint') === 7.36 && g('paredes') === 18.4 && g('rod') === 7.2);
+    a('R-19 las partidas editadas a mano y las de base «ud» no se tocan', g('manual') === 99 && g('luz') === 5);
+    const e2 = mkE(9, [['pint', 'm2_pared_pintura'], ['suelo', 'm2_suelo']]); const a2 = e2.m2; e2.m2 = 16; recalcM2(e2, a2);
+    a('R-19 sin ancho × largo medidos, al cambiar los m² las paredes escalan con √(m²) y el suelo sigue los m²', e2.trabajos[1].cant === 16 && e2.trabajos[0].cant === r2(5 * Math.sqrt(16 / 9))); }
+  // R-17 · describirTrabajo (todos los trabajos con subconfiguración)
+  const D = (k, det, t) => describirTrabajo(k, det, t || 'bano').map(x => x.join(': ')).join(' | ');
+  a('R-17 renovación eléctrica: puntos de luz, enchufes y demás (cantUd)', /Puntos de luz, enchufes y mecanismos: 5 puntos/.test(D('renovar_electricidad', { cantUd: 5 })) && /Puntos de luz y enchufes: 6 puntos/.test(D('puntos_de_luz', { cantUd: 6 })));
+  a('R-17 redistribución de tabiques: acción, material, longitud y número de tabiques', (() => { const t = D('redistribucion_tabiques', { cantUd: 2, tabiquesConfig: [{ accion: 'demoler_levantar', material: 'pladur', ml: 3 }, { accion: 'tirar', material: 'ladrillo' }] }); return /Tabiques: 2 ud/.test(t) && /Tabique 1: Derribar y levantar · Pladur · 3 ml/.test(t) && /Tabique 2: Derribar$/.test(t); })());
+  a('R-17 ventanas: número, tipo (apertura) y vidrio', /Ventanas: 1 ud/.test(D('cambiar_ventana', { cantUd: 1, ventanasConfig: [{ apertura: 'corredera', material: 'pvc', vidrio: 'doble', ancho: 1.8 }] })) && /Corredera · pvc · vidrio doble · 1,8 m/.test(D('cambiar_ventana', { ventanasConfig: [{ apertura: 'corredera', material: 'pvc', vidrio: 'doble', ancho: 1.8 }] })));
+  a('R-17 demolición (estado y estados), pintura con o sin muebles, planta y obra completa', /Estado de la estancia: Con muebles/.test(D('demolicion_completa', { demolicionEstado: 'con_muebles' })) && /Vacía \/ sin muebles \+ Vivienda habitada/.test(D('demolicion_completa', { demolicionEstados: ['vacio', 'habitada'] })) && /Con muebles en la estancia/.test(D('pintar_paredes', { pinturaConMuebles: true })) && /Estancia vacía/.test(D('pintar_paredes', { pinturaConMuebles: false })) && /Planta: Planta baja/.test(D('x', { plantaEspacio: 'baja' })) && /Obra completa: Sí/.test(D('x', { obraCompleta: true })));
+  a('R-17 calefacción, aire acondicionado, ventilación y cocina (muebles y encimera en metros)', /Radiadores: 2 ud/.test(D('radiadores', { cantUd: 2 })) && /split: 1 ud/.test(D('ac_split', { cantUd: 1 })) && /Extractores: 1 ud/.test(D('extractor_ventilacion', { cantUd: 1 })) && /Muebles de cocina \(longitud\): 4,5 ml/.test(D('instalar_muebles', { mlOvr: 4.5 })) && /Encimera \(longitud\): 3 ml/.test(D('encimera', { mlOvr: 3 })) && /Zonas de suelo radiante/.test(D('suelo_radiante', { cantUd: 2 })));
+  a('R-17 notas del cliente y trabajo sin subconfiguración (lista vacía); cantidad verificable', D('x', { notas: 'Baño pequeño' }) === 'Notas del cliente: Baño pequeño' && describirTrabajo('instalar_ducha', {}, 'bano').length === 0 && cantidadPedida({ cantUd: 5 }).valor === 5 && cantidadPedida({ mlOvr: 4.5 }).campo === 'mlOvr' && cantidadPedida({}) === null);
+  // R-18 · tabiques
+  { const t1 = crearTabique({ espacioId: 'a', contiguaId: 'b', longitud: 3, alto: 2.5, accion: 'demoler_levantar', trabajoId: 'T' }), t2 = crearTabique({ espacioId: 'a', longitud: 2, alto: 2.5, trabajoId: 'T' });
+    a('R-18 tabique: longitud × altura = m², estancia contigua y acción; su línea usa los m² medidos (los no medidos cuentan 7,5 m²)', t1.m2 === 7.5 && t1.contiguaId === 'b' && cantidadTabiques([t1], 'T', 1).m2 === 7.5 && cantidadTabiques([t1, t2], 'T', 3).m2 === r2(7.5 + 5 + 7.5) && cantidadTabiques([], 'T', 2).sinMedir === 2); }
+  // R-16 · versiones
+  { const v1 = [{ esp: 'e1', k: 'a', l: 'A', cant: 1, precio: 10 }, { esp: 'e1', k: 'b', l: 'B', cant: 2, precio: 5 }], v2 = [{ esp: 'e1', k: 'a', l: 'A', cant: 3, precio: 10 }, { esp: 'e1', k: 'c', l: 'C', cant: 1, precio: 7 }]; const d = diffLineas(v1, v2);
+    a('R-16 «ver cambios respecto a la anterior»: añadidas, quitadas y cambiadas entre dos versiones', d.anadidas.length === 1 && d.anadidas[0].k === 'c' && d.quitadas.length === 1 && d.quitadas[0].k === 'b' && d.cambiadas.length === 1 && d.cambiadas[0].de.cant === 1 && d.cambiadas[0].a.cant === 3 && etiquetaTramo({ rango: { lo: 9500, hi: 10500 }, total: 10000 }) === 'entre 9.500 € y 10.500 €' && etiquetaTramo({ total: 10000 }) === '10.000,00 €'); }
+  // R-22 · desglose
+  { const T2 = semilla(); const arbol = desgloseArbol(T2.est, T2.ajustes); const tot = totalesDe(T2.est, T2.ajustes).total;
+    a('R-22 desglose: estancia → trabajo → partidas con subtotal en cada nivel; la suma de estancias es el total con IVA', arbol.length === 8 && arbol.every(e => e.trabajos.length > 0 && Math.abs(e.subtotal - r2(e.trabajos.reduce((x, t) => x + t.subtotal, 0))) < 0.011) && Math.abs(arbol.reduce((x, e) => x + e.subtotal, 0) - tot) < 1 && arbol[0].trabajos[0].partidas[0].precio > 0 && arbol.every(e => e.delta === 0));
+    T2.est[0].trabajos[0].cant += 1; a('R-22 la diferencia frente a la versión anterior aparece en el nivel que cambia', desgloseArbol(T2.est, T2.ajustes)[0].delta > 0 && desgloseArbol(T2.est, T2.ajustes)[1].delta === 0); }
+  // R-24 · ajustes de negociación
+  { const T3 = semilla(); const base = totalesDe(T3.est, T3.ajustes); const n1 = totalesDe(T3.est, T3.ajustes, { imprevistosPct: 5, descuentoModo: 'pct', descuento: 10 }); const n2 = totalesDe(T3.est, T3.ajustes, { descuentoModo: 'eur', descuento: 1000 }); const n3 = totalesDe(T3.est, T3.ajustes, { redondeo: 100 });
+    a('R-24 sin ajustes el total no cambia; con imprevistos y descuento % se recalcula (línea propia) y el beneficio se mide sobre el coste', totalesDe(T3.est, T3.ajustes, {}).total === base.total && n1.imprevistos === r2(r2(base.subtotal * 1.22) * 0.05) && n1.descuento === r2((r2(base.subtotal * 1.22) + n1.imprevistos) * 0.1) && n1.total < base.total && base.beneficio === base.margen && base.coste === base.subtotal && n1.beneficio === r2(n1.base - n1.coste));
+    a('R-24 descuento en €, redondeo del total (a 100 €) con su ajuste, y beneficio negativo detectable', n2.descuento === 1000 && n2.total < base.total && n3.total % 100 === 0 && Math.abs(n3.ajusteRedondeo) <= 50 && totalesDe(T3.est, T3.ajustes, { descuentoModo: 'eur', descuento: 1e9 }).beneficio < 0);
+    a('R-24 el plazo se calcula con los días de los hitos (semanas de 5 días, mínimo 1)', plazoCalculado([{ dias: 2 }, { dias: 3 }, { dias: 4 }]) === 2 && plazoCalculado([]) === 1 && plazoCalculado([{ dias: 5 }]) === 1); }
+  // R-23 · plan de cobros
+  { const plan = [{ id: 'p1', label: 'A', pct: 40, cuando: 'aceptacion' }, { id: 'p2', label: 'B', pct: 20, cuando: 'hito:Instalaciones' }, { id: 'p3', label: 'C', pct: 10, cuando: 'entrega' }]; const ip = importesPlan(plan, 10000);
+    a('R-23 el último tramo es siempre el resto (suma 100 %) y los importes suman el total', normalizarPlanL(plan)[2].pct === 40 && ip.map(t => t.importe).join('/') === '4000/2000/4000' && ip[2].resto && importesPlan(plan, 1000.01).reduce((x, t) => x + t.importe, 0) === 1000.01);
+    a('R-23 validación: intermedios ≤ 100 %, y un tramo no puede depender de un hito que ya no existe; reasignar al eliminar un hito', validarPlanL(plan, [{ nombre: 'Instalaciones' }]).ok && !validarPlanL(plan, [{ nombre: 'Otro' }]).ok && !validarPlanL([{ pct: 80, cuando: 'aceptacion' }, { pct: 40, cuando: 'aceptacion' }, { pct: 0, cuando: 'entrega' }], []).ok && planesParaReasignar(plan, 'Instalaciones').length === 1 && planesParaReasignar(plan, 'Otro').length === 0); }
+  // R-21 · reconciliar un borrador editado en el admin
+  { const E = mkE(6, [['a', 'm2_suelo'], ['b', 'm2_suelo'], ['c', 'm2_suelo', 'm²', { origen: 'visita' }]]); const Sx = { est: [E] }; E.trabajos[0].lineaId = 'LA';
+    mezclarAdminLineas(Sx, [{ id: 'LA', key: 'a', concepto: 'A editado', cantidad: 9, precio: 11, unidad: 'm²', base: 'm2_suelo', tipo: 'mo', bloqueada: true, espacioId: 'ex' }, { id: 'LN', key: 'n', concepto: 'Nueva del admin', cantidad: 1, precio: 50, unidad: 'ud', base: 'fijo', tipo: 'extra', espacioId: 'ex' }]);
+    a('R-21 al reabrir tras una edición en el admin: se actualizan las líneas existentes, se quitan las borradas y se añaden las nuevas', E.trabajos[0].cant === 9 && E.trabajos[0].precio === 11 && E.trabajos[0].l === 'A editado' && E.trabajos[0].manual === true && E.trabajos.find(t => t.k === 'b').quitado === true && !E.trabajos.some(t => t.k === 'c') && E.trabajos.some(t => t.l === 'Nueva del admin' && t.origen === 'visita')); }
+  a('Pantalla final: el estado del lite sobrevive a JSON (borrador, plan, tabiques y ajustes)', (() => { const T4 = normS(semilla()); T4.tabiques.push(crearTabique({ espacioId: 'a', longitud: 1, alto: 2 })); T4.neg.descuento = 5; const c = JSON.parse(JSON.stringify(T4)); return c.tabiques[0].m2 === 2 && c.neg.descuento === 5 && c.planCobros.length === 3 && c.hitosPlan.length === 4 && totalesDe(c.est, c.ajustes, c.neg).total === totalesDe(T4.est, T4.ajustes, T4.neg).total; })());
+  const msg = ok + '/' + tot + ' pruebas correctas'; console.log('%c' + msg + (fails.length ? ' · fallos: ' + fails.join(' | ') : ' ✓'), 'font-weight:bold'); return { ok, total:tot, fails };
+};
+
+// ═══════════════════════════════════════════════════════
+// 12. ARRANQUE
+// ═══════════════════════════════════════════════════════
+if (!est(S.ui.room)) S.ui.room = null;
+if (['hub', 'room'].includes(S.ui.view) && !S.ui.room) S.ui.room = S.est[0].id;
+</script>
+<script>
+// ═══════════════════════════════════════════════════════
+// V2 · B. ESTADO, SINCRONIZACIÓN CON EL ADMIN Y PANTALLAS DE LA VISITA
+// ═══════════════════════════════════════════════════════
+const UP = () => { try { return window.parent && window.parent !== window ? window.parent.Proto : null; } catch (e) { return null; } };
+const TOT = () => totalesDe(S.est, S.ajustes, S.neg);
+function normS(o) {
+  o.neg = Object.assign({}, NEG_DEF, o.neg || {}); o.tabiques = o.tabiques || []; o.versiones = o.versiones || []; o.estadoDatos = o.estadoDatos || null;
+  o.hitosPlan = o.hitosPlan || [{ id: 'h1', nombre: 'Demolición', dias: 2 }, { id: 'h2', nombre: 'Instalaciones', dias: 3 }, { id: 'h3', nombre: 'Albañilería', dias: 4 }, { id: 'h4', nombre: 'Remates y limpieza', dias: 2 }];
+  o.planCobros = o.planCobros || [{ id: 'p1', label: 'Al aceptar', pct: 30, cuando: 'aceptacion' }, { id: 'p2', label: 'En instalaciones', pct: 30, cuando: 'hito:Instalaciones' }, { id: 'p3', label: 'A la entrega', pct: 40, cuando: 'entrega' }];
+  o.cfgL = o.cfgL || { fotoObligatoriaHito: true };
+  o.ui = Object.assign({ view: 'home', room: null, modo: 'visita', obra: null, obraTab: 'hitos' }, o.ui || {});
+  o.est.forEach(e => { e.med = e.med || null; e.m2Est = e.m2Est != null ? e.m2Est : e.m2; e.trabajos.forEach(t => { if (t.ver === undefined) t.ver = null; }); });
+  return o;
+}
+S = normS(S);
+
+// ── Fotos: en el prototipo completo viven en Proto.adjuntos (solo se guardan sus ids); suelto, como imagen en línea ──
+const fsrc = f => f.src || (f.adj && UP() && UP().adjuntos.url(f.adj)) || '';
+function guardarFoto(dataUrl, meta) { const p = UP(); if (p) { try { return { adj: p.adjuntos.putSync(dataUrl, Object.assign({ origen: 'lite', nombre: 'foto-visita.jpg', tipo: 'image/jpeg', casoId: S.casoId || null }, meta || {})) }; } catch (e) {} } return { src: dataUrl }; }
+async function subirImagenes(files, meta) {
+  const ids = []; for (const f of files) { try { const p = UP(); if (p) ids.push(await p.adjuntos.put(f, Object.assign({ origen: 'lite', casoId: S.casoId || null }, meta || {}))); else ids.push(await comprimir(f)); } catch (e) { toast('No se pudo añadir una de las fotos'); } }
+  return ids;
+}
+
+// ── Sincronización del borrador con el admin (R-21) ──
+let syncT = null, ultimoHash = '', rechazoSync = false;
+const hashStr = s => { let h = 5381; for (let i = 0; i < s.length; i++) h = ((h << 5) + h + s.charCodeAt(i)) | 0; return h + ':' + s.length; };
+function pack() {
+  const t = TOT(); const plan = normalizarPlanL(S.planCobros);
+  S.est.forEach(e => e.fotos.forEach(f => { if (!f.adj && f.src && UP()) { try { f.adj = UP().adjuntos.putSync(f.src, { origen: 'lite', nombre: 'foto-visita.jpg', tipo: (/^data:([^;,]+)/.exec(f.src) || [])[1] || 'image/jpeg', casoId: S.casoId || null }); } catch (e2) {} } }));
+  const o = {
+    v3id: S.v3.id, canal: S.v3.canal, baseRev: S.borradorRev || 0, ajustes: { margen: S.ajustes.margen, iva: S.ajustes.iva }, neg: Object.assign({}, S.neg, { plazoSemanas: plazoActual() }), general: S.general, total: t.total, totales: t,
+    est: S.est.map(e => ({ id: e.id, tipo: e.tipo, tipoAdm: e.tipoAdm || ({ habitacion: 'hab', otro: 'salon' })[e.tipo] || e.tipo, nombre: e.nombre, m2: e.m2, revisada: e.revisada, med: e.med, comentarios: e.comentarios.map(c => c.t || c.texto || String(c)), nFotos: e.fotos.length, fotos: e.fotos.map(f => ({ adj: f.adj || null, cap: f.cap || '' })),
+      trabajos: e.trabajos.map(x => ({ id: x.id, k: x.k, key: x.key || x.k, l: x.l, u: x.u, bk: x.bk || null, tl: x.tl || 'mo', cant: x.cant, precio: x.precio, quitado: !!x.quitado, origen: x.origen, nota: x.nota || '', manual: !!x.manual, confirmado: !!x.confirmado, tab: x.tab || null })) })),
+    tabiques: S.tabiques.map(x => Object.assign({}, x)), hitosPlan: S.hitosPlan.map(h => ({ id: h.id, nombre: h.nombre, dias: h.dias, diasEstimados: h.dias })), planCobros: plan.map(t => ({ label: t.label, pct: t.pct, cuando: t.cuando }))
+  };
+  return o;
+}
+function snapshot() { const c = JSON.parse(JSON.stringify(S)); delete c.versiones; delete c.ui; delete c.hist; delete c.estadoDatos; return c; }
+function plazoActual() { return S.neg.plazoManual != null && S.neg.plazoManual !== '' ? Math.max(1, Math.round(Number(S.neg.plazoManual) || 1)) : plazoCalculado(S.hitosPlan); }
+function etiquetaSync() { return S.sync ? (S.sync.ok ? 'Sincronizado ' + hhmm(S.sync.at) : S.sync.conflicto ? 'Conflicto' : '') : ''; }
+function pintaSync() { const el = $('#sy'); if (el) el.textContent = etiquetaSync(); }
+function programarSync() {
+  const p = UP(); if (!p || !S.casoId || S.v3.estado !== 'borrador' || !S.sincro) return;
+  clearTimeout(syncT); syncT = setTimeout(() => { if (hashStr(JSON.stringify(pack())) !== ultimoHash) guardarBorrador(false); }, 2200);
+}
+function guardarBorrador(manual, forzar) {
+  const p = UP(); if (!p || !S.casoId) { if (manual) { guardarYa(); toast('Borrador guardado en este dispositivo (sin conexión con el admin)'); } return; }
+  clearTimeout(syncT); const d = pack(); d.snap = snapshot(); d.forzar = !!forzar; d.silencioso = true;
+  const rs = p.lite('borrador', d);
+  if (rs && rs.conflicto) { S.sync = { ok: false, conflicto: true, at: Date.now() }; pintaSync(); sheetConflicto(rs); return rs; }
+  if (rs && rs.ok) { S.borradorRev = rs.rev; ultimoHash = hashStr(JSON.stringify(pack())); S.sync = { ok: true, at: Date.now() }; S.v3.pendienteEnvio = true; pintaSync(); if (manual) { guardarYa(); toast('Borrador ' + S.v3.id + ' guardado y sincronizado con el admin'); render(); } else guardar(); }
+  return rs;
+}
+function sheetConflicto(rs) {
+  sheet('<h3>El admin ha modificado el borrador</h3><p class="muted" style="margin:8px 0 12px">El borrador ' + esc(S.v3.id) + ' se cambió desde el admin el <b>' + esc(String(rs.fecha || '').replace('T', ' ').slice(0, 16)) + '</b>. Si guardas ahora, tus cambios <b>sobrescriben</b> los suyos (prevalece la última modificación).</p>' +
+    '<div style="display:grid;gap:10px"><button class="btn pri blk" onclick="cerrarSheet();guardarBorrador(true,true)">Sobrescribir con lo que tengo aquí</button><button class="btn blk" onclick="cerrarSheet();recargarDelAdmin()">Cargar la versión del admin</button><button class="btn blk" onclick="cerrarSheet()">Decidir después</button></div>');
+}
+function recargarDelAdmin() { const p = UP(); if (p && S.casoId) p.reabrirEnLite(S.casoId); }
+const _guardar0 = guardar; guardar = function () { _guardar0(); programarSync(); };
+
+// ── R-25 · estado de los datos del cliente ──
+function recordarCliente(que) {
+  const p = UP(); const rs = p ? p.lite('recordar', { que }) : null;
+  if (rs && rs.ok) { toast('Recordatorio enviado al cliente (queda en su conversación)'); S.recordado = Object.assign(S.recordado || {}, { [que]: Date.now() }); guardar(); render(); }
+  else toast('Sin conexión con el admin: no se puede enviar el recordatorio');
+}
+function cardDatosCliente() {
+  const ed = S.estadoDatos; if (!ed) return '';
+  const fila = (t, o, que) => '<div class="kv"><span>' + t + '</span><span>' + (o.completos ? '<span class="pill ok">completos</span>' : '<span class="pill wip">pendientes' + (o.hechos != null ? ' · ' + o.hechos + '/' + o.total : '') + '</span>') + '</span></div>' + (!o.completos && o.faltan.length ? '<div class="muted" style="margin:2px 0 6px">Falta: ' + esc(o.faltan.join(', ')) + '</div>' : '') +
+    (!o.completos ? '<button class="btn blk" style="margin-bottom:6px" onclick="recordarCliente(\'' + que + '\')">✉ Recordar al cliente</button>' + (S.recordado && S.recordado[que] ? '<div class="muted" style="text-align:center">Recordado a las ' + hhmm(S.recordado[que]) + '</div>' : '') : '');
+  return '<div class="card" id="card-datos"><h3>Datos del cliente</h3><div class="muted" style="margin-bottom:6px">Los completa el cliente desde su panel; aquí solo ves el estado.</div>' + fila('Datos de la vivienda', ed.vivienda, 'vivienda') + fila('Datos de facturación', ed.fiscal, 'fiscal') + '</div>';
+}
+
+// ── R-16 · histórico de versiones ──
+function filaVersion(v) {
+  const prev = S.versiones[S.versiones.indexOf(v) - 1];
+  return '<div class="ver-row"><div class="sp"><b>' + esc(v.id) + '</b> <span class="pill ' + (v.estado === 'vigente' ? 'ok' : v.estado === 'borrador' ? 'wip' : '') + '">' + ({ vigente: 'vigente', sustituida: 'sustituida', aceptada: 'aceptada', borrador: 'borrador' }[v.estado] || v.estado) + '</span><div class="muted">' + esc(fecha(v.fecha)) + ' · ' + esc(v.autor) + (v.etiqueta ? ' · ' + esc(v.etiqueta) : '') + '</div></div>' +
+    '<div class="ver-imp"><b>' + esc(etiquetaTramo(v)) + '</b></div>' + (prev ? '<button class="btn" onclick="verCambios(\'' + esc(v.id) + '\')" aria-label="Ver cambios de ' + esc(v.id) + ' respecto a ' + esc(prev.id) + '">Ver cambios respecto a la anterior</button>' : '') + '</div>';
+}
+function cardVersiones() {
+  const t = TOT(); const enviada = S.v3.estado === 'enviada'; const ult = S.versiones[S.versiones.length - 1];
+  const borr = { id: S.v3.id, estado: enviada ? 'vigente' : 'borrador', fecha: enviada ? S.v3.enviadaAt : Date.now(), autor: 'Reformista (visita técnica)', total: t.total, rango: null, etiqueta: enviada ? 'enviada' : 'en edición' };
+  const lista = S.versiones.slice(); if (enviada || true) lista.push(borr);
+  return '<div class="card" id="card-versiones"><h3>Versiones</h3>' + lista.map(v => { const prev = lista[lista.indexOf(v) - 1]; return '<div class="ver-row"><div class="sp"><b>' + esc(v.id) + '</b> <span class="pill ' + (v.estado === 'vigente' || v.estado === 'aceptada' ? 'ok' : v.estado === 'borrador' ? 'wip' : '') + '">' + esc(v.estado) + '</span><div class="muted">' + esc(fecha(v.fecha)) + ' · ' + esc(v.autor) + (v.etiqueta ? ' · ' + esc(v.etiqueta) : '') + '</div></div><div class="ver-imp"><b>' + esc(etiquetaTramo(v)) + '</b></div>' + (prev ? '<button class="btn" onclick="verCambios(\'' + esc(v.id) + '\')" aria-label="Ver cambios de ' + esc(v.id) + ' respecto a ' + esc(prev.id) + '">Ver cambios respecto a la anterior</button>' : '') + '</div>'; }).join('') +
+    (ult ? '' : '<div class="muted">Sin versiones anteriores.</div>') + '</div>';
+}
+function lineasVersion(id) { if (id === S.v3.id) return lineasDeEst(S.est); const v = S.versiones.find(x => x.id === id); return v ? v.lineas : []; }
+function verCambios(id) {
+  const ids = S.versiones.map(v => v.id).concat([S.v3.id]); const i = ids.indexOf(id); if (i < 1) return; const ant = ids[i - 1];
+  const d = diffLineas(lineasVersion(ant), lineasVersion(id)); const hay = d.anadidas.length + d.quitadas.length + d.cambiadas.length;
+  sheet('<div class="row" style="margin-bottom:8px"><h3 class="sp" style="margin:0">' + esc(id) + ' respecto a ' + esc(ant) + '</h3><button class="btn" onclick="cerrarSheet()">Cerrar</button></div>' +
+    (hay ? d.anadidas.map(x => '<div class="diff"><i class="a">＋</i><span>' + esc(nombreEst(x.esp)) + ' · ' + esc(x.l) + ' <span class="muted">(' + fmtNum(x.cant) + ' ' + esc(x.u) + ')</span></span></div>').join('') + d.quitadas.map(x => '<div class="diff"><i class="q">−</i><span>' + esc(nombreEst(x.esp)) + ' · ' + esc(x.l) + '</span></div>').join('') + d.cambiadas.map(x => '<div class="diff"><i class="m">~</i><span>' + esc(nombreEst(x.a.esp)) + ' · ' + esc(x.a.l) + ' <span class="muted">' + fmtNum(x.de.cant) + '→' + fmtNum(x.a.cant) + ' ' + esc(x.a.u) + (x.de.precio !== x.a.precio ? ' · ' + fmtNum(x.de.precio) + '→' + fmtNum(x.a.precio) + ' €/' + esc(x.a.u) : '') + '</span></span></div>').join('') : '<div class="muted">Sin diferencias de líneas.</div>'));
+}
+function nombreEst(id) { const e = S.est.find(x => x.id === id); return e ? e.nombre : 'General'; }
+
+// ── Selector de modo y pantalla de inicio (R-26) ──
+function selectorModo() {
+  const n = (UP() ? UP().obrasLite().length : 0);
+  return '<div class="modos" role="tablist" aria-label="Modo del panel"><button class="modo ' + (S.ui.modo === 'visita' ? 'on' : '') + '" role="tab" aria-selected="' + (S.ui.modo === 'visita') + '" id="modo-visita" onclick="cambiarModo(\'visita\')"><span>🔍</span>Visita técnica</button>' +
+    '<button class="modo ' + (S.ui.modo === 'obra' ? 'on' : '') + '" role="tab" aria-selected="' + (S.ui.modo === 'obra') + '" id="modo-obra" onclick="cambiarModo(\'obra\')"><span>🏗</span>Obra' + (n ? ' <em>' + n + '</em>' : '') + '</button></div>';
+}
+function cambiarModo(m) { S.ui.modo = m; S.ui.view = 'home'; guardar(); render(); }
+function vHome() {
+  if (S.ui.modo === 'obra') return selectorModo() + vObraLista();
+  const t = TOT(); const p = progreso(S); const enviada = !editable(); const d = r2(t.total - S.v2.total); const cr = S.ui.room && est(S.ui.room);
+  const estadoPill = enviada ? '<span class="pill env">' + S.v3.id + ' enviada · ' + fecha(S.v3.enviadaAt) + '</span>' : S.v3.pendienteEnvio ? '<span class="pill wip">Borrador pendiente de enviar</span>' : p.revisadas || p.confirmados ? '<span class="pill wip">En curso</span>' : '<span class="pill">Sin empezar</span>';
+  return selectorModo() + '<div class="hero"><h1>Panel Lite</h1><p>Revisa el presupuesto del cliente estancia por estancia durante la visita técnica.</p></div>' +
+    '<div class="card"><div class="row"><div class="sp"><div class="lbl">' + esc(S.caso.ref) + '</div><h3 style="margin:0">' + esc(S.caso.cliente.nombre) + '</h3><div class="muted">' + esc(S.caso.direccion) + '</div><div class="muted">' + esc(S.caso.tipo) + '</div></div>' + estadoPill + '</div>' +
+    '<div style="margin:12px 0"><div class="kv"><span>' + esc(S.v2.id) + ' · ' + etqBase() + '</span><b>' + eur(S.v2.total) + '</b></div><div class="kv"><span>' + esc(S.v3.id) + ' · ' + (enviada ? 'enviada' : 'tu revisión') + '</span><b>' + eur(t.total) + '</b></div>' +
+    '<div class="kv"><span>Diferencia</span><b class="' + (d > 0 ? 'dlt-up' : 'dlt-dn') + '">' + (d >= 0 ? '+' : '−') + eur(Math.abs(d)) + '</b></div></div>' +
+    '<div class="row" style="margin-bottom:6px"><span class="muted sp">' + p.revisadas + ' de ' + p.total + ' estancias revisadas</span><span class="muted">' + p.confirmados + '/' + p.trabajos + ' trabajos</span></div><div class="progress"><i style="width:' + p.pct + '%"></i></div>' +
+    '<div style="margin-top:14px;display:grid;gap:10px">' +
+      (enviada ? '<button class="btn pri blk" onclick="ir(\'sent\')">Ver ' + esc(S.v3.id) + ' enviada</button><button class="btn blk" onclick="crearNueva()">Crear nueva versión para editar</button>'
+      : '<button class="btn pri blk" onclick="ir(\'' + (cr && (p.revisadas || p.confirmados) ? 'room\',\'' + cr.id : 'hub') + '\')">' + (p.revisadas || p.confirmados ? 'Continuar la revisión' + (cr ? ' · ' + esc(cr.nombre) : '') : 'Empezar la revisión') + '</button>' +
+        (S.v3.pendienteEnvio ? '<button class="btn ok blk" onclick="ir(\'send\')">Revisar y enviar al cliente</button>' : '')) + '</div></div>' +
+    cardVersiones() + cardDatosCliente() +
+    '<div class="info">' + (UP() ? 'Conectado con el admin: el borrador se guarda solo y aparece en la ficha del caso (pestaña Presupuesto).' : 'Prototipo sin conexión: los datos se guardan solo en este dispositivo.') + ' El envío al cliente es simulado.</div>' +
+    '<div class="row"><button class="btn sp" onclick="abrirAjustes()">⚙ Ajustes</button><button class="btn dng sp" onclick="confirmarReset()">Restablecer ejemplo</button></div>';
+}
+
+// ── R-17 · lo que pidió el cliente / verificado en la visita ──
+function panelPidioCliente(e, t) {
+  const pares = t.det ? describirTrabajo(t.key || t.k, t.det, e.tipo) : []; const cp = cantidadPedida(t.det);
+  if (!pares.length && !cp) return '';
+  const dif = cp && t.ver && t.ver.valor != null && Number(t.ver.valor) !== cp.valor;
+  return '<div class="pidio" id="pidio-' + t.id + '"><div class="lbl">Lo que pidió el cliente</div>' + pares.map(([k, v]) => '<div class="kv"><span>' + esc(k) + '</span><b>' + esc(v) + '</b></div>').join('') +
+    (cp ? '<div class="lbl" style="margin-top:8px">Verificado en la visita</div><label class="field"><span>' + esc(CANT_ETQ[t.key || t.k] || ML_ETQ[t.key || t.k] || 'Cantidad') + ' (pedido: ' + fmtNum(cp.valor) + ')</span><input inputmode="decimal" aria-label="Cantidad verificada" value="' + (t.ver && t.ver.valor != null ? fmtNum(t.ver.valor) : '') + '" placeholder="' + fmtNum(cp.valor) + '" onchange="verificarCant(\'' + e.id + '\',\'' + t.id + '\',this.value)"></label>' + (dif ? '<div class="warn" style="margin:0">Difiere de lo que pidió el cliente: ' + fmtNum(cp.valor) + ' → ' + fmtNum(t.ver.valor) + '</div>' : '') : '') + '</div>';
+}
+function verificarCant(eid, tid, v) {
+  mut(() => { const t = trab(est(eid), tid); const cp = cantidadPedida(t.det); const n = String(v).trim() === '' ? null : Math.max(0, r2(num(v))); t.ver = n == null ? null : { valor: n, campo: cp ? cp.campo : 'cantUd', en: Date.now() };
+    if (n != null && cp && (t.u === 'ud' || t.u === 'ml') && !t.manual) { t.cant = n; } });
+}
+function cardClienteSala(e) {
+  const mats = e.trabajos.filter(t => t.tl === 'mat' && !t.quitado); const det = e.detalle && e.detalle.cfg;
+  if (!mats.length && !(det && det.notas)) return '';
+  return '<div class="card" id="card-pidio-sala"><h3>Lo que pidió el cliente en esta estancia</h3>' + (mats.length ? '<div class="lbl">Materiales elegidos</div>' + mats.map(t => '<div class="kv"><span>' + esc(t.l) + '</span><b>' + fmtNum(t.base ? t.base.cant : t.cant) + ' ' + esc(t.u) + '</b></div>').join('') : '') + (det && det.notas ? '<div class="lbl" style="margin-top:8px">Notas</div><div>' + esc(det.notas) + '</div>' : '') + '</div>';
+}
+
+// ── R-19 / R-20 · medidas de la estancia ──
+function medDe(e) { return e.med || (e.med = { ancho: 0, largo: 0, alto: 0, huecos: [], reparto: null, activa: false }); }
+function cardSuperficie(e, ro) {
+  const m = e.med || {}; const dif = e.m2Est > 0 ? difPct(e.m2, e.m2Est) : 0; const avisa = Math.abs(dif) > 15;
+  return '<div class="card" id="card-sup"><div class="row"><div class="sp"><div class="lbl">Superficie</div><div class="muted">Las cantidades por m² se ajustan solas (salvo las que edites a mano)</div></div><div class="stepper" role="group" aria-label="Superficie en metros cuadrados"><button onclick="m2Step(\'' + e.id + '\',-1)" aria-label="Menos">−</button><input id="m2-in" inputmode="decimal" value="' + fmtNum(e.m2) + '" aria-label="Metros cuadrados" onchange="m2Set(\'' + e.id + '\',this.value)"><button onclick="m2Step(\'' + e.id + '\',1)" aria-label="Más">＋</button></div><b>m²</b></div>' +
+    '<div class="lbl" style="margin-top:12px">Medir ancho × largo</div><div class="grid2"><label class="field"><span>Ancho (m)</span><input id="med-ancho" inputmode="decimal" value="' + (m.ancho ? fmtNum(m.ancho) : '') + '" placeholder="0,00" ' + (ro ? 'disabled' : '') + ' oninput="supVivo()" onchange="medirSup(\'' + e.id + '\')"></label><label class="field"><span>Largo (m)</span><input id="med-largo" inputmode="decimal" value="' + (m.largo ? fmtNum(m.largo) : '') + '" placeholder="0,00" ' + (ro ? 'disabled' : '') + ' oninput="supVivo()" onchange="medirSup(\'' + e.id + '\')"></label></div>' +
+    '<div id="sup-res" class="muted" aria-live="polite">' + supTexto(e, m.ancho, m.largo) + '</div></div>';
+}
+function supTexto(e, ancho, largo) {
+  const a = superficie(ancho, largo); if (!(a > 0)) return 'Estimación del cliente: <b>' + fmtNum(e.m2Est) + ' m²</b>. Introduce ancho y largo para calcular los m².';
+  const dif = difPct(a, e.m2Est); return 'Medido: <b>' + fmtNum(ancho) + ' × ' + fmtNum(largo) + ' = ' + fmtNum(a) + ' m²</b> · estimación del cliente ' + fmtNum(e.m2Est) + ' m² (' + (dif >= 0 ? '+' : '') + fmtNum(dif) + ' %)' + (Math.abs(dif) > 15 ? '<div class="warn" style="margin:6px 0 0">La medida difiere más de un 15 % de la estimación del cliente: revísala.</div>' : '');
+}
+function supVivo() { const e = curRoom(); const el = $('#sup-res'); if (el) el.innerHTML = supTexto(e, num($('#med-ancho').value), num($('#med-largo').value)); }
+function medirSup(eid) {
+  mut(() => { const e = est(eid); const m = medDe(e); const a = num($('#med-ancho').value), l = num($('#med-largo').value); m.ancho = a > 0 ? r2(a) : 0; m.largo = l > 0 ? r2(l) : 0;
+    if (m.ancho > 0 && m.largo > 0) { const ant = e.m2; e.m2 = Math.max(0.01, superficie(m.ancho, m.largo)); m.activa = true; recalcM2(e, ant); } });
+}
+function tienePared(e) { return e.trabajos.some(t => !t.quitado && ((t.bk && t.bk.indexOf('m2_pared') === 0) || t.b === 'pared')); }
+const ATAJOS_ALIC = [['Hasta techo', 'techo'], ['2,10 m', 2.1], ['1,50 m', 1.5], ['1,20 m', 1.2], ['0,90 m', 0.9]];
+function cardParedes(e, ro) {
+  if (!tienePared(e)) return ''; const m = e.med || {}; const g = geometria(e); const P = paredesDe(e); const ac = acabadosDe(e); const rp = g.reparto; const dos = ac.alic && ac.pint;
+  return '<div class="card" id="card-paredes"><h3>Paredes</h3><div class="muted" style="margin-bottom:8px">' + (g.medido ? 'Con las medidas de la estancia.' : 'Sin ancho × largo medidos: se usa un cuadrado equivalente a los m².') + '</div>' +
+    '<label class="field"><span>Alto de la estancia (m)</span><input id="par-alto" inputmode="decimal" value="' + (m.alto ? fmtNum(m.alto) : '') + '" placeholder="2,50" ' + (ro ? 'disabled' : '') + ' onchange="setAlto(\'' + e.id + '\',this.value)"></label>' +
+    '<div class="lbl">Huecos (puertas y ventanas)</div>' + (m.huecos || []).map((h, i) => '<div class="row" style="margin-bottom:6px"><span class="pill">' + (h.tipo === 'puerta' ? 'Puerta' : 'Ventana') + '</span><span class="sp">' + fmtNum(h.ancho) + ' × ' + fmtNum(h.alto) + ' m = ' + fmtNum(h.ancho * h.alto) + ' m²</span>' + (ro ? '' : '<button class="x" aria-label="Quitar hueco" onclick="delHueco(\'' + e.id + '\',' + i + ')">✕</button>') + '</div>').join('') +
+    (ro ? '' : '<div class="grid2"><label class="field"><span>Ancho (m)</span><input id="hu-a" inputmode="decimal" placeholder="0,80"></label><label class="field"><span>Alto (m)</span><input id="hu-h" inputmode="decimal" placeholder="2,00"></label></div><div class="row" style="margin-bottom:10px"><button class="btn sp" onclick="addHueco(\'' + e.id + '\',\'puerta\')">＋ Puerta</button><button class="btn sp" onclick="addHueco(\'' + e.id + '\',\'ventana\')">＋ Ventana</button></div>') +
+    (dos && !ro ? '<div class="lbl">Reparto entre alicatado y pintura</div><div class="row" style="margin-bottom:8px"><button class="chip ' + (rp.modo !== 'pct' ? 'sel' : '') + '" onclick="setRepartoModo(\'' + e.id + '\',\'altura\')">Por altura de alicatado</button><button class="chip ' + (rp.modo === 'pct' ? 'sel' : '') + '" onclick="setRepartoModo(\'' + e.id + '\',\'pct\')">Reparto por %</button></div>' +
+      (rp.modo === 'pct' ? '<label class="field"><span>% de alicatado (el resto es pintura)</span><input id="rep-pct" inputmode="decimal" value="' + fmtNum(rp.pct != null ? rp.pct : 60) + '" onchange="setReparto(\'' + e.id + '\',\'pct\',this.value)"></label>'
+      : '<div>' + ATAJOS_ALIC.map(([l, v]) => '<button class="chip ' + ((v === 'techo' ? rp.hAlic >= g.alto : Math.abs(rp.hAlic - v) < 0.001) ? 'sel' : '') + '" onclick="setReparto(\'' + e.id + '\',\'hAlic\',\'' + v + '\')">' + l + '</button>').join('') + '</div>' +
+        '<div class="grid2"><label class="field"><span>Altura de alicatado (m)</span><input id="rep-ha" inputmode="decimal" value="' + fmtNum(rp.hAlic) + '" onchange="setReparto(\'' + e.id + '\',\'hAlic\',this.value)"></label><label class="field"><span>Alicatado hasta el techo (ml, ducha o bañera)</span><input id="rep-lt" inputmode="decimal" value="' + fmtNum(rp.Lt || 0) + '" onchange="setReparto(\'' + e.id + '\',\'Lt\',this.value)"></label></div>') : '') +
+    '<div class="resumen-par" id="par-res"><div class="kv"><span>Perímetro</span><b>' + fmtNum(P.perimetro) + ' m</b></div><div class="kv"><span>Paredes brutas</span><b>' + fmtNum(P.brutas) + ' m²</b></div><div class="kv"><span>Huecos</span><b>−' + fmtNum(P.huecos) + ' m²</b></div><div class="kv"><span>Paredes netas</span><b>' + fmtNum(P.netas) + ' m²</b></div>' +
+    (ac.alic ? '<div class="kv"><span>Alicatado</span><b>' + fmtNum(P.alic) + ' m² (' + fmtNum(P.pctAlic) + ' %)</b></div>' : '') + (ac.pint ? '<div class="kv"><span>Pintura</span><b>' + fmtNum(P.pint) + ' m² (' + fmtNum(P.pctPint) + ' %)</b></div>' : '') + '</div></div>';
+}
+function setAlto(eid, v) { mut(() => { const e = est(eid), m = medDe(e); m.alto = Math.max(0, r2(num(v))); m.activa = true; recalcM2(e); }); }
+function addHueco(eid, tipo) { const a = r2(num($('#hu-a').value)), h = r2(num($('#hu-h').value)); if (!(a > 0 && h > 0)) { toast('Indica ancho y alto del hueco'); return; } mut(() => { const e = est(eid), m = medDe(e); m.huecos.push({ id: uid('hu'), tipo, ancho: a, alto: h }); m.activa = true; recalcM2(e); }); }
+function delHueco(eid, i) { mut(() => { const e = est(eid), m = medDe(e); m.huecos.splice(i, 1); recalcM2(e); }); }
+function setRepartoModo(eid, modo) { mut(() => { const e = est(eid), m = medDe(e); const g = geometria(e); m.reparto = Object.assign({}, g.reparto, { modo }); if (modo === 'pct' && m.reparto.pct == null) { const P = paredesDe(e); m.reparto.pct = P.pctAlic || 60; } m.activa = true; recalcM2(e); }); }
+function setReparto(eid, campo, v) {
+  mut(() => { const e = est(eid), m = medDe(e); const g = geometria(e); m.reparto = Object.assign({}, g.reparto); m.activa = true;
+    if (campo === 'hAlic') m.reparto.hAlic = v === 'techo' ? g.alto : clampN(r2(num(v)), 0, g.alto); else if (campo === 'Lt') m.reparto.Lt = Math.max(0, r2(num(v))); else if (campo === 'pct') m.reparto.pct = clampN(r2(num(v)), 0, 100);
+    m.reparto.modo = campo === 'pct' ? 'pct' : (m.reparto.modo === 'pct' && campo !== 'pct' ? 'altura' : m.reparto.modo); recalcM2(e); });
+}
+
+// ── R-18 · tabiques con estancia contigua ──
+function esTrabTabique(t) { return TRAB_TABIQUE_L.includes(t.key || t.k) && !t.quitado; }
+function cardTabiques(e) {
+  const propios = S.tabiques.filter(x => x.espacioId === e.id), ajenos = S.tabiques.filter(x => x.contiguaId === e.id);
+  if (!propios.length && !ajenos.length) return '';
+  return '<div class="card" id="card-tabiques"><h3>Tabiques medidos</h3>' + propios.map(x => '<div class="kv"><span>' + (x.contiguaId ? '🧱 Tabique compartido con <b>' + esc(nombreEst(x.contiguaId)) + '</b>' : '🧱 Tabique') + ' · ' + esc(ACCION_TAB[x.accion] || x.accion) + '<div class="muted">' + fmtNum(x.longitud) + ' m × ' + fmtNum(x.alto) + ' m</div></span><b>' + fmtNum(x.m2) + ' m²</b></div>').join('') +
+    ajenos.map(x => '<div class="kv"><span>🧱 Tabique compartido con <b>' + esc(nombreEst(x.espacioId)) + '</b><div class="muted">La partida está en ' + esc(nombreEst(x.espacioId)) + ' · ' + fmtNum(x.longitud) + ' × ' + fmtNum(x.alto) + ' m</div></span><b>' + fmtNum(x.m2) + ' m²</b></div>').join('') + '</div>';
+}
+let _tb = null;
+function abrirTabique(eid, tid) {
+  const e = est(eid), t = trab(e, tid); const g = geometria(e); const tc = ((t.det && t.det.tabiquesConfig) || [])[S.tabiques.filter(x => x.trabajoId === tid).length] || {};
+  _tb = { eid, tid, contigua: _tb && _tb.eid === eid ? _tb.contigua : '', accion: ACCION_TAB[accionNorm(tc.accion)] ? accionNorm(tc.accion) : 'demoler_levantar', material: MAT_TAB[tc.material] ? tc.material : 'pladur', ml: tc.ml || '' }; sheetTabique();
+}
+function sheetTabique() {
+  const e = est(_tb.eid); const g = geometria(e); const otras = S.est.filter(x => x.id !== e.id && x.trabajos.some(t => !t.quitado));
+  sheet('<div class="row" style="margin-bottom:8px"><h3 class="sp" style="margin:0">Medir tabique · ' + esc(e.nombre) + '</h3><button class="btn" onclick="cerrarSheet()">Cerrar</button></div>' +
+    '<div class="grid2"><label class="field"><span>Longitud (m)</span><input id="tb-l" inputmode="decimal" placeholder="3,00" value="' + (_tb.ml ? fmtNum(_tb.ml) : '') + '" oninput="tbVivo()"></label><label class="field"><span>Altura (m)</span><input id="tb-h" inputmode="decimal" value="' + fmtNum(g.alto) + '" oninput="tbVivo()"></label></div><div class="muted" id="tb-m2" style="margin-bottom:10px" aria-live="polite">Introduce la longitud para calcular los m².</div>' +
+    '<label class="field"><span>Estancia contigua</span><select id="tb-c" onchange="tbContigua(this.value)"><option value="">— Ninguna / exterior —</option>' + otras.map(x => '<option value="' + x.id + '"' + (_tb.contigua === x.id ? ' selected' : '') + '>' + esc(x.nombre) + '</option>').join('') + '<option value="__nueva">＋ Añadir estancia…</option></select></label>' +
+    '<div class="lbl">Qué se hace</div><div style="margin-bottom:8px">' + Object.entries(ACCION_TAB).map(([k, v]) => '<button class="chip ' + (_tb.accion === k ? 'sel' : '') + '" onclick="_tb.accion=\'' + k + '\';tbMarca()">' + v + '</button>').join('') + '</div>' +
+    '<div class="lbl">Material del nuevo tabique</div><div style="margin-bottom:8px">' + Object.entries(MAT_TAB).map(([k, v]) => '<button class="chip ' + (_tb.material === k ? 'sel' : '') + '" onclick="_tb.material=\'' + k + '\';tbMarca()">' + v + '</button>').join('') + '</div>' +
+    '<button class="btn pri blk" onclick="guardarTabique()">Guardar tabique</button>');
+}
+function tbMarca() { const l = $('#tb-l').value, h = $('#tb-h').value; sheetTabique(); $('#tb-l').value = l; $('#tb-h').value = h; tbVivo(); }
+function tbVivo() { const m2 = r2(num($('#tb-l').value) * num($('#tb-h').value)); $('#tb-m2').innerHTML = m2 > 0 ? 'Superficie del tabique: <b>' + fmtNum(m2) + ' m²</b>' : 'Introduce la longitud para calcular los m².'; }
+function tbContigua(v) {
+  if (v === '__nueva') { _ne = { tipo: 'habitacion', volver: 'tabique' }; sheetNuevaEst(); return; }
+  _tb.contigua = v;
+}
+function guardarTabique() {
+  const l = num($('#tb-l').value), h = num($('#tb-h').value); if (!(l > 0 && h > 0)) { toast('Indica longitud y altura del tabique'); return; }
+  const tb = crearTabique({ espacioId: _tb.eid, contiguaId: _tb.contigua || ($('#tb-c').value && $('#tb-c').value !== '__nueva' ? $('#tb-c').value : ''), longitud: l, alto: h, accion: _tb.accion, material: _tb.material, trabajoId: _tb.tid });
+  if (tb.accion !== 'solo_levantar' && tb.contiguaId) { _tb.pend = tb; sheet('<h3>¿Hay que reponer el acabado en la estancia contigua?</h3><p class="muted" style="margin:8px 0 12px">Al tirar el tabique queda un tramo de pared sin acabado en <b>' + esc(nombreEst(tb.contiguaId)) + '</b> (' + fmtNum(tb.m2) + ' m²).</p><div style="display:grid;gap:10px"><button class="btn pri blk" onclick="confirmarTabique(true)">Sí, añadir la pintura de esa pared</button><button class="btn blk" onclick="confirmarTabique(false)">No hace falta</button></div>'); return; }
+  _tb.pend = tb; confirmarTabique(false);
+}
+function confirmarTabique(reponer) {
+  const tb = _tb.pend; tb.reponer = !!reponer; cerrarSheet();
+  mut(() => {
+    const e = est(tb.espacioId), t = trab(e, tb.trabajoId); S.tabiques.push(tb); t.tab = tb.id;
+    const n = (t.det && t.det.cantUd != null) ? t.det.cantUd : (t.base ? t.base.cant : 1); const c = cantidadTabiques(S.tabiques, t.id, n);
+    if (!t.m2Tab) { t.m2Tab = { u: t.u, precioUd: t.precio, cantUd: n }; }
+    t.u = 'm²'; t.cant = c.m2; t.precio = r2(t.m2Tab.precioUd / REF_TABIQUE_M2); t.manual = true; t.nota = 'Tabique medido: ' + c.medidosM2 + ' m²' + (c.sinMedir ? ' + ' + c.sinMedir + ' sin medir (' + REF_TABIQUE_M2 + ' m² c/u)' : '') + (tb.contiguaId ? ' · compartido con ' + nombreEst(tb.contiguaId) : '');
+    if (reponer && tb.contiguaId) { const ec = est(tb.contiguaId); const nt = nuevoTrabajo('pint_pared', ec, 'visita'); nt.cant = tb.m2; nt.manual = true; nt.bk = 'm2_pared_pintura'; nt.nota = 'Reponer el acabado tras tirar el tabique con ' + e.nombre; ec.trabajos.push(nt); ec.revisada = false; }
+  });
+  toast('Tabique guardado' + (tb.contiguaId ? ' · compartido con ' + nombreEst(tb.contiguaId) : ''));
+}
+
+// ═══════════════════════════════════════════════════════
+// V2 · C. PANTALLA FINAL: DESGLOSE, NEGOCIACIÓN, BENEFICIO, HITOS Y PLAN DE COBROS (R-22 a R-24)
+// ═══════════════════════════════════════════════════════
+function boxTotales() {
+  const t = TOT(); const d = r2(t.total - S.v2.total);
+  return '<div class="lbl">Presupuesto ' + esc(S.v3.id) + '</div><div class="big-total">' + eur(t.total) + '</div><div class="muted" style="margin-bottom:8px">IVA incluido</div>' +
+    '<div class="kv"><span>Subtotal trabajos</span><span>' + eur(t.subtotal) + '</span></div><div class="kv"><span>Margen ' + fmtNum(S.ajustes.margen) + ' %</span><span>' + eur(t.margen) + '</span></div>' +
+    (t.imprevistos ? '<div class="kv"><span>Imprevistos ' + fmtNum(S.neg.imprevistosPct) + ' %</span><span>' + eur(t.imprevistos) + '</span></div>' : '') +
+    (t.descuento ? '<div class="kv"><span>Descuento</span><span class="dlt-dn">−' + eur(t.descuento) + '</span></div>' : '') +
+    '<div class="kv"><span>IVA ' + fmtNum(S.ajustes.iva) + ' %</span><span>' + eur(t.iva) + '</span></div>' + (t.ajusteRedondeo ? '<div class="kv"><span>Redondeo</span><span>' + (t.ajusteRedondeo >= 0 ? '+' : '−') + eur(Math.abs(t.ajusteRedondeo)) + '</span></div>' : '') +
+    '<div class="kv"><span>' + esc(S.v2.id) + ' (' + etqBase() + ')</span><span>' + eur(S.v2.total) + '</span></div><div class="kv"><b>Diferencia</b><b class="' + (d > 0 ? 'dlt-up' : 'dlt-dn') + '">' + (d >= 0 ? '+' : '−') + eur(Math.abs(d)) + '</b></div>';
+}
+function boxBeneficio() {
+  const t = TOT(); const baja = t.beneficio < 0;
+  return '<div class="lbl">Tu beneficio · solo para ti</div><div class="muted" style="margin-bottom:6px">El cliente nunca ve el margen ni el coste.</div>' +
+    '<div class="kv"><span>Coste (sin margen)</span><b>' + eur(t.coste) + '</b></div><div class="kv"><span>Margen + imprevistos, antes del descuento</span><b>' + eur(t.beneficioAntes) + ' · ' + fmtNum(t.beneficioAntesPct) + ' % s/ coste</b></div>' +
+    '<div class="kv"><span>Descuento aplicado</span><b>' + (t.descuento ? '−' + eur(t.descuento) : '—') + '</b></div><div class="kv"><span>Beneficio después del descuento</span><b class="' + (baja ? 'dlt-up' : 'dlt-dn') + '">' + eur(t.beneficio) + ' · ' + fmtNum(t.beneficioPct) + ' % s/ coste</b></div>' + (baja ? '<div class="warn" style="margin:8px 0 0">Con este descuento trabajas por debajo del coste.</div>' : '');
+}
+function refrescarTotales() {
+  const a = $('#box-tot'), b = $('#box-ben'); if (a) a.innerHTML = boxTotales(); if (b) b.innerHTML = boxBeneficio(); planPintaImportes(); const pz = $('#neg-plazo-auto'); if (pz) pz.textContent = 'Calculado a partir de los hitos: ' + plazoCalculado(S.hitosPlan) + ' semana(s)';
+}
+// Los campos NO se repintan al escribir: solo se actualizan los totales (crítico en móvil)
+function negVivo(campo, v) {
+  if (!editable()) return;
+  if (campo === 'margen') S.ajustes.margen = clampN(num(v), 0, 100); else if (campo === 'iva') S.ajustes.iva = clampN(num(v), 0, 100);
+  else if (campo === 'descuento') S.neg.descuento = Math.max(0, num(v)); else if (campo === 'imprevistosPct') S.neg.imprevistosPct = clampN(num(v), 0, 100);
+  else if (campo === 'validezDias') S.neg.validezDias = Math.max(1, Math.round(num(v)) || 30); else if (campo === 'plazoManual') S.neg.plazoManual = String(v).trim() === '' ? null : Math.max(1, Math.round(num(v)) || 1);
+  else if (campo === 'condiciones') S.neg.condiciones = String(v);
+  else S.neg[campo] = campo === 'redondeo' ? Number(v) : v;
+  guardar(); refrescarTotales();
+}
+function negConfirma(campo, v) { negVivo(campo, v); if (['descuentoModo', 'redondeo'].includes(campo)) render(); }
+function cardNegociacion(ro) {
+  const n = S.neg; const d = ro ? 'disabled' : '';
+  return '<div class="card" id="card-neg"><h3>Ajustes de negociación</h3><div class="muted" style="margin-bottom:8px">Cambiar estos ajustes recalcula la ' + esc(S.v3.id) + ' en vivo; la ' + esc(S.v2.id) + ' queda intacta.</div>' +
+    '<div class="grid2"><label class="field"><span>Margen (%)</span><input id="neg-margen" inputmode="decimal" value="' + fmtNum(S.ajustes.margen) + '" ' + d + ' oninput="negVivo(\'margen\',this.value)"></label><label class="field"><span>IVA (%)</span><input id="neg-iva" inputmode="decimal" value="' + fmtNum(S.ajustes.iva) + '" ' + d + ' oninput="negVivo(\'iva\',this.value)"></label></div>' +
+    '<div class="muted" style="margin:-4px 0 10px">IVA: 21 %, 10 % u otro. Confirma el criterio con tu gestor.</div>' +
+    '<div class="grid2"><label class="field"><span>Descuento comercial</span><input id="neg-dto" inputmode="decimal" value="' + fmtNum(n.descuento) + '" ' + d + ' oninput="negVivo(\'descuento\',this.value)"></label><label class="field"><span>En</span><select id="neg-dtomodo" ' + d + ' onchange="negConfirma(\'descuentoModo\',this.value)"><option value="pct"' + (n.descuentoModo !== 'eur' ? ' selected' : '') + '>Porcentaje (%)</option><option value="eur"' + (n.descuentoModo === 'eur' ? ' selected' : '') + '>Euros (€)</option></select></label></div>' +
+    '<div class="muted" style="margin:-4px 0 10px">El cliente verá una línea negativa «Descuento».</div>' +
+    '<div class="grid2"><label class="field"><span>Validez del presupuesto (días)</span><input id="neg-validez" inputmode="numeric" value="' + n.validezDias + '" ' + d + ' oninput="negVivo(\'validezDias\',this.value)"></label><label class="field"><span>Plazo de ejecución (semanas)</span><input id="neg-plazo" inputmode="numeric" value="' + plazoActual() + '" ' + d + ' oninput="negVivo(\'plazoManual\',this.value)"></label></div>' +
+    '<div class="muted" id="neg-plazo-auto" style="margin:-4px 0 10px">Calculado a partir de los hitos: ' + plazoCalculado(S.hitosPlan) + ' semana(s)</div>' +
+    '<div class="grid2"><label class="field"><span>Imprevistos (%)</span><input id="neg-imp" inputmode="decimal" value="' + fmtNum(n.imprevistosPct) + '" ' + d + ' oninput="negVivo(\'imprevistosPct\',this.value)"></label><label class="field"><span>Redondeo del total</span><select id="neg-red" ' + d + ' onchange="negConfirma(\'redondeo\',this.value)">' + [[0, 'Ninguno'], [10, 'A 10 €'], [50, 'A 50 €'], [100, 'A 100 €']].map(([v, l]) => '<option value="' + v + '"' + (Number(n.redondeo) === v ? ' selected' : '') + '>' + l + '</option>').join('') + '</select></label></div>' +
+    '<label class="field"><span>Condiciones especiales (aparecen en el presupuesto)</span><textarea id="neg-cond" ' + d + ' oninput="negVivo(\'condiciones\',this.value)" placeholder="Ej.: el precio incluye la retirada de escombros">' + esc(n.condiciones) + '</textarea></label></div>';
+}
+function cardDesglose() {
+  const arbol = desgloseArbol(S.est, S.ajustes); const dl = v => Math.abs(v) >= 0.5 ? '<small class="' + (v > 0 ? 'dlt-up' : 'dlt-dn') + '"> ' + (v > 0 ? '+' : '−') + eur0(Math.abs(v)) + '</small>' : '';
+  return '<div class="card" id="card-desglose"><h3>Desglose del presupuesto</h3><div class="muted" style="margin-bottom:8px">Importes con margen e IVA. Entre paréntesis, la diferencia frente a la ' + esc(S.v2.id) + '.</div>' +
+    arbol.map(e => '<details class="tree"><summary><b>' + esc(e.nombre) + '</b><span>' + eur0(e.subtotal) + dl(e.delta) + '</span></summary>' + e.trabajos.map(t => '<details class="tree t2"><summary>' + esc(t.nombre) + '<span>' + eur0(t.subtotal) + dl(t.delta) + '</span></summary>' + t.partidas.map(p => '<div class="tree-p"><span>' + esc(p.tipo) + ': ' + esc(p.l) + '<small> · ' + fmtNum(p.cant) + ' ' + esc(p.u) + ' × ' + eur(p.precio) + '</small></span><b>' + eur(p.subtotal) + '</b></div>').join('') + '</details>').join('') + '</details>').join('') +
+    '<details class="tree" style="margin-top:6px"><summary>Resumen compacto por estancias<span></span></summary>' + S.est.map(e => '<div class="kv"><span>' + (e.revisada ? '✅ ' : '⏳ ') + esc(e.nombre) + ' <span class="muted">· ' + e.fotos.length + ' 📷 · ' + e.comentarios.length + ' 💬</span></span><b>' + eur0(finalDe(subEst(e), S.ajustes)) + '</b></div>').join('') + '</details></div>';
+}
+// ── Hitos y plan de cobros (R-23) ──
+const opcionesCuando = () => [['aceptacion', 'Al aceptar'], ...S.hitosPlan.map(h => ['hito:' + h.nombre, 'Al terminar «' + h.nombre + '»']), ['entrega', 'A la entrega']];
+function cardPlan(ro) {
+  const total = TOT().total; const plan = importesPlan(S.planCobros, total); const vp = validarPlanL(S.planCobros, S.hitosPlan); const d = ro ? 'disabled' : '';
+  return '<div class="card" id="card-plan"><h3>Hitos y plan de cobros</h3><div class="muted" style="margin-bottom:8px">El cliente verá este plan antes de aceptar. Parte de tus valores por defecto; aquí lo ajustas solo para este caso.</div>' +
+    '<div class="lbl">Hitos de obra (' + plazoCalculado(S.hitosPlan) + ' semanas aprox.)</div>' + S.hitosPlan.map((h, i) => '<div class="row hito-fila" style="margin-bottom:6px"><input class="sp" aria-label="Nombre del hito ' + (i + 1) + '" value="' + esc(h.nombre) + '" ' + d + ' onchange="hitoPlanSet(\'' + h.id + '\',\'nombre\',this.value)"><input style="max-width:84px" inputmode="numeric" aria-label="Días del hito ' + (i + 1) + '" value="' + h.dias + '" ' + d + ' onchange="hitoPlanSet(\'' + h.id + '\',\'dias\',this.value)"><span class="muted">días</span>' + (ro ? '' : '<button class="x" aria-label="Eliminar el hito ' + esc(h.nombre) + '" onclick="hitoPlanDel(\'' + h.id + '\')">✕</button>') + '</div>').join('') +
+    (ro ? '' : '<button class="btn blk" style="margin-bottom:12px" onclick="hitoPlanAdd()">＋ Añadir hito</button>') +
+    '<div class="lbl">Tramos de cobro</div>' + plan.map((t, i) => '<div class="tramo" id="tr-' + t.id + '"><div class="row" style="margin-bottom:4px"><input class="sp" aria-label="Etiqueta del tramo ' + (i + 1) + '" value="' + esc(t.label) + '" ' + d + ' onchange="tramoSet(\'' + t.id + '\',\'label\',this.value)">' + (t.resto ? '<span class="pill ok" style="white-space:nowrap">el resto · <span id="trp-' + t.id + '">' + fmtNum(t.pct) + '</span> %</span>' : '<input style="max-width:84px" inputmode="decimal" aria-label="Porcentaje del tramo ' + (i + 1) + '" value="' + fmtNum(t.pct) + '" ' + d + ' oninput="tramoVivo(\'' + t.id + '\',this.value)" onchange="tramoSet(\'' + t.id + '\',\'pct\',this.value)"><span class="muted">%</span>') + (ro || S.planCobros.length < 2 ? '' : '<button class="x" aria-label="Eliminar el tramo ' + esc(t.label) + '" onclick="tramoDel(\'' + t.id + '\')">✕</button>') + '</div>' +
+      '<div class="row"><select class="sp" aria-label="Disparador del tramo ' + (i + 1) + '" ' + d + ' onchange="tramoSet(\'' + t.id + '\',\'cuando\',this.value)">' + opcionesCuando().map(([v, l]) => '<option value="' + esc(v) + '"' + (t.cuando === v ? ' selected' : '') + '>' + esc(l) + '</option>').join('') + '</select><b id="tri-' + t.id + '">' + eur(t.importe) + '</b></div></div>').join('') +
+    (ro ? '' : '<button class="btn blk" style="margin:8px 0" onclick="tramoAdd()">＋ Añadir tramo</button>') +
+    '<div id="plan-msg">' + (vp.ok ? '<div class="muted">El último tramo es siempre «el resto»: absorbe lo que quede del total (IVA incluido).</div>' : vp.errores.map(x => '<div class="warn">' + esc(x) + '</div>').join('')) + '</div></div>';
+}
+function planPintaImportes() {
+  const total = TOT().total; importesPlan(S.planCobros, total).forEach(t => { const a = $('#tri-' + t.id), b = $('#trp-' + t.id); if (a) a.textContent = eur(t.importe); if (b) b.textContent = fmtNum(t.pct); });
+  const vp = validarPlanL(S.planCobros, S.hitosPlan), m = $('#plan-msg'); if (m) m.innerHTML = vp.ok ? '<div class="muted">El último tramo es siempre «el resto»: absorbe lo que quede del total (IVA incluido).</div>' : vp.errores.map(x => '<div class="warn">' + esc(x) + '</div>').join('');
+}
+function tramoVivo(id, v) { if (!editable()) return; const t = S.planCobros.find(x => x.id === id); t.pct = clampN(num(v), 0, 100); planPintaImportes(); }
+function tramoSet(id, campo, v) { mut(() => { const t = S.planCobros.find(x => x.id === id); if (campo === 'pct') t.pct = clampN(num(v), 0, 100); else t[campo] = String(v); }); }
+function tramoAdd() { mut(() => { const pl = S.planCobros; pl.splice(pl.length - 1, 0, { id: uid('p'), label: 'Nuevo tramo', pct: 0, cuando: 'aceptacion' }); }); }
+function tramoDel(id) { mut(() => { S.planCobros = S.planCobros.filter(x => x.id !== id); }); }
+function hitoPlanSet(id, campo, v) {
+  mut(() => { const h = S.hitosPlan.find(x => x.id === id); if (campo === 'dias') h.dias = Math.max(1, Math.round(num(v)) || 1); else { const nuevo = String(v).trim() || h.nombre; S.planCobros.forEach(t => { if (t.cuando === 'hito:' + h.nombre) t.cuando = 'hito:' + nuevo; }); h.nombre = nuevo; } });
+}
+function hitoPlanAdd() { mut(() => { S.hitosPlan.push({ id: uid('h'), nombre: 'Nuevo hito', dias: 2 }); }); }
+function hitoPlanDel(id) {
+  const h = S.hitosPlan.find(x => x.id === id); const refs = planesParaReasignar(S.planCobros, h.nombre);
+  if (!refs.length) { mut(() => { S.hitosPlan = S.hitosPlan.filter(x => x.id !== id); }); return; }
+  const otros = [['aceptacion', 'Al aceptar'], ...S.hitosPlan.filter(x => x.id !== id).map(x => ['hito:' + x.nombre, 'Al terminar «' + x.nombre + '»']), ['entrega', 'A la entrega']];
+  sheet('<h3>«' + esc(h.nombre) + '» dispara un cobro</h3><p class="muted" style="margin:8px 0 10px">Antes de eliminarlo, elige cuándo se cobra' + (refs.length > 1 ? 'n estos tramos' : ' este tramo') + ': ' + refs.map(t => '«' + esc(t.label) + '»').join(', ') + '.</p><label class="field"><span>Nuevo disparador</span><select id="re-cuando">' + otros.map(([v, l]) => '<option value="' + esc(v) + '">' + esc(l) + '</option>').join('') + '</select></label><div class="row"><button class="btn sp" onclick="cerrarSheet()">Cancelar</button><button class="btn pri sp" onclick="hitoPlanDelOk(\'' + id + '\')">Reasignar y eliminar</button></div>');
+}
+function hitoPlanDelOk(id) { const h = S.hitosPlan.find(x => x.id === id); const nuevo = $('#re-cuando').value; cerrarSheet(); mut(() => { S.planCobros.forEach(t => { if (t.cuando === 'hito:' + h.nombre) t.cuando = nuevo; }); S.hitosPlan = S.hitosPlan.filter(x => x.id !== id); }); }
+
+// ── Pantalla final ──
+function vSend() {
+  const d = diffV3(S); const pend = pendientes(S); const ro = !editable(); const hay = d.anadidos.length + d.quitados.length + d.modificados.length;
+  const fotos = S.est.reduce((s, e) => s + e.fotos.length, 0), coms = S.est.reduce((s, e) => s + e.comentarios.length, 0);
+  return (ro ? '<div class="warn">La ' + esc(S.v3.id) + ' ya fue enviada (' + fecha(S.v3.enviadaAt) + '). Esto es un resumen de solo lectura.</div>' : '') +
+    (pend.length && !ro ? '<div class="warn"><b>Faltan ' + pend.length + ' estancia(s) por revisar:</b> ' + pend.map(e => '<button class="chip" onclick="ir(\'room\',\'' + e.id + '\')">' + esc(e.nombre) + '</button>').join('') + '</div>' : '') +
+    '<div class="card" id="box-tot">' + boxTotales() + '</div>' + cardDesglose() + cardNegociacion(ro) + '<div class="card" id="box-ben" style="border-style:dashed">' + boxBeneficio() + '</div>' + cardPlan(ro) +
+    '<div class="card"><h3>Cambios respecto a la ' + esc(S.v2.id) + '</h3>' + (hay ? d.anadidos.map(x => '<div class="diff"><i class="a">＋</i><span><b>' + esc(x.e.nombre) + '</b> · ' + esc(x.t.l) + ' <span class="muted">(' + eur0(finalDe(subLinea(x.t), S.ajustes)) + ')</span></span></div>').join('') + d.quitados.map(x => '<div class="diff"><i class="q">−</i><span><b>' + esc(x.e.nombre) + '</b> · ' + esc(x.t.l) + '</span></div>').join('') + d.modificados.map(x => '<div class="diff"><i class="m">~</i><span><b>' + esc(x.e.nombre) + '</b> · ' + esc(x.t.l) + ' <span class="muted">' + fmtNum(x.t.base.cant) + '→' + fmtNum(x.t.cant) + ' ' + esc(x.t.u) + (x.t.base.precio !== x.t.precio ? ' · ' + fmtNum(x.t.base.precio) + '→' + fmtNum(x.t.precio) + ' €/' + esc(x.t.u) : '') + '</span></span></div>').join('') : '<div class="muted">Sin cambios: coincide con lo que pidió el cliente.</div>') + '<div class="muted" style="margin-top:8px">' + fotos + ' fotos y ' + coms + ' comentarios en total.</div></div>' +
+    (ro ? '' : '<div class="card"><div class="lbl">Observaciones generales</div><textarea aria-label="Observaciones generales" onchange="setGeneral(this.value)">' + esc(S.general) + '</textarea></div>' +
+      '<div style="display:grid;gap:10px"><button class="btn pri blk" onclick="abrirEnvio()">📤 Enviar ' + esc(S.v3.id) + ' al cliente ahora</button><button class="btn blk" id="btn-borrador" onclick="guardarYSalir()">💾 Guardar borrador' + (UP() ? ' (se sincroniza con el admin)' : ' y enviar desde casa') + '</button><button class="btn blk" onclick="ir(\'hub\')">‹ Seguir revisando</button></div>');
+}
+function guardarYSalir() { S.v3.pendienteEnvio = true; S.ui.view = 'home'; guardarYa(); const rs = guardarBorrador(true); render(); if (!UP()) toast('Borrador ' + S.v3.id + ' guardado. Podrás continuar y enviarlo desde casa.'); void rs; }
+function confirmarEnvio() {
+  const p = UP(); const total = TOT().total; const canal = S.v3.canalIntento || 'WhatsApp';
+  if (p && S.casoId) { S.v3.canal = canal; const rs = p.lite('enviar', pack()); if (!rs || rs.ok === false) { cerrarSheet(); toast('No se ha enviado: revisa el aviso de arriba'); return; } }
+  S.v3.estado = 'enviada'; S.v3.enviadaAt = Date.now(); S.v3.canal = canal; S.v3.pendienteEnvio = false; S.hist.push({ id: S.v3.id, total, fecha: S.v3.enviadaAt, canal }); clearTimeout(syncT);
+  cerrarSheet(); S.ui.view = 'sent'; guardarYa(); render(); window.scrollTo(0, 0);
+}
+
+// ═══════════════════════════════════════════════════════
+// V2 · D. MODO OBRA (R-26 a R-31): los datos viven en el admin; el lite los lee y escribe a través del puente
+// ═══════════════════════════════════════════════════════
+const OB = () => { const p = UP(); return p && S.ui.obra ? p.obraVista(S.ui.obra) : null; };
+const SALUD_L = { al_dia: ['Al día', 'ok'], en_riesgo: ['En riesgo', 'wip'], bloqueada: ['Bloqueada', 'bad'] };
+const ESTADO_OBRA_L = { en_obra: 'En obra', terminada: 'Terminada', en_remates: 'En remates' };
+function vObraLista() {
+  const p = UP(); const obras = p ? p.obrasLite() : [];
+  if (!p) return '<div class="card muted">El modo Obra necesita el prototipo completo (conexión con el admin).</div>';
+  return '<div class="hero"><h1>Obras activas</h1><p>Elige una obra para actualizar hitos, incidencias, cambios y fotos.</p></div>' +
+    (obras.length ? obras.map(o => '<button class="room" id="obra-' + esc(o.id) + '" onclick="abrirObra(\'' + esc(o.id) + '\')" aria-label="Abrir la obra de ' + esc(o.cliente) + '"><span class="ico">🏗</span><span class="sp" style="min-width:0"><b>' + esc(o.cliente) + '</b><span class="meta"><span>' + esc(o.id) + '</span><span>' + esc(ESTADO_OBRA_L[o.estado] || o.estado) + '</span>' + (o.incidenciasAbiertas ? '<span>⚠ ' + o.incidenciasAbiertas + ' incidencia(s)</span>' : '') + '</span><span class="muted" style="display:block">' + esc(o.direccion) + '</span><span class="progress" style="display:block;margin-top:6px"><i style="width:' + Math.round(o.progreso * 100) + '%"></i></span></span>' +
+      '<span class="amt">' + Math.round(o.progreso * 100) + ' %' + (o.salud ? '<small><span class="pill ' + SALUD_L[o.salud][1] + '">' + SALUD_L[o.salud][0] + '</span></small>' : '') + '</span></button>').join('') : '<div class="card muted" style="text-align:center">No hay obras en curso. Cuando el cliente acepte y empieces la obra desde el admin, aparecerá aquí.</div>');
+}
+function abrirObra(id) { S.ui.modo = 'obra'; S.ui.obra = id; S.ui.obraTab = S.ui.obraTab || 'hitos'; S.ui.view = 'obra'; guardar(); render(); window.scrollTo(0, 0); }
+function obraTab(t) { S.ui.obraTab = t; guardar(); render(); }
+const TABS_OBRA = [['hitos', 'Hitos'], ['incid', 'Incidencias'], ['cambios', 'Cambios'], ['cuenta', 'Cuenta'], ['fotos', 'Fotos']];
+function vObra() {
+  const o = OB(); if (!o) return '<div class="card muted">No se encuentra la obra.</div>';
+  const tab = S.ui.obraTab; const cab = '<div class="card"><div class="row"><div class="sp"><div class="lbl">' + esc(o.id) + ' · ' + esc(ESTADO_OBRA_L[o.estado] || o.estado) + '</div><h3 style="margin:0">' + esc(o.cliente) + '</h3><div class="muted">' + esc(o.direccion) + '</div></div>' + (o.salud ? '<span class="pill ' + SALUD_L[o.salud][1] + '">' + SALUD_L[o.salud][0] + '</span>' : '') + '</div>' +
+    '<div class="row" style="margin-top:10px"><div class="progress sp"><i style="width:' + Math.round(o.progreso * 100) + '%"></i></div><b>' + Math.round(o.progreso * 100) + ' %</b></div>' + (o.pendienteConformidad ? '<div class="info" style="margin:10px 0 0">Entregada, pendiente de conformidad del cliente (solo el cliente puede cerrar la obra).</div>' : '') + '</div>' +
+    '<div class="otabs" role="tablist" aria-label="Secciones de la obra">' + TABS_OBRA.map(([k, l]) => '<button class="otab ' + (tab === k ? 'on' : '') + '" role="tab" aria-selected="' + (tab === k) + '" id="otab-' + k + '" onclick="obraTab(\'' + k + '\')">' + l + (k === 'incid' && o.incidencias.some(i => i.estado === 'abierta') ? ' <em>' + o.incidencias.filter(i => i.estado === 'abierta').length + '</em>' : '') + '</button>').join('') + '</div>';
+  return cab + ({ hitos: obraHitos, incid: obraIncid, cambios: obraCambiosL, cuenta: obraCuenta, fotos: obraFotos }[tab] || obraHitos)(o);
+}
+const thumbAdj = (id, cls) => { const u = UP() && UP().adjuntos.url(id); return u ? '<button class="thumb ' + (cls || '') + '" onclick="verAdj(\'' + esc(id) + '\')" aria-label="Ver foto"><img src="' + u + '" alt="Foto de la obra"></button>' : ''; };
+function verAdj(id) { const u = UP().adjuntos.url(id); $('#viewer').innerHTML = '<img src="' + u + '" alt="Foto"><div class="vb"><button class="btn" onclick="cerrarVisorObra()">Cerrar</button></div>'; $('#viewer').classList.add('on'); }
+function cerrarVisorObra() { $('#viewer').classList.remove('on'); $('#viewer').innerHTML = ''; }
+// Selección de fotos para los formularios (hoja): se suben al servicio de adjuntos al guardar
+let _fx = { files: [] };
+function fotosInput(id, obligatoria) {
+  return '<div class="row" style="margin:6px 0"><label class="btn pri addph" style="position:relative">📷 Hacer foto<input type="file" accept="image/*" capture="environment" aria-label="Hacer foto con la cámara" onchange="fxAdd(this)"></label><label class="btn addph" style="position:relative">🖼 Galería<input type="file" accept="image/*" multiple aria-label="Elegir fotos de la galería" onchange="fxAdd(this)"></label></div><div class="thumbs" id="' + id + '"></div>' + (obligatoria ? '<div class="muted">La foto es obligatoria.</div>' : '');
+}
+function fxAdd(input) { _fx.files.push(...input.files); input.value = ''; fxPinta(); }
+function fxQuitar(i) { _fx.files.splice(i, 1); fxPinta(); }
+function fxPinta() { const el = $('#fx-th'); if (!el) return; el.innerHTML = ''; _fx.files.forEach((f, i) => { const b = document.createElement('div'); b.className = 'thumb'; const im = document.createElement('img'); im.alt = 'Foto ' + (i + 1); im.src = URL.createObjectURL(f); const x = document.createElement('button'); x.className = 'x'; x.type = 'button'; x.textContent = '✕'; x.setAttribute('aria-label', 'Quitar foto'); x.style.cssText = 'position:absolute;top:2px;right:2px;background:rgba(0,0,0,.55);color:#fff;min-width:32px;min-height:32px'; x.onclick = () => fxQuitar(i); b.appendChild(im); b.appendChild(x); el.appendChild(b); }); }
+async function fxSubir(casoId, meta) { const ids = await subirImagenes(_fx.files, Object.assign({ casoId }, meta || {})); _fx.files = []; return ids; }
+function accionObra(kind, d, ok) { const p = UP(); const rs = p.liteObra(kind, Object.assign({ casoId: S.ui.obra }, d)); if (!rs.ok) { toast(rs.error || 'No se ha podido guardar'); return rs; } if (ok) ok(rs); render(); return rs; }
+
+// ── R-27 hitos ──
+function obraHitos(o) {
+  return '<div class="card"><h3>Hitos de la obra</h3>' + (o.hitos.length ? o.hitos.map(h => '<div class="hito ' + h.estado + '" id="h-' + esc(h.id) + '"><div class="row"><span class="ico-h">' + (h.estado === 'hecho' ? '✅' : h.estado === 'en_curso' ? '🔨' : '⏳') + '</span><div class="sp"><b>' + esc(h.nombre) + '</b><div class="muted">' + ({ pendiente: 'Pendiente', en_curso: 'En curso', hecho: 'Hecho' + (h.fechaReal ? ' · ' + fecha(h.fechaReal) : '') }[h.estado]) + (h.estado !== 'hecho' && h.fechaPrevista ? ' · previsto ' + fecha(h.fechaPrevista) : '') + '</div>' + (h.desbloquea && h.estado !== 'hecho' ? '<div class="muted">Desbloquea el cobro «' + esc(h.desbloquea.label) + '»</div>' : '') + '</div></div>' +
+    (h.fotos.length ? '<div class="thumbs">' + h.fotos.map(f => thumbAdj(f)).join('') + '</div>' : '') + (h.nota ? '<div class="muted">📝 ' + esc(h.nota) + '</div>' : '') +
+    (h.estado !== 'hecho' ? '<div class="row" style="margin-top:8px">' + (h.estado !== 'en_curso' ? '<button class="btn sp" onclick="hitoEnCurso(\'' + esc(h.id) + '\')">En curso</button>' : '') + '<button class="btn ok sp" id="hecho-' + esc(h.id) + '" onclick="hitoHechoSheet(\'' + esc(h.id) + '\')">Marcar hecho</button></div>' : '') + '</div>').join('') : '<div class="muted">La obra aún no tiene hitos.</div>') + '</div>';
+}
+function hitoEnCurso(id) { accionObra('hito', { id, estado: 'en_curso' }, () => toast('Hito en curso')); }
+function hitoHechoSheet(id) {
+  const o = OB(); const h = o.hitos.find(x => x.id === id); _fx = { files: [] };
+  sheet('<div class="row" style="margin-bottom:8px"><h3 class="sp" style="margin:0">«' + esc(h.nombre) + '» hecho</h3><button class="btn" onclick="cerrarSheet()">Cerrar</button></div>' + (h.desbloquea ? '<div class="info">Este hito desbloquea el cobro del tramo «' + esc(h.desbloquea.label) + '» (' + eur(h.desbloquea.importe) + ').</div>' : '') +
+    '<div class="lbl">Foto del hito' + (o.fotoObligatoriaHito ? ' (obligatoria)' : '') + '</div>' + fotosInput('fx-th', o.fotoObligatoriaHito).replace('id="fx-th"', 'id="fx-th"') + '<label class="field"><span>Nota (opcional)</span><textarea id="hh-nota" placeholder="Qué se ha hecho, incidencias, materiales…"></textarea></label><button class="btn ok blk" id="hh-ok" onclick="hitoHechoOk(\'' + esc(id) + '\')">Marcar como hecho</button>');
+}
+async function hitoHechoOk(id) {
+  const o = OB(); if (o.fotoObligatoriaHito && !_fx.files.length) { toast('Añade al menos una foto para marcar el hito como hecho'); return; }
+  $('#hh-ok').disabled = true; const nota = $('#hh-nota').value; const ids = await fxSubir(S.ui.obra, { origen: 'lite-hito' });
+  const rs = accionObra('hito', { id, estado: 'hecho', adjuntos: ids, nota }, rs => { cerrarSheet(); toast('Hito hecho' + (rs.avisos && rs.avisos.length ? ' · ' + rs.avisos[0] : '')); }); if (!rs.ok) $('#hh-ok').disabled = false;
+}
+
+// ── R-28 incidencias ──
+const TIPOS_INC = [['retraso', 'Retraso'], ['dano', 'Daño o imprevisto'], ['material', 'Material no disponible'], ['acceso', 'Acceso o comunidad'], ['seguridad', 'Seguridad'], ['otro', 'Otro']];
+const GRAV = [['baja', 'Baja'], ['media', 'Media'], ['alta', 'Alta']];
+function obraIncid(o) {
+  return '<div class="card"><div class="row"><h3 class="sp" style="margin:0">Incidencias</h3><button class="btn pri" id="inc-nueva" onclick="incSheet()">＋ Nueva incidencia</button></div>' + (o.incidencias.length ? o.incidencias.slice().reverse().map(i => '<div class="inc ' + i.estado + '"><div class="row"><b>' + esc(i.id) + '</b> <span class="pill ' + (i.gravedad === 'alta' ? 'bad' : i.gravedad === 'media' ? 'wip' : '') + '">' + ({ baja: 'Baja', media: 'Media', alta: 'Alta' }[i.gravedad]) + '</span>' + (i.bloquea ? '<span class="pill bad">bloquea</span>' : '') + (i.diasRetraso ? '<span class="pill wip">+' + i.diasRetraso + ' d</span>' : '') + '<span class="pill ' + (i.estado === 'abierta' ? 'wip' : 'ok') + '">' + (i.estado === 'abierta' ? 'abierta' : 'resuelta') + '</span></div><div>' + esc(i.texto) + '</div><div class="muted">' + esc((TIPOS_INC.find(t => t[0] === i.tipo) || [0, i.tipo])[1]) + ' · ' + fecha(i.fecha) + (i.visibleCliente ? ' · visible para el cliente' : ' · interna') + (i.cambioId ? ' · cambio ' + esc(i.cambioId) : '') + '</div>' + ((i.fotos || []).length ? '<div class="thumbs">' + i.fotos.map(f => thumbAdj(f)).join('') + '</div>' : '') + (i.estado === 'abierta' && !i.cambioId ? '<button class="btn" style="margin-top:6px" onclick="cambioSheet({concepto:' + esc(JSON.stringify(i.texto.slice(0, 80))) + ',tipo:\'imprevisto\',incidenciaId:\'' + esc(i.id) + '\'})">Convertir en cambio</button>' : '') + '</div>').join('') : '<div class="muted" style="margin-top:8px">Sin incidencias.</div>') + '</div>';
+}
+let _inc = null;
+function incSheet() { _fx = { files: [] }; _inc = { tipo: 'otro', gravedad: 'baja', bloquea: false, plazo: false, coste: false, visible: true, voz: false }; incPinta(); }
+function incPinta() {
+  const v = _inc; const txt = ($('#inc-txt') || {}).value || '', dias = ($('#inc-dias') || {}).value || '';
+  const chips = (arr, campo) => arr.map(([k, l]) => '<button class="chip ' + (v[campo] === k ? 'sel' : '') + '" aria-pressed="' + (v[campo] === k) + '" onclick="_inc.' + campo + '=\'' + k + '\';incPinta()">' + l + '</button>').join('');
+  const sw = (campo, l) => '<label class="check" style="display:flex;gap:10px;align-items:center;min-height:48px"><input type="checkbox" style="width:26px;height:26px" ' + (v[campo] ? 'checked' : '') + ' onchange="_inc.' + campo + '=this.checked;incPinta()"> ' + l + '</label>';
+  sheet('<div class="row" style="margin-bottom:8px"><h3 class="sp" style="margin:0">Nueva incidencia</h3><button class="btn" onclick="cerrarSheet()">Cerrar</button></div><div class="lbl">Tipo</div><div>' + chips(TIPOS_INC, 'tipo') + '</div>' +
+    '<label class="field"><span>Descripción</span><textarea id="inc-txt" placeholder="Qué ha pasado">' + esc(txt) + '</textarea></label><button class="btn blk" style="margin-bottom:8px" onclick="incVoz()">🎤 Nota de voz (transcripción simulada)</button>' +
+    '<div class="lbl">Fotos</div>' + fotosInput('fx-th') + '<div class="lbl" style="margin-top:8px">Gravedad</div><div>' + chips(GRAV, 'gravedad') + '</div>' + sw('bloquea', '¿Bloquea la obra?') + sw('plazo', '¿Afecta al plazo?') +
+    (v.plazo ? '<label class="field"><span>Días de retraso (se replanifican los hitos)</span><input id="inc-dias" inputmode="numeric" value="' + esc(dias || '1') + '"></label>' : '') + sw('coste', '¿Implica coste? (se abre el cambio con los datos precargados)') + sw('visible', 'Visible para el cliente') +
+    '<button class="btn pri blk" id="inc-ok" onclick="incGuardar()">Guardar incidencia</button>');
+  fxPinta();
+}
+function incVoz() { const t = $('#inc-txt'); t.value = (t.value ? t.value + ' ' : '') + '[Transcripción simulada de la nota de voz] Se ha detectado un problema en la zona y se necesita revisarlo con el cliente.'; _inc.voz = true; }
+async function incGuardar() {
+  const texto = $('#inc-txt').value.trim(); if (!texto) { toast('Describe la incidencia'); return; } const v = _inc; const dias = v.plazo ? Math.max(1, Math.round(num(($('#inc-dias') || {}).value || 1))) : 0; $('#inc-ok').disabled = true;
+  const ids = await fxSubir(S.ui.obra, { origen: 'lite-incidencia' });
+  const rs = accionObra('incidencia', { tipo: v.tipo, texto, fotos: ids, gravedad: v.gravedad, bloquea: v.bloquea, diasRetraso: dias, visibleCliente: v.visible, voz: v.voz }, rs => { cerrarSheet(); toast('Incidencia ' + rs.incidencia.id + ' registrada'); if (v.coste) setTimeout(() => cambioSheet({ concepto: texto.slice(0, 80), tipo: 'imprevisto', incidenciaId: rs.incidencia.id }), 50); });
+  if (!rs.ok) $('#inc-ok').disabled = false;
+}
+
+// ── R-29 cambios: formulario rápido con tres modos de importe (la misma regla que el modal del admin) ──
+const TIPOS_CAMBIO = [['alcance', 'Alcance'], ['material', 'Material'], ['material_cliente', 'Material del cliente'], ['imprevisto', 'Imprevisto'], ['cliente', 'Pedido del cliente']];
+let _cm = null;
+function importeCambioL(modo, datos, margen) { const p = UP(); if (p) return p.calc.cambio(modo, datos, margen); const m = Number(margen) || 0; if (modo === 'coste_margen') { const c = r2(num(datos.coste)); return { importe: r2(c * (1 + m / 100)), coste: c, margenEur: r2(c * m / 100), modo }; } if (modo === 'partidas') { const c = r2((datos.partidas || []).reduce((s, x) => s + (Number(x.cant) || 0) * (Number(x.precio) || 0), 0)); return { importe: r2(c * (1 + m / 100)), coste: c, margenEur: r2(c * m / 100), modo }; } return { importe: r2(num(datos.importe)), coste: null, margenEur: null, modo: 'final' }; }
+function cambioSheet(pre) {
+  pre = pre || {}; _fx = { files: [] }; _cm = { tipo: pre.tipo || 'alcance', modo: 'final', partidas: [], aprob: 'presencial', bloquea: false, urgente: false, incidenciaId: pre.incidenciaId || null, voz: false }; const o = OB();
+  sheet('<div class="row" style="margin-bottom:8px"><h3 class="sp" style="margin:0">Anotar un cambio</h3><button class="btn" onclick="cerrarSheet()">Cerrar</button></div>' +
+    '<label class="field"><span>Concepto *</span><input id="cm-con" type="text" value="' + esc(pre.concepto || '') + '" placeholder="Qué cambia"></label><div class="lbl">Tipo</div><div id="cm-tipos"></div>' +
+    '<div class="lbl" style="margin-top:8px">Importe *</div><div class="row" style="margin-bottom:8px" role="radiogroup" aria-label="Cómo fijas el importe">' + [['final', 'Precio final sin IVA'], ['coste_margen', 'Coste + margen'], ['partidas', 'Por partidas']].map(([k, l]) => '<label class="chip" style="cursor:pointer"><input type="radio" name="cm-modo" value="' + k + '" ' + (k === 'final' ? 'checked' : '') + ' onchange="cmModo(\'' + k + '\')" style="width:18px;height:18px;margin-right:6px"> ' + l + '</label>').join('') + '</div>' +
+    '<div id="cm-final"><label class="field"><span>Precio final sin IVA (negativo si resta)</span><input id="cm-imp" inputmode="decimal" oninput="cmRes()"></label></div>' +
+    '<div id="cm-coste" style="display:none"><label class="field"><span>Tu coste (sin margen)</span><input id="cm-cos" inputmode="decimal" oninput="cmRes()"></label><div class="muted">Margen automático configurado: ' + fmtNum(o.margen) + ' %</div></div>' +
+    '<div id="cm-part" style="display:none"><div id="cm-part-l"></div><label class="field"><span>Añadir del catálogo</span><select id="cm-cat" onchange="cmPartAdd(this.value);this.value=\'\'"><option value="">Elegir trabajo o producto…</option>' + o.catalogo.map(x => '<option value="' + esc(x.id) + '">' + esc(x.nombre) + ' · ' + eur(x.precio) + '/' + esc(x.unidad) + '</option>').join('') + '</select></label><button class="btn blk" onclick="cmPartAdd(\'\')">＋ Partida libre</button><div class="muted">Se aplica el margen del ' + fmtNum(o.margen) + ' % a la suma.</div></div>' +
+    '<div class="card" style="margin:10px 0" id="cm-res" aria-live="polite"></div>' +
+    '<details class="mas"><summary>Más opciones</summary><div class="lbl" style="margin-top:8px">Foto o voz</div>' + fotosInput('fx-th') + '<button class="btn blk" style="margin-bottom:8px" onclick="cmVoz()">🎤 Nota de voz (transcripción simulada)</button><label class="field"><span>Nota</span><input id="cm-nota" type="text"></label><label class="field"><span>Cómo se aprobó</span><select id="cm-apr"><option value="telefono">Teléfono</option><option value="presencial" selected>Presencial</option><option value="enlace">Enlace</option></select></label>' +
+    '<label class="check" style="display:flex;gap:10px;align-items:center;min-height:48px"><input type="checkbox" id="cm-blq" style="width:26px;height:26px"> ¿Bloquea la obra?</label><label class="check" style="display:flex;gap:10px;align-items:center;min-height:48px"><input type="checkbox" id="cm-urg" style="width:26px;height:26px"> ¿Urgente?</label></details>' +
+    '<button class="btn pri blk" id="cm-ok" onclick="cmGuardar()">Anotar y avisar al cliente</button>');
+  cmTipos(); cmRes();
+}
+function cmTipos() { $('#cm-tipos').innerHTML = TIPOS_CAMBIO.map(([k, l]) => '<button class="chip ' + (_cm.tipo === k ? 'sel' : '') + '" aria-pressed="' + (_cm.tipo === k) + '" onclick="_cm.tipo=\'' + k + '\';cmTipos()">' + l + '</button>').join(''); }
+function cmModo(m) { _cm.modo = m; $('#cm-final').style.display = m === 'final' ? '' : 'none'; $('#cm-coste').style.display = m === 'coste_margen' ? '' : 'none'; $('#cm-part').style.display = m === 'partidas' ? '' : 'none'; cmRes(); }
+function cmDatos() { return { importe: ($('#cm-imp') || {}).value, coste: ($('#cm-cos') || {}).value, partidas: _cm.partidas }; }
+function cmRes() { const o = OB(); const rs = importeCambioL(_cm.modo, cmDatos(), o.margen); $('#cm-res').innerHTML = '<div class="kv"><span>Importe sin IVA</span><b>' + eur(rs.importe) + '</b></div><div class="kv"><span>Con IVA ' + fmtNum(o.ivaPct) + ' %</span><b>' + eur(rs.importe * (1 + o.ivaPct / 100)) + '</b></div>' + (rs.margenEur != null ? '<div class="muted">Coste ' + eur(rs.coste) + ' + margen ' + fmtNum(o.margen) + ' % (' + eur(rs.margenEur) + ')</div>' : ''); return rs; }
+function cmPartPinta() { $('#cm-part-l').innerHTML = _cm.partidas.map((p, i) => '<div class="row" style="margin-bottom:6px"><input class="sp" aria-label="Partida ' + (i + 1) + '" value="' + esc(p.nombre) + '" placeholder="Trabajo o producto" oninput="_cm.partidas[' + i + '].nombre=this.value"><input style="max-width:72px" inputmode="decimal" aria-label="Cantidad" value="' + p.cant + '" oninput="_cm.partidas[' + i + '].cant=num(this.value);cmRes()"><input style="max-width:84px" inputmode="decimal" aria-label="Precio unitario" value="' + p.precio + '" oninput="_cm.partidas[' + i + '].precio=num(this.value);cmRes()"><button class="x" aria-label="Quitar partida" onclick="_cm.partidas.splice(' + i + ',1);cmPartPinta();cmRes()">✕</button></div>').join(''); }
+function cmPartAdd(id) { const x = id ? OB().catalogo.find(y => y.id === id) : null; _cm.partidas.push({ nombre: x ? x.nombre : '', cant: 1, precio: x ? x.precio : 0 }); cmPartPinta(); cmRes(); }
+function cmVoz() { const t = $('#cm-nota'); t.value = (t.value ? t.value + ' ' : '') + '[Transcripción simulada] El cliente aprueba el cambio de palabra.'; }
+async function cmGuardar() {
+  const o = OB(); const concepto = $('#cm-con').value.trim(); const rs0 = cmRes(); if (!concepto) { toast('Indica el concepto del cambio'); return; } if (!rs0.importe) { toast('Indica un importe distinto de 0'); return; } $('#cm-ok').disabled = true;
+  const ids = await fxSubir(S.ui.obra, { origen: 'lite-cambio' });
+  const rs = accionObra('cambio', { modo: _cm.modo, concepto, tipo: _cm.tipo, importe: cmDatos().importe, coste: cmDatos().coste, partidas: _cm.partidas.map(p => ({ nombre: p.nombre, cant: p.cant, precio: p.precio })), aprobacion: $('#cm-apr').value, bloquea: $('#cm-blq').checked, urgente: $('#cm-urg').checked, fotos: ids, nota: $('#cm-nota').value, incidenciaId: _cm.incidenciaId, origen: 'lite' }, rs => sheetCambioOk(rs, concepto));
+  if (!rs.ok) $('#cm-ok').disabled = false;
+}
+function sheetCambioOk(rs, concepto) {
+  const o = OB(); const tel = String((o && o.tel) || '').replace(/\D/g, '');
+  sheet('<h3>Cambio ' + esc(rs.id) + ' anotado</h3><p class="muted" style="margin:6px 0 10px">Aviso informativo para el cliente (el cliente nunca fija el precio):</p><textarea class="msgbox" id="cm-msg" aria-label="Mensaje al cliente">' + esc(rs.msg) + '</textarea>' +
+    '<div class="row" style="margin:8px 0"><button class="btn sp" onclick="window.open(\'https://wa.me/' + (tel ? '34' + tel : '') + '?text=\'+encodeURIComponent($(\'#cm-msg\').value),\'_blank\',\'noopener\')">💬 WhatsApp</button><button class="btn sp" onclick="copiarTexto($(\'#cm-msg\').value)">📋 Copiar</button></div>' +
+    '<div class="info">Umbral de adenda: ' + esc(rs.umbralTexto) + '.</div>' + (rs.disparadores.length ? '<div class="warn" id="cm-trig">⚠ <b>Disparador de adenda:</b> ' + rs.disparadores.map(esc).join('; ') + '.' + (rs.tope ? ' <b>Adenda inmediata recomendada.</b>' : '') + '</div>' : '<div class="muted">Sin disparadores de adenda activos.</div>') +
+    '<div class="row"><button class="btn sp" onclick="cerrarSheet()">Cerrar</button>' + (rs.puedeAdenda ? '<button class="btn pri sp" onclick="cerrarSheet();obraTab(\'cuenta\')">Ir a la cuenta</button>' : '') + '</div>');
+}
+function copiarTexto(t) { if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(t).then(() => toast('Copiado')); else toast('Copia el texto manualmente'); }
+function obraCambiosL(o) {
+  return '<div class="card"><div class="row"><h3 class="sp" style="margin:0">Cambios de la obra</h3><button class="btn pri" id="cambio-nuevo" onclick="cambioSheet()">＋ Anotar cambio</button></div>' + (o.cambios.length ? o.cambios.map(c => '<div class="kv"><span><b>' + esc(c.id) + '</b> ' + esc(c.concepto) + '<div class="muted">' + fecha(c.fecha) + ' · ' + esc(c.estado.replace('_', ' ')) + (c.bloquea ? ' · bloquea' : '') + '</div></span><b' + (c.estado === 'retirado' ? ' style="text-decoration:line-through"' : '') + '>' + eur(c.importe) + '</b></div>').join('') : '<div class="muted" style="margin-top:8px">Sin cambios registrados.</div>') + '</div>';
+}
+
+// ── R-30 cuenta de la obra ──
+function obraCuenta(o) {
+  const c = o.cuenta;
+  return '<div class="card" id="cuenta-obra"><h3>Cuenta de la obra</h3><div class="muted" style="margin-bottom:6px">Importes con IVA. Solo lectura.</div>' +
+    '<div class="kv"><span>Aceptada</span><b>' + eur(c.aceptada) + '</b></div><div class="kv"><span>+ Adendas firmadas</span><b>' + eur(c.adendasFirmadas) + '</b></div><div class="kv"><span>= Firmado</span><b>' + eur(c.firmado) + '</b></div><div class="kv"><span>+ Cambios provisionales (sin firmar)</span><b>' + eur(c.provisional) + '</b></div>' +
+    '<div class="kv"><b>Total vigente</b><b style="font-size:18px">' + eur(c.total) + '</b></div><div class="kv"><span>Cobrado</span><b>' + eur(c.cobrado) + '</b></div><div class="kv"><span>Saldo</span><b class="' + (c.saldo > 0.005 ? 'dlt-up' : 'dlt-dn') + '">' + eur(c.saldo) + '</b></div>' +
+    '<div class="kv"><span>Próximo cobro</span><b>' + (c.proximo ? esc(c.proximo.label) + ' · ' + eur(c.proximo.importe) : 'Plan completo') + '</b></div></div>' +
+    '<div class="card"><div class="lbl">Pendiente de firma frente al umbral de adenda</div><div class="progress" style="height:12px" role="progressbar" aria-valuenow="' + c.pctUmbral + '" aria-valuemin="0" aria-valuemax="100"><i style="width:' + c.pctUmbral + '%;background:' + (c.pctUmbral >= 100 ? 'var(--danger)' : c.pctUmbral >= 80 ? '#c98a00' : 'var(--ok)') + '"></i></div><div class="muted" style="margin-top:6px">' + eur(c.pendienteSinIva) + ' sin IVA pendientes de firma · umbral ' + esc(c.umbralTexto) + ' (' + c.pctUmbral + ' %)</div>' +
+    (c.disparadores.length ? c.disparadores.map(t => '<div class="warn" style="margin-top:8px">⚠ ' + esc(t) + '</div>').join('') : '') + (c.puedeAdenda ? '<button class="btn pri blk" id="gen-adenda" style="margin-top:10px" onclick="generarAdendaL()">Generar adenda (' + c.nRegistrados + ' cambio' + (c.nRegistrados > 1 ? 's' : '') + ')</button>' : '') + '</div>' +
+    '<div class="card"><h3>Cambios y adendas</h3>' + (o.cambios.length ? o.cambios.map(x => '<div class="kv"><span><b>' + esc(x.id) + '</b> ' + esc(x.concepto) + '<div class="muted">' + esc(x.estado.replace('_', ' ')) + (x.adendaId ? ' · adenda ' + esc(x.adendaId) : '') + '</div></span><b' + (x.estado === 'retirado' ? ' style="text-decoration:line-through"' : '') + '>' + eur(x.importeIva) + '</b></div>').join('') : '<div class="muted">Sin cambios.</div>') + (o.adendas.length ? '<div class="lbl" style="margin-top:8px">Adendas</div>' + o.adendas.map(a => '<div class="kv"><span><b>' + esc(a.id) + '</b> · ' + esc(a.estado === 'firmada' ? 'firmada' : 'por firmar') + '</span><b>' + eur(a.delta) + ' sin IVA</b></div>').join('') : '') + '</div>';
+}
+function generarAdendaL() { accionObra('adenda', {}, rs => toast('Adenda ' + rs.id + ' enviada al cliente para su firma')); }
+
+// ── R-31 fotos de obra por estancia y momento ──
+const MOMENTOS = [['antes', 'Antes'], ['durante', 'Durante'], ['despues', 'Después']];
+function obraFotos(o) {
+  const porEsp = {}; o.fotos.forEach(f => { (porEsp[f.espacioId || '_'] = porEsp[f.espacioId || '_'] || []).push(f); });
+  return '<div class="card"><div class="row"><h3 class="sp" style="margin:0">Fotos de la obra</h3><button class="btn pri" id="foto-nueva" onclick="fotoObraSheet()">📷 Subir fotos</button></div>' +
+    (o.fotos.length ? Object.keys(porEsp).map(k => '<div class="lbl" style="margin-top:10px">' + esc(k === '_' ? 'Sin estancia' : ((o.espacios.find(e => e.id === k) || {}).nombre || k)) + '</div>' + MOMENTOS.map(([m, l]) => { const fs = porEsp[k].filter(f => (f.momento || 'durante') === m && f.adjuntoId); return fs.length ? '<div class="muted">' + l + ' (' + fs.length + ')</div><div class="thumbs">' + fs.map(f => thumbAdj(f.adjuntoId)).join('') + '</div>' : ''; }).join('')).join('') : '<div class="muted" style="margin-top:8px">Aún no hay fotos. Súbelas por estancia y momento: las verán el admin y el cliente.</div>') + '</div>';
+}
+function fotoObraSheet() {
+  const o = OB(); _fx = { files: [] };
+  sheet('<div class="row" style="margin-bottom:8px"><h3 class="sp" style="margin:0">Subir fotos de la obra</h3><button class="btn" onclick="cerrarSheet()">Cerrar</button></div><label class="field"><span>Estancia</span><select id="fo-esp">' + o.espacios.map(e => '<option value="' + esc(e.id) + '">' + esc(e.nombre) + '</option>').join('') + '</select></label><label class="field"><span>Momento</span><select id="fo-mom">' + MOMENTOS.map(([k, l]) => '<option value="' + k + '"' + (k === 'durante' ? ' selected' : '') + '>' + l + '</option>').join('') + '</select></label>' + fotosInput('fx-th') + '<button class="btn pri blk" id="fo-ok" onclick="fotoObraOk()">Subir</button>');
+}
+async function fotoObraOk() {
+  if (!_fx.files.length) { toast('Elige al menos una foto'); return; } $('#fo-ok').disabled = true; const esp = $('#fo-esp').value, mom = $('#fo-mom').value; const ids = await fxSubir(S.ui.obra, { origen: 'lite-foto' });
+  const rs = accionObra('foto', { adjuntos: ids, momento: mom, espacioId: esp }, () => { cerrarSheet(); toast(ids.length + ' foto(s) subida(s)'); }); if (!rs.ok) $('#fo-ok').disabled = false;
+}
+
+// ── Cabecera y arranque de pantallas (sustituye a header/render) ──
+function header() {
+  const v = S.ui.view; const enviada = S.v3.estado === 'enviada';
+  let back = '', title = 'Panel Lite', sub = S.ui.modo === 'obra' ? 'Modo Obra' : 'Revisión en visita técnica';
+  const b = (txt, fn, cls) => '<button class="back ' + (cls || '') + '" onclick="' + fn + '" aria-label="Volver">‹ ' + txt + '</button>';
+  if (v === 'hub') { back = b('Inicio', "ir('home')"); title = S.caso.cliente.nombre; sub = S.caso.ref + ' · ' + S.caso.tipo; }
+  else if (v === 'room') { back = b('Estancias', "ir('hub')", 'only-narrow') + b('Inicio', "ir('home')", 'only-wide'); title = S.caso.cliente.nombre; sub = S.caso.ref + ' · ' + curRoom().nombre; }
+  else if (v === 'send') { back = b('Revisión', "ir('hub')"); title = 'Resumen y envío'; sub = S.caso.cliente.nombre + ' · ' + S.caso.ref; }
+  else if (v === 'sent') { back = b('Inicio', "ir('home')"); title = S.v3.id + ' enviada'; sub = S.caso.cliente.nombre + ' · ' + S.caso.ref; }
+  else if (v === 'obra') { back = b('Obras', "S.ui.view='home';guardar();render()"); title = 'Obra'; sub = S.ui.obra || ''; }
+  const obraMode = S.ui.modo === 'obra' && v === 'home';
+  return '<header class="top">' + back + '<div class="tt"><b>' + esc(title) + '</b><small>' + esc(sub) + '</small></div>' +
+    (obraMode || v === 'obra' ? '<span class="ver env">Obra</span>' : '<span class="ver ' + (enviada ? 'env' : '') + '">' + (enviada ? esc(S.v3.id) + ' enviada' : esc(S.v2.id) + ' → ' + esc(S.v3.id)) + '</span>') + '<span class="saves"><span id="sv" class="save' + (saveErr ? ' err' : '') + '">' + (saveErr ? 'Sin guardar' : (savedAt ? 'Guardado ' + hhmm(savedAt) : '')) + '</span><span id="sy" class="save" title="Estado de la sincronización con el admin">' + (S.ui.modo === 'obra' ? '' : etiquetaSync()) + '</span></span></header>';
+}
+function render() {
+  const v = S.ui.view; document.body.dataset.view = v;
+  const key = v + '|' + (S.ui.room || '') + '|' + (S.ui.obraTab || ''); const y = key === lastKey ? window.scrollY : 0; lastKey = key;
+  let main = '';
+  if (v === 'home') main = vHome();
+  else if (v === 'hub' || v === 'room') main = '<div class="cols"><div class="pane-list">' + vList() + '</div><div class="pane-room">' + vRoom(curRoom()) + '</div></div>';
+  else if (v === 'send') main = vSend(); else if (v === 'obra') main = vObra(); else main = vSent();
+  $('#app').innerHTML = header() + '<main id="main">' + main + '</main>' + (v === 'hub' || v === 'room' ? bar() : '');
+  window.scrollTo(0, y);
+}
+
+</script>
+<script>
+/* === PROTOTIPO COMPLETO · adaptador del panel Lite === */
+(function () {
+  const P = window.__P = {};
+  P.S = () => S;
+  P.clave = () => S && S.protoKey || null;
+
+  // Pantalla de espera mientras no haya una visita asignada
+  const ov = document.createElement('div');
+  ov.id = 'proto-vacio';
+  ov.style.cssText = 'position:fixed;inset:0;z-index:300;background:var(--bg,#f6f1ea);display:flex;align-items:center;justify-content:center;padding:24px;text-align:center;font-family:inherit';
+  ov.innerHTML = '<div style="max-width:420px"><div style="font-size:52px">📋</div><h2 style="margin:8px 0">Sin visitas asignadas</h2><p style="color:#6b5d4f;line-height:1.5">Cuando el cliente <b>confirme el día de la visita técnica</b> (pestaña Cliente), el pedido aparecerá aquí para revisarlo estancia por estancia desde el móvil o la tablet.</p><p style="color:#6b5d4f;line-height:1.5;margin-top:10px">Si ya tienes una obra en marcha, entra en el modo <b>Obra</b>.</p><button id="vacio-obra" style="margin-top:14px;min-height:48px;padding:0 18px;border-radius:12px;background:#a9561a;color:#fff;font-weight:600">Ir al modo Obra</button></div>';
+  document.body.appendChild(ov);
+  P.mostrar = (sw) => { ov.style.display = sw ? 'none' : 'flex'; };
+  ov.querySelector('#vacio-obra').addEventListener('click', () => { S.ui.modo = 'obra'; S.ui.view = 'home'; render(); P.mostrar(true); });
+
+  P.estadoDatos = function (ed) {
+    if (!ed || JSON.stringify(ed) === JSON.stringify(S.estadoDatos)) return;
+    S.estadoDatos = ed; const c = $('#card-datos'); if (c && S.ui.view === 'home') c.outerHTML = cardDatosCliente();
+  };
+
+  // Carga el pedido del cliente (versión vigente) como punto de partida de la visita; con borrador guardado, lo reanuda
+  P.cargar = function (V, forzar) {
+    const est = V.est.map(e => ({
+      id: e.id, tipo: e.tipo, tipoAdm: e.tipoAdm, nombre: e.nombre, m2: e.m2, m2Est: e.m2, med: null, detalle: e.detalle || null, revisada: false, origenEst: 'cliente', comentarios: [], fotos: [],
+      trabajos: e.lineas.map(l => ({ id: uid('t'), k: l.k, key: l.key || l.k, l: l.l, u: l.u, b: 'fijo', bk: l.bk || 'fijo', tl: l.tl || 'mo', det: l.det || null, cant: l.cant, precio: l.precio, origen: 'cliente', confirmado: false, quitado: false, manual: !!l.manual, nota: l.nota || '', base: { cant: l.cant, precio: l.precio }, ver: null, lineaId: l.lineaId || null }))
+    }));
+    const antes = S && S.ui ? S.ui : {};
+    let N = {
+      ver: 2, creado: Date.now(), protoKey: V.clave, casoId: V.casoId, sincro: true,
+      caso: { ref: V.ref, cliente: V.cliente, direccion: V.direccion, m2Total: V.m2Total, tipo: V.tipoTxt },
+      ajustes: V.ajustes, v2: null, v3: { id: V.v3id, estado: 'borrador', pendienteEnvio: false, guardadaAt: null, enviadaAt: null, canal: null },
+      hist: [], versiones: V.versiones || [], est, general: '', estadoDatos: V.estadoDatos || null,
+      neg: Object.assign({}, NEG_DEF, (V.cfg && V.cfg.negociacionDef) || {}), cfgL: { fotoObligatoriaHito: !(V.cfg && V.cfg.fotoObligatoriaHito === false) },
+      hitosPlan: ((V.cfg && V.cfg.hitos) || []).map(h => ({ id: uid('h'), nombre: h.nombre, dias: h.diasEstimados })), planCobros: ((V.cfg && V.cfg.planCobros) || []).map(t => ({ id: uid('p'), label: t.label, pct: t.pct, cuando: t.cuando })),
+      tabiques: [], ui: { view: 'home', room: null, modo: forzar ? 'visita' : (antes.modo || 'visita'), obra: antes.obra || null, obraTab: antes.obraTab || 'hitos' }
+    };
+    const tot = totalesDe(N.est, N.ajustes); N.v2 = { id: V.v2id, total: tot.total, subtotal: tot.subtotal, fecha: Date.now() - 86400000 };
+    if (V.borrador && !V.borrador.snap) {
+      const bo = V.borrador; const meds = V.medidas || bo.medidas || {};
+      N.est.forEach(e => { const m = meds[e.id]; if (m && m.aplicada !== false) { e.med = { ancho: m.ancho || 0, largo: m.largo || 0, alto: m.alto || 0, huecos: (m.huecos || []).map(h => ({ id: uid('hu'), tipo: h.tipo, ancho: h.ancho, alto: h.alto })), reparto: m.reparto || null, activa: true }; if (m.ancho > 0 && m.largo > 0) e.m2 = superficie(m.ancho, m.largo); } });
+      N.tabiques = (bo.tabiques || []).map(t => Object.assign({}, t)); if (bo.hitosPlan && bo.hitosPlan.length) N.hitosPlan = bo.hitosPlan.map(h => ({ id: uid('h'), nombre: h.nombre, dias: h.dias || h.diasEstimados }));
+      if (bo.planCobros && bo.planCobros.length) N.planCobros = bo.planCobros.map(t => ({ id: uid('p'), label: t.label, pct: t.pct, cuando: t.cuando })); if (bo.neg) N.neg = Object.assign({}, NEG_DEF, bo.neg, { plazoManual: bo.neg.plazoSemanas || null }); if (bo.ajustes) N.ajustes = Object.assign({}, bo.ajustes);
+      mezclarAdminLineas(N, bo.lineas); N.general = bo.general || ''; N.borradorRev = bo.rev; N.v3.id = bo.v3id || N.v3.id; N.v3.pendienteEnvio = true;
+    }
+    if (V.borrador && V.borrador.snap) {
+      const sn = JSON.parse(JSON.stringify(V.borrador.snap)); sn.versiones = N.versiones; sn.estadoDatos = N.estadoDatos; sn.protoKey = N.protoKey; sn.casoId = N.casoId; sn.hist = []; sn.ui = N.ui; sn.sincro = true; sn.v2 = sn.v2 || N.v2;
+      if (V.borrador.por === 'admin') mezclarAdminLineas(sn, V.borrador.lineas);
+      sn.borradorRev = V.borrador.rev; sn.v3 = Object.assign({}, sn.v3, { id: V.borrador.v3id || sn.v3.id, estado: 'borrador', pendienteEnvio: true }); N = sn;
+    }
+    S = normS(N); ultimoHash = hashStr(JSON.stringify(pack())); S.sync = S.borradorRev ? { ok: true, at: Date.now() } : null;
+    guardarYa(); render(); P.mostrar(true);
+  };
+  // «Nueva versión» (V4…) y restablecer ejemplo no tienen sentido aquí
+  const up = () => window.parent && window.parent.Proto;
+  window.resetOk = function () { const p = up(); if (p) p.toast('Para empezar de cero usa «Reiniciar prototipo» arriba'); try { cerrarSheet(); } catch (e) {} };
+  P.refrescar = () => { if (!$('#sheet').innerHTML.trim() && !document.activeElement.matches('input,textarea,select')) { P.refrescarOverlay(); render(); } };
+  P.refrescarOverlay = () => P.mostrar(!!S.casoId || S.ui.modo === 'obra');
+  P.refrescarOverlay();
+  render();
+})();
+</script>
+</body>
+</html>

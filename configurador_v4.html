@@ -1,0 +1,2499 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Configurador de Presupuesto — Reformas</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;600&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+/* ── RESET ── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+body { font-family: 'DM Sans', sans-serif; background: #f4efe6; color: #1c140d; font-size: 15px; line-height: 1.6; }
+img  { display: block; max-width: 100%; }
+button, input, select, textarea { font-family: inherit; }
+
+/* ── TOKENS ── */
+:root {
+  --cream:  #f4efe6;
+  --stone:  #e5ddd0;
+  --warm:   #c4b49a;
+  --terra:  #8a5c38;
+  --deep:   #18100a;
+  --ink:    #1c140d;
+  --accent: #c96f28;
+  --light:  #faf7f2;
+  --muted:  #7a6b58;
+  --ok:     #3a6648;
+  --danger: #963030;
+  --border: #ddd5c5;
+  --r:      10px;
+}
+
+/* ── CABECERA ── */
+.top-bar {
+  background: var(--deep); height: 52px;
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0 28px; position: sticky; top: 0; z-index: 100;
+  border-bottom: 1px solid rgba(255,255,255,.07);
+}
+.top-logo { font-family: 'Cormorant Garamond', serif; font-size: 17px; color: var(--cream); }
+.top-logo span { color: var(--accent); }
+.top-hint { font-size: 11px; color: rgba(196,180,154,.5); letter-spacing: .4px; }
+
+/* ── CONTENEDOR WIZARD ── */
+.wizard-wrap { max-width: 680px; margin: 0 auto; padding: 36px 24px 80px; }
+
+/* ── STEPPER ── */
+.stepper {
+  display: flex; align-items: center; margin-bottom: 40px;
+}
+.step-it { display: flex; align-items: center; gap: 6px; flex: 1; }
+.step-it:last-child { flex: 0; }
+.step-dot {
+  width: 28px; height: 28px; border-radius: 50%; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 11px; font-weight: 600; transition: all .3s;
+  border: 2px solid var(--border); background: var(--light); color: var(--muted);
+}
+.step-it.done .step-dot { background: var(--ok);    border-color: var(--ok);    color: #fff; }
+.step-it.act  .step-dot { background: var(--accent); border-color: var(--accent); color: #fff; }
+.step-line { flex: 1; height: 1px; background: var(--border); margin: 0 4px; transition: background .3s; }
+.step-it.done .step-line { background: var(--ok); }
+.step-lbl { font-size: 11px; color: var(--muted); white-space: nowrap; }
+.step-it.act  .step-lbl { color: var(--accent); font-weight: 600; }
+.step-it.done .step-lbl { color: var(--ok); }
+
+/* ── PANELS ── */
+.panel { display: none; animation: fadeUp .28s ease; }
+.panel.active { display: block; }
+@keyframes fadeUp { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+
+.panel-title { font-family: 'Cormorant Garamond', serif; font-size: 30px; margin-bottom: 5px; }
+.panel-sub   { color: var(--muted); font-size: 14px; margin-bottom: 24px; font-weight: 300; }
+
+/* ── TARJETAS DE OPCIÓN (tipo inmueble, espacios) ── */
+.opt-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 10px; margin-bottom: 24px; }
+.opt-card {
+  border: 2px solid var(--border); border-radius: 12px;
+  padding: 16px 12px; cursor: pointer; transition: all .18s;
+  background: var(--light); position: relative; text-align: center; user-select: none;
+}
+.opt-card:hover { border-color: var(--warm); transform: translateY(-2px); }
+.opt-card.sel { border-color: var(--accent); background: #fff; box-shadow: 0 0 0 3px rgba(201,111,40,.1); }
+.opt-check {
+  position: absolute; top: 8px; right: 8px;
+  width: 18px; height: 18px; border-radius: 50%;
+  background: var(--accent); color: #fff; font-size: 9px;
+  display: flex; align-items: center; justify-content: center;
+  opacity: 0; transition: opacity .18s;
+}
+.opt-card.sel .opt-check { opacity: 1; }
+.opt-icon { font-size: 28px; margin-bottom: 8px; }
+.opt-name { font-weight: 500; font-size: 13px; }
+.opt-desc { font-size: 11px; color: var(--muted); margin-top: 2px; }
+
+/* ── PASO 1: superficie + planta ── */
+.field-row  { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 18px; }
+.field-solo { margin-bottom: 18px; }
+.field-lbl  { font-size: 11px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .5px; margin-bottom: 5px; }
+.field-inp  {
+  width: 100%; padding: 10px 14px; border: 1.5px solid var(--border);
+  border-radius: 8px; font-size: 14px; background: var(--light); color: var(--ink);
+  transition: border-color .18s;
+}
+.field-inp:focus { outline: none; border-color: var(--accent); background: #fff; }
+.field-inp::placeholder { color: var(--warm); }
+.planta-row { display: flex; gap: 8px; }
+.planta-btn {
+  flex: 1; border: 2px solid var(--border); border-radius: 8px;
+  padding: 10px 8px; text-align: center; cursor: pointer;
+  background: var(--light); transition: all .18s; font-size: 13px;
+}
+.planta-btn.sel { border-color: var(--accent); background: #fff; font-weight: 600; color: var(--accent); }
+
+/* ── PASO 3: TRABAJOS (checkboxes por categoría) ── */
+.espacio-progress {
+  display: flex; gap: 8px; align-items: center; margin-bottom: 20px;
+}
+.esp-dot {
+  width: 8px; height: 8px; border-radius: 50%;
+  background: var(--border); transition: background .2s;
+}
+.esp-dot.done { background: var(--ok); }
+.esp-dot.act  { background: var(--accent); width: 22px; border-radius: 4px; }
+.esp-badge {
+  display: inline-flex; align-items: center; gap: 6px;
+  background: rgba(201,111,40,.12); border: 1px solid rgba(201,111,40,.25);
+  color: var(--accent); font-size: 12px; font-weight: 600;
+  padding: 4px 12px; border-radius: 20px; margin-bottom: 16px;
+}
+
+.cat-label { font-size: 10px; letter-spacing: 1.8px; text-transform: uppercase; color: var(--muted); font-weight: 600; margin: 16px 0 8px; }
+.chk-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.chk-card {
+  border: 1.5px solid var(--border); border-radius: 9px;
+  padding: 11px 14px; cursor: pointer; transition: all .16s;
+  background: var(--light); display: flex; align-items: center; gap: 10px;
+  font-size: 13px; user-select: none;
+}
+.chk-card:hover { border-color: var(--warm); }
+.chk-card.sel { border-color: var(--accent); background: #fff; }
+.chk-box {
+  width: 18px; height: 18px; border-radius: 5px; flex-shrink: 0;
+  border: 1.5px solid var(--border); background: #fff; transition: all .16s;
+  display: flex; align-items: center; justify-content: center; font-size: 10px; color: #fff;
+}
+.chk-card.sel .chk-box { background: var(--accent); border-color: var(--accent); }
+.chk-card.sel .chk-box::after { content: '✓'; }
+
+/* cantidad para items "ud" */
+.qty-row { display: flex; align-items: center; gap: 6px; margin-top: 8px; }
+.qty-inp {
+  width: 52px; padding: 4px 8px; border: 1px solid var(--border);
+  border-radius: 6px; font-size: 13px; text-align: center; background: var(--cream);
+}
+.qty-lbl { font-size: 12px; color: var(--muted); }
+
+/* m² del espacio */
+.m2-surf {
+  background: var(--light); border: 1.5px solid var(--border);
+  border-radius: 12px; padding: 18px 22px;
+  display: flex; justify-content: space-between; align-items: center;
+  margin-top: 20px;
+}
+.m2-ctrl { display: flex; align-items: center; gap: 12px; }
+.m2-btn {
+  width: 32px; height: 32px; border-radius: 50%;
+  border: 1.5px solid var(--border); background: var(--cream);
+  font-size: 18px; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: all .16s; color: var(--ink);
+}
+.m2-btn:hover { border-color: var(--accent); color: var(--accent); }
+.m2-num {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 36px; min-width: 54px; text-align: center;
+}
+
+/* ── PASO 4: MATERIALES ── */
+.mat-section-title {
+  font-size: 12px; letter-spacing: 1.5px; text-transform: uppercase;
+  color: var(--accent); font-weight: 600; margin: 22px 0 10px;
+  padding-bottom: 6px; border-bottom: 1px solid var(--border);
+}
+.prod-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 12px; margin-bottom: 4px; }
+.prod-card {
+  border: 2px solid var(--border); border-radius: 11px;
+  overflow: hidden; cursor: pointer; transition: all .18s; background: #fff; position: relative;
+}
+.prod-card:hover { border-color: var(--warm); transform: translateY(-2px); }
+.prod-card.sel { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(201,111,40,.1); }
+.prod-card .opt-check { opacity: 0; }
+.prod-card.sel .opt-check { opacity: 1; }
+.prod-img { width: 100%; height: 100px; object-fit: cover; background: var(--stone); }
+.prod-body { padding: 9px 11px; }
+.prod-brand { font-size: 9px; text-transform: uppercase; letter-spacing: 1px; color: var(--muted); margin-bottom: 2px; }
+.prod-name  { font-size: 12px; font-weight: 500; line-height: 1.4; margin-bottom: 6px; }
+.prod-foot  { display: flex; justify-content: space-between; align-items: baseline; }
+.prod-price { font-size: 14px; font-weight: 600; color: var(--terra); }
+.prod-unit  { font-size: 10px; color: var(--muted); }
+.prod-m2-row {
+  margin-top: 7px; padding-top: 7px; border-top: 1px solid var(--border);
+  display: flex; align-items: center; gap: 5px;
+}
+.prod-m2-row input {
+  width: 52px; padding: 3px 7px; border: 1px solid var(--border);
+  border-radius: 5px; font-size: 12px; text-align: center; background: var(--cream);
+}
+.prod-m2-row label { font-size: 11px; color: var(--muted); }
+.mat-skip { font-size: 13px; color: var(--muted); padding: 10px 0 4px; font-weight: 300; }
+
+/* ── PASO 5: EXTRAS ── */
+.extra-grid { display: grid; gap: 8px; margin-bottom: 20px; }
+.extra-card {
+  border: 1.5px solid var(--border); border-radius: 9px;
+  padding: 13px 16px; cursor: pointer; transition: all .16s;
+  background: var(--light); display: flex; align-items: center; gap: 12px; user-select: none;
+}
+.extra-card:hover { border-color: var(--warm); }
+.extra-card.sel { border-color: var(--accent); background: #fff; }
+.extra-icon { font-size: 20px; flex-shrink: 0; }
+.extra-info { flex: 1; }
+.extra-name { font-weight: 500; font-size: 14px; }
+.extra-desc { font-size: 12px; color: var(--muted); margin-top: 1px; }
+.extra-importe { font-size: 13px; font-weight: 600; color: var(--terra); white-space: nowrap; }
+
+/* ── PASO 6: NOTAS ── */
+textarea.field-inp { resize: vertical; min-height: 90px; }
+
+/* ── PASO 7: URGENCIA ── */
+.urgencia-grid { display: grid; gap: 8px; margin-bottom: 24px; }
+.urgencia-card {
+  border: 1.5px solid var(--border); border-radius: 9px;
+  padding: 13px 16px; cursor: pointer; transition: all .16s;
+  background: var(--light); display: flex; align-items: center; gap: 12px; user-select: none;
+}
+.urgencia-card:hover { border-color: var(--warm); }
+.urgencia-card.sel { border-color: var(--accent); background: #fff; }
+.urg-icon { font-size: 22px; flex-shrink: 0; }
+.urg-lbl  { font-weight: 500; font-size: 14px; }
+
+/* ── RESULTADO ── */
+.res-hero {
+  background: var(--deep); border-radius: 16px; padding: 28px 30px;
+  margin-bottom: 20px; position: relative; overflow: hidden;
+}
+.res-hero::before {
+  content: ''; position: absolute; inset: 0;
+  background: radial-gradient(ellipse 100% 80% at 100% 0%, rgba(201,111,40,.22), transparent 60%);
+}
+.res-tag   { font-size: 10px; letter-spacing: 2px; text-transform: uppercase; color: var(--warm); margin-bottom: 8px; position: relative; }
+.res-total { font-family: 'Cormorant Garamond', serif; font-size: 58px; color: var(--cream); line-height: 1; position: relative; }
+.res-cur   { font-size: 26px; color: var(--warm); vertical-align: super; margin-right: 3px; }
+.res-sub   { font-size: 13px; color: rgba(196,180,154,.7); margin-top: 8px; position: relative; }
+.res-tiempo { font-size: 13px; color: var(--accent); font-weight: 500; margin-top: 4px; position: relative; }
+
+.res-bloque { background: #fff; border: 1px solid var(--border); border-radius: 12px; overflow: hidden; margin-bottom: 14px; }
+.res-bloque-head {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 12px 16px; background: #faf8f4; border-bottom: 1px solid var(--border);
+  font-weight: 600; font-size: 14px; cursor: pointer; user-select: none;
+}
+.res-bloque-head .esp-toggle { font-size: 11px; color: var(--muted); transition: transform .2s; }
+.res-bloque-head .esp-toggle.open { transform: rotate(180deg); }
+.res-lineas { display: none; }
+.res-lineas.open { display: block; }
+.res-row { display: flex; align-items: center; padding: 9px 16px; border-bottom: 1px solid var(--border); font-size: 13px; gap: 8px; }
+.res-row:last-child { border-bottom: none; }
+.res-row-label { flex: 1; color: var(--ink); }
+.res-row-qty   { font-size: 11px; color: var(--muted); white-space: nowrap; }
+.res-row-val   { font-weight: 600; white-space: nowrap; text-align: right; min-width: 70px; }
+.res-row.mo    .res-row-val { color: var(--terra); }
+.res-row.mat   .res-row-val { color: #2c6e49; }
+.res-row.extra .res-row-val { color: #1a6496; }
+
+.res-total-row {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 12px 16px; font-weight: 600; font-size: 14px;
+  border-top: 2px solid var(--stone); background: var(--stone);
+}
+.res-total-row .res-row-val { color: var(--terra); font-size: 16px; }
+
+.res-sumario { background: var(--light); border: 1px solid var(--border); border-radius: 10px; padding: 16px 18px; margin-bottom: 20px; }
+.res-sum-row { display: flex; justify-content: space-between; font-size: 13px; padding: 4px 0; }
+.res-sum-row.tot { font-weight: 600; font-size: 15px; border-top: 1px solid var(--border); margin-top: 8px; padding-top: 10px; color: var(--terra); }
+
+.aviso-box { background: #fdf6ee; border: 1px solid #f0d5b0; border-radius: 8px; padding: 10px 14px; font-size: 12px; color: #7a4e0a; margin-bottom: 16px; }
+
+/* ── PASO 8: FORMULARIO ── */
+.form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 16px; }
+.form-full { grid-column: 1 / -1; }
+.form-lbl  { font-size: 11px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .4px; margin-bottom: 4px; }
+.canal-row { display: flex; gap: 8px; margin-bottom: 16px; }
+.canal-btn {
+  flex: 1; border: 1.5px solid var(--border); border-radius: 8px;
+  padding: 9px 6px; text-align: center; cursor: pointer;
+  background: var(--light); font-size: 13px; transition: all .16s;
+}
+.canal-btn.sel { border-color: var(--accent); background: #fff; font-weight: 600; }
+.horario-row { display: flex; gap: 8px; margin-bottom: 16px; }
+.horario-btn { flex: 1; border: 1.5px solid var(--border); border-radius: 8px; padding: 8px 4px; text-align: center; cursor: pointer; background: var(--light); font-size: 12px; transition: all .16s; }
+.horario-btn.sel { border-color: var(--accent); background: #fff; font-weight: 600; }
+
+/* ── RGPD ── */
+.rgpd-row { display: flex; gap: 10px; align-items: flex-start; background: var(--light); border: 1px solid var(--border); border-radius: 8px; padding: 12px; margin-bottom: 18px; }
+.rgpd-box { width: 18px; height: 18px; border-radius: 4px; border: 1.5px solid var(--border); flex-shrink: 0; margin-top: 2px; cursor: pointer; background: var(--cream); display: flex; align-items: center; justify-content: center; transition: all .16s; font-size: 10px; color: #fff; }
+.rgpd-box.on { background: var(--accent); border-color: var(--accent); }
+.rgpd-txt { font-size: 12px; color: var(--muted); line-height: 1.6; }
+.rgpd-txt a { color: var(--accent); }
+
+/* ── ACCIONES ── */
+.step-actions { display: flex; gap: 10px; margin-top: 24px; }
+.btn-next {
+  flex: 1; padding: 14px; background: var(--accent); color: #fff;
+  border: none; border-radius: 10px; font-size: 15px; font-weight: 500;
+  cursor: pointer; transition: all .18s;
+}
+.btn-next:hover { background: #b8621f; }
+.btn-next:disabled { opacity: .38; cursor: not-allowed; }
+.btn-back {
+  padding: 14px 20px; background: transparent; border: 1.5px solid var(--border);
+  border-radius: 10px; font-size: 14px; color: var(--muted); cursor: pointer; transition: all .18s;
+}
+.btn-back:hover { border-color: var(--warm); color: var(--ink); }
+.btn-outline {
+  flex: 1; padding: 14px; background: transparent; border: 1.5px solid var(--accent);
+  color: var(--accent); border-radius: 10px; font-size: 15px; font-weight: 500; cursor: pointer; transition: all .18s;
+}
+.btn-outline:hover { background: rgba(201,111,40,.08); }
+
+/* ── ÉXITO ── */
+.success-wrap { text-align: center; padding: 40px 0; }
+.success-icon { width: 68px; height: 68px; border-radius: 50%; background: rgba(58,102,72,.12); border: 2px solid rgba(58,102,72,.3); display: flex; align-items: center; justify-content: center; font-size: 28px; margin: 0 auto 20px; animation: popIn .5s cubic-bezier(.34,1.56,.64,1); }
+@keyframes popIn { from { transform: scale(0); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+.success-title { font-family: 'Cormorant Garamond', serif; font-size: 34px; margin-bottom: 8px; }
+.success-ref { display: inline-block; background: var(--light); border: 1px solid var(--border); border-radius: 8px; padding: 12px 20px; font-size: 13px; color: var(--muted); margin: 14px 0 28px; text-align: left; line-height: 1.8; }
+.success-ref strong { color: var(--ink); }
+
+/* ── UPLOAD ── */
+.upload-area {
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  border: 2px dashed var(--border); border-radius: 10px; padding: 22px 16px;
+  cursor: pointer; transition: all .2s; background: var(--light); text-align: center;
+}
+.upload-area:hover { border-color: var(--accent); background: #fff; }
+.upload-icon { font-size: 26px; margin-bottom: 6px; }
+.upload-txt { font-size: 13px; color: var(--muted); }
+.file-chip {
+  display: inline-flex; align-items: center; gap: 5px;
+  background: var(--stone); border-radius: 20px; padding: 3px 10px 3px 8px;
+  font-size: 11px; color: var(--ink);
+}
+.file-chip button {
+  background: none; border: none; cursor: pointer; color: var(--muted); font-size: 12px; padding: 0 2px;
+}
+/* ── AVISO VISITA ── */
+.aviso-visita {
+  background: #fdf6ee; border: 1px solid #f0d5b0; border-radius: 9px;
+  padding: 13px 16px; font-size: 13px; color: #7a4e0a; line-height: 1.6; margin-bottom: 18px;
+}
+/* ── SUBPREGUNTA DEMOLICIÓN ── */
+.demo-sub {
+  background: var(--light); border: 1.5px solid var(--border); border-radius: 9px;
+  padding: 13px 16px; margin: 8px 0 4px; display: flex; flex-direction: column; gap: 6px;
+}
+.demo-sub-lbl { font-size: 12px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .5px; }
+.demo-opts { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 4px; }
+.demo-btn {
+  border: 1.5px solid var(--border); border-radius: 20px; padding: 5px 12px;
+  font-size: 12px; cursor: pointer; background: #fff; transition: all .15s;
+}
+.demo-btn.sel { border-color: var(--accent); background: rgba(201,111,40,.1); color: var(--accent); font-weight: 600; }
+/* ── PLANTA ESPACIO (chalet) ── */
+.planta-esp-row { display: flex; gap: 6px; flex-wrap: wrap; margin: 6px 0 12px; }
+.planta-esp-btn {
+  border: 1.5px solid var(--border); border-radius: 20px; padding: 5px 14px;
+  font-size: 12px; cursor: pointer; background: #fff; transition: all .15s;
+}
+.planta-esp-btn.sel { border-color: var(--accent); background: rgba(201,111,40,.1); color: var(--accent); font-weight: 600; }
+/* ── NOTA TRABAJO ── */
+.trabajo-nota { font-size: 10px; color: var(--muted); margin-top: 2px; font-style: italic; }
+
+/* ── PASO 2: contadores de estancias ── */
+.espacio-counter-row {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 12px 16px; background: var(--light); border: 1.5px solid var(--border);
+  border-radius: 11px; margin-bottom: 8px; transition: border-color .18s;
+}
+.espacio-counter-row.has-val { border-color: var(--accent); background: #fff; }
+.ec-left { display: flex; align-items: center; gap: 10px; }
+.ec-icon { font-size: 22px; }
+.ec-name { font-weight: 500; font-size: 14px; }
+.ec-ctrl { display: flex; align-items: center; gap: 12px; }
+.ec-btn {
+  width: 32px; height: 32px; border-radius: 50%;
+  border: 1.5px solid var(--border); background: var(--cream);
+  font-size: 20px; cursor: pointer; display: flex; align-items: center; justify-content: center;
+  transition: all .15s; color: var(--ink); line-height: 1;
+}
+.ec-btn:hover { border-color: var(--accent); color: var(--accent); }
+.ec-val {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 32px; min-width: 28px; text-align: center; transition: color .15s;
+}
+.ec-val.nonzero { color: var(--accent); }
+
+/* ── PASO 3: mueble select ── */
+.mueble-wrap {
+  margin-top: 14px; padding: 13px 16px;
+  background: var(--light); border: 1.5px solid var(--border); border-radius: 9px;
+}
+.mueble-wrap .field-lbl { margin-bottom: 7px; display: block; }
+.mueble-select {
+  width: 100%; max-width: 260px; padding: 8px 12px;
+  border: 1.5px solid var(--border); border-radius: 8px; font-size: 14px;
+  background: #fff; color: var(--ink); cursor: pointer; transition: border-color .18s;
+}
+.mueble-select:focus { outline: none; border-color: var(--accent); }
+
+/* ── RESULTADO: sumario siempre visible ── */
+.res-resumen {
+  background: var(--light); border: 1px solid var(--border); border-radius: 12px;
+  overflow: hidden; margin-bottom: 14px;
+}
+.res-resumen-row {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 10px 16px; border-bottom: 1px solid var(--border); font-size: 13px;
+  cursor: pointer; user-select: none; transition: background .14s; gap: 8px;
+}
+.res-resumen-row:hover { background: #f5f1eb; }
+.res-resumen-row.no-expand { cursor: default; }
+.res-resumen-row.no-expand:hover { background: transparent; }
+.res-resumen-row:last-child { border-bottom: none; }
+.res-resumen-row.tot {
+  background: var(--stone); font-weight: 600; font-size: 15px;
+  border-top: 2px solid var(--warm);
+}
+.res-resumen-label { flex: 1; }
+.res-resumen-arrow { font-size: 9px; color: var(--muted); margin-right: 6px; transition: transform .2s; }
+.res-resumen-arrow.open { transform: rotate(180deg); }
+.res-resumen-val { font-weight: 600; }
+.res-resumen-row.tot .res-resumen-val { color: var(--terra); font-size: 16px; }
+
+/* ── RESULTADO: secciones expandibles ── */
+.res-expand-section { margin-bottom: 12px; border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
+.res-expand-head {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 12px 16px; background: #faf8f4; font-weight: 600; font-size: 13px;
+  cursor: pointer; user-select: none; transition: background .14s; gap: 8px;
+}
+.res-expand-head:hover { background: #f5f1eb; }
+.res-expand-head-label { flex: 1; }
+.res-expand-head-val { color: var(--terra); margin-right: 8px; }
+.res-expand-arrow { font-size: 9px; color: var(--muted); transition: transform .2s; }
+.res-expand-arrow.open { transform: rotate(180deg); }
+.res-expand-body { display: none; background: #fff; border-top: 1px solid var(--border); }
+.res-expand-body.open { display: block; }
+
+/* Sub-categoría (nivel 2) */
+.res-subcat { border-bottom: 1px solid var(--border); }
+.res-subcat:last-child { border-bottom: none; }
+.res-subcat-head {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 9px 16px 9px 22px; cursor: pointer; user-select: none;
+  font-size: 13px; transition: background .13s; gap: 8px;
+}
+.res-subcat-head:hover { background: #fdf9f5; }
+.res-subcat-label { flex: 1; color: var(--ink); }
+.res-subcat-val { font-weight: 600; color: var(--terra); white-space: nowrap; margin-right: 6px; font-size: 13px; }
+.res-subcat-arrow { font-size: 9px; color: var(--muted); transition: transform .2s; }
+.res-subcat-arrow.open { transform: rotate(180deg); }
+.res-subcat-items { display: none; }
+.res-subcat-items.open { display: block; }
+
+/* Fila de detalle (nivel 3 — por estancia) */
+.res-detail {
+  display: flex; align-items: center; padding: 6px 16px 6px 34px;
+  border-top: 1px solid #f0ece4; font-size: 12px; gap: 8px;
+}
+.res-detail-label { flex: 1; color: var(--muted); }
+.res-detail-qty { font-size: 11px; color: #b0a090; white-space: nowrap; }
+.res-detail-val { font-weight: 500; color: var(--ink); white-space: nowrap; min-width: 64px; text-align: right; }
+
+
+/* ── PASO 2: layout exclusividad ── */
+.p2-layout { display: flex; gap: 16px; align-items: flex-start; }
+.p2-left   { flex: 1; min-width: 0; }
+.p2-aviso  {
+  width: 200px; flex-shrink: 0; background: #fff8e6; border: 1.5px solid #f0c060;
+  border-radius: 12px; padding: 14px 12px; font-size: 12px; line-height: 1.6;
+  color: #7a5c00; position: sticky; top: 16px;
+}
+@media (max-width: 560px) {
+  .p2-layout { flex-direction: column; }
+  .p2-aviso  { width: 100%; position: static; }
+}
+.p2-aviso-icon { font-size: 22px; text-align: center; margin-bottom: 6px; }
+.p2-aviso a { color: var(--terra); text-decoration: underline; cursor: pointer; }
+
+/* ── PASO 3: tabique sub-questionnaire ── */
+.tabique-set { margin: 10px 0 8px; border: 1.5px solid var(--border); border-radius: 11px; overflow: hidden; }
+.tabique-card {
+  background: #faf8f4; border-bottom: 1px solid var(--border); padding: 12px 14px;
+}
+.tabique-card:last-child { border-bottom: none; }
+.tabique-card-title { font-size: 12px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing:.5px; margin-bottom: 9px; }
+.tabique-opts { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.tab-btn {
+  padding: 6px 14px; border-radius: 8px; border: 1.5px solid var(--border);
+  background: var(--cream); font-size: 13px; cursor: pointer; transition: all .15s;
+}
+.tab-btn.sel { background: var(--accent); color: #fff; border-color: var(--accent); }
+.tab-check-row { display: flex; align-items: center; gap: 7px; margin-top: 9px; font-size: 13px; cursor: pointer; }
+.tab-check { width: 18px; height: 18px; border: 1.5px solid var(--border); border-radius: 4px; display: inline-flex; align-items: center; justify-content: center; background: #fff; font-size: 11px; transition: all .15s; flex-shrink: 0; }
+.tab-check.on { background: var(--accent); border-color: var(--accent); color: #fff; }
+
+/* ── PASO 3: pintura muebles ── */
+.pintura-sub { margin: 8px 0 4px; padding: 11px 13px; background: #fafaf7; border: 1.5px solid var(--border); border-radius: 9px; }
+.pintura-sub-lbl { font-size: 11px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing:.5px; margin-bottom: 8px; }
+.pintura-opts { display: flex; gap: 8px; flex-wrap: wrap; }
+.pintura-btn { padding: 6px 12px; border-radius: 8px; border: 1.5px solid var(--border); background: var(--cream); font-size: 12px; cursor: pointer; transition: all .15s; }
+.pintura-btn.sel { background: var(--accent); color: #fff; border-color: var(--accent); }
+
+/* ── PASO 3: ventanas questionnaire ── */
+.ventanas-set { margin: 10px 0 4px; }
+.ventana-card {
+  border: 1.5px solid var(--border); border-radius: 11px; overflow: hidden; margin-bottom: 8px;
+}
+.ventana-card-head {
+  display: flex; align-items: center; gap: 10px; padding: 10px 14px;
+  background: #faf8f4; cursor: pointer; user-select: none;
+}
+.ventana-card-head-lbl { flex: 1; font-size: 13px; font-weight: 600; }
+.ventana-status { font-size: 11px; color: var(--accent); }
+.ventana-arrow { font-size: 10px; color: var(--muted); transition: transform .2s; }
+.ventana-arrow.open { transform: rotate(180deg); }
+.ventana-body { display: none; padding: 13px 14px; background: #fff; border-top: 1px solid var(--border); }
+.ventana-body.open { display: block; }
+.vent-step-lbl { font-size: 11px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing:.5px; margin-bottom: 8px; }
+.vent-opts { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
+.vent-btn {
+  display: flex; flex-direction: column; align-items: center;
+  padding: 8px 12px; border-radius: 9px; border: 1.5px solid var(--border);
+  background: var(--cream); font-size: 12px; cursor: pointer; transition: all .15s;
+  gap: 4px; min-width: 72px;
+}
+.vent-btn.sel { background: var(--accent); color: #fff; border-color: var(--accent); }
+.vent-btn-icon { font-size: 20px; }
+.vent-aviso { background: #fff8e6; border: 1px solid #f0c060; border-radius: 8px; padding: 8px 12px; font-size: 12px; color: #7a5c00; margin-bottom: 10px; line-height: 1.5; }
+.vent-aviso a { color: var(--terra); }
+
+/* ── PASO 3: avisos inline de categoría ── */
+.cat-aviso {
+  display: flex; align-items: flex-start; gap: 7px;
+  background: #fff8e6; border: 1px solid #f0c060; border-radius: 8px;
+  padding: 8px 11px; font-size: 12px; color: #7a5c00; margin-bottom: 8px; line-height: 1.5;
+}
+.cat-aviso-icon { flex-shrink: 0; }
+
+/* ── PASO 3: suelo aviso ── */
+.suelo-aviso {
+  background: #f0f8ff; border: 1px solid #90c0e0; border-radius: 8px;
+  padding: 8px 11px; font-size: 12px; color: #1a4a6a; margin-top: 4px; line-height: 1.5;
+}
+
+/* ── PASO 3: comentarios ── */
+.comentarios-wrap { margin-top: 16px; border: 1.5px solid var(--border); border-radius: 9px; overflow: hidden; }
+.comentarios-toggle {
+  width: 100%; background: #faf8f4; border: none; padding: 11px 14px;
+  text-align: left; font-size: 13px; cursor: pointer; color: var(--muted);
+  display: flex; align-items: center; gap: 8px;
+}
+.comentarios-toggle:hover { background: #f5f1eb; }
+.comentarios-body { padding: 12px 14px; background: #fff; border-top: 1px solid var(--border); }
+
+/* ── PASO 4: materiales por estancia ── */
+.mat-esp-block { margin-bottom: 20px; }
+.mat-esp-titulo {
+  font-family: 'Cormorant Garamond', serif; font-size: 18px; font-weight: 600;
+  color: var(--ink); padding: 6px 0 6px; border-bottom: 1.5px solid var(--border); margin-bottom: 12px;
+  display: flex; align-items: center; gap: 8px;
+}
+.mat-compartir-row {
+  display: flex; align-items: center; gap: 8px; margin-bottom: 10px;
+  font-size: 12px; color: var(--muted); cursor: pointer;
+}
+.mat-compartir-check {
+  width: 18px; height: 18px; border: 1.5px solid var(--border); border-radius: 4px;
+  display: inline-flex; align-items: center; justify-content: center; background: #fff;
+  font-size: 11px; transition: all .15s; flex-shrink: 0;
+}
+.mat-compartir-check.on { background: var(--accent); border-color: var(--accent); color: #fff; }
+
+/* ── Botón guardar para luego ── */
+.btn-guardar-luego {
+  background: transparent; border: 1.5px solid var(--border); color: var(--muted);
+  padding: 10px 20px; border-radius: 10px; font-size: 13px; cursor: pointer;
+  transition: all .18s;
+}
+.btn-guardar-luego:hover { border-color: var(--accent); color: var(--accent); }
+
+/* ── Página guardar ── */
+.guardar-info {
+  background: #fff8e6; border: 1px solid #f0c060; border-radius: 12px;
+  padding: 18px 16px; margin-bottom: 20px;
+}
+.guardar-icon { font-size: 32px; text-align: center; margin-bottom: 10px; }
+.guardar-info p { font-size: 14px; line-height: 1.7; margin: 0 0 8px; }
+
+/* ── TOAST ── */
+#toast { position: fixed; bottom: 22px; right: 22px; padding: 10px 18px; border-radius: 9px; color: #fff; font-size: 13px; font-weight: 500; opacity: 0; transform: translateY(6px); pointer-events: none; transition: opacity .22s, transform .22s; z-index: 9999; max-width: 300px; line-height: 1.4; }
+#toast.show { opacity: 1; transform: translateY(0); }
+#toast.ok   { background: #3a6648; }
+#toast.warn { background: #7a4e0a; }
+#toast.err  { background: #963030; }
+
+/* ── RESPONSIVE ── */
+@media (max-width: 520px) {
+  .opt-grid { grid-template-columns: repeat(2, 1fr); }
+  .chk-grid { grid-template-columns: 1fr; }
+  .prod-grid { grid-template-columns: 1fr 1fr; }
+  .form-grid { grid-template-columns: 1fr; }
+  .field-row { grid-template-columns: 1fr; }
+  .wizard-wrap { padding: 24px 16px 60px; }
+  .res-total { font-size: 44px; }
+}
+</style>
+</head>
+<body>
+
+<header class="top-bar">
+  <div class="top-logo">Anatoliy <span>Reformas</span></div>
+  <div class="top-hint">Madrid · +34 600 000 000</div>
+</header>
+
+<div class="wizard-wrap">
+
+  <!-- STEPPER -->
+  <div class="stepper" id="stepper">
+    <div class="step-it act" id="sp1"><div class="step-dot">1</div><span class="step-lbl">Inmueble</span><div class="step-line"></div></div>
+    <div class="step-it"     id="sp2"><div class="step-dot">2</div><span class="step-lbl">Espacios</span><div class="step-line"></div></div>
+    <div class="step-it"     id="sp3"><div class="step-dot">3</div><span class="step-lbl">Trabajos</span><div class="step-line"></div></div>
+    <div class="step-it"     id="sp4"><div class="step-dot">4</div><span class="step-lbl">Materiales</span><div class="step-line"></div></div>
+    <div class="step-it"     id="sp5"><div class="step-dot">5</div><span class="step-lbl">Extras</span><div class="step-line"></div></div>
+    <div class="step-it"     id="sp6"><div class="step-dot">6</div><span class="step-lbl">Detalles</span></div>
+  </div>
+
+  <!-- ══ PASO 1: INMUEBLE ══ -->
+  <div class="panel active" id="p1">
+    <div class="panel-title">¿Cómo es tu inmueble?</div>
+    <div class="panel-sub">Cuéntanos lo básico para ajustar el presupuesto</div>
+
+    <div class="opt-grid" id="grid-tipo">
+      <div class="opt-card" onclick="selTipo(this,'piso')">      <div class="opt-check">✓</div><div class="opt-icon">🏢</div><div class="opt-name">Piso</div></div>
+      <div class="opt-card" onclick="selTipo(this,'local')">     <div class="opt-check">✓</div><div class="opt-icon">🏪</div><div class="opt-name">Local</div></div>
+      <div class="opt-card" onclick="selTipo(this,'chalet')">    <div class="opt-check">✓</div><div class="opt-icon">🏡</div><div class="opt-name">Chalet</div></div>
+      <div class="opt-card" onclick="selTipo(this,'obra_nueva')"><div class="opt-check">✓</div><div class="opt-icon">🏗️</div><div class="opt-name">Obra nueva</div></div>
+    </div>
+
+    <div class="field-row">
+      <div>
+        <div class="field-lbl">Superficie total (orientativo)</div>
+        <input class="field-inp" type="number" id="sup-total" placeholder="ej: 80" min="10" max="5000">
+        <span style="font-size:12px;color:var(--muted);margin-top:4px;display:block">m² — puedes dejarlo vacío</span>
+      </div>
+      <div>
+        <div class="field-lbl">Código postal</div>
+        <input class="field-inp" type="text" id="cp" placeholder="ej: 28001" maxlength="5">
+      </div>
+    </div>
+
+    <!-- Solo para piso: qué planta -->
+    <div class="field-solo" id="sec-planta-piso" style="display:none">
+      <div class="field-lbl" style="margin-bottom:8px">¿En qué planta está el piso?</div>
+      <div class="planta-row">
+        <div class="planta-btn" onclick="selPlanta(this,'baja')">Baja</div>
+        <div class="planta-btn sel" onclick="selPlanta(this,'1_2')">1ª – 2ª</div>
+        <div class="planta-btn" onclick="selPlanta(this,'3_4')">3ª – 4ª</div>
+        <div class="planta-btn" onclick="selPlanta(this,'mas5')">5ª o más</div>
+      </div>
+    </div>
+
+    <!-- Solo para chalet: cuántas plantas tiene -->
+    <div class="field-solo" id="sec-chalet-plantas" style="display:none">
+      <div class="field-lbl" style="margin-bottom:8px">¿Cuántas plantas tiene el chalet?</div>
+      <div class="planta-row">
+        <div class="planta-btn sel" onclick="selNumPlantasChalet(this,2)">2 plantas</div>
+        <div class="planta-btn" onclick="selNumPlantasChalet(this,3)">3 plantas</div>
+        <div class="planta-btn" onclick="selNumPlantasChalet(this,4)">4 o más</div>
+      </div>
+    </div>
+
+    <div class="step-actions">
+      <button class="btn-next" onclick="irPaso2()">Siguiente →</button>
+    </div>
+  </div>
+
+  <!-- ══ PASO 2: ESPACIOS ══ -->
+  <div class="panel" id="p2">
+    <div class="panel-title">¿Qué espacios vas a reformar?</div>
+    <div class="panel-sub">Indica cuántos baños, aseos y habitaciones e indica el resto de espacios</div>
+
+    <div class="p2-layout">
+      <div class="p2-left">
+        <!-- Contadores para espacios múltiples -->
+        <div class="cat-label" style="margin-top:0">ESTANCIAS CON AGUA / DORMITORIOS</div>
+        <div id="contadores-espacios">
+          <div class="espacio-counter-row" id="ecr-bano">
+            <div class="ec-left"><span class="ec-icon">🛁</span><span class="ec-name">Baños completos</span></div>
+            <div class="ec-ctrl">
+              <button class="ec-btn" onclick="cambiarCantEspacio('bano',-1)">−</button>
+              <span class="ec-val" id="ecv-bano">0</span>
+              <button class="ec-btn" onclick="cambiarCantEspacio('bano',1)">+</button>
+            </div>
+          </div>
+          <div class="espacio-counter-row" id="ecr-aseo">
+            <div class="ec-left"><span class="ec-icon">🚿</span><span class="ec-name">Aseos</span></div>
+            <div class="ec-ctrl">
+              <button class="ec-btn" onclick="cambiarCantEspacio('aseo',-1)">−</button>
+              <span class="ec-val" id="ecv-aseo">0</span>
+              <button class="ec-btn" onclick="cambiarCantEspacio('aseo',1)">+</button>
+            </div>
+          </div>
+          <div class="espacio-counter-row" id="ecr-habitacion">
+            <div class="ec-left"><span class="ec-icon">🛏️</span><span class="ec-name">Habitaciones</span></div>
+            <div class="ec-ctrl">
+              <button class="ec-btn" onclick="cambiarCantEspacio('habitacion',-1)">−</button>
+              <span class="ec-val" id="ecv-habitacion">0</span>
+              <button class="ec-btn" onclick="cambiarCantEspacio('habitacion',1)">+</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Toggle para otros espacios -->
+        <div class="cat-label">OTROS ESPACIOS</div>
+        <div class="opt-grid" id="grid-espacios">
+          <div class="opt-card" id="esp-card-cocina"      onclick="toggleEspacioV4(this,'cocina')">      <div class="opt-check">✓</div><div class="opt-icon">🍳</div><div class="opt-name">Cocina</div></div>
+          <div class="opt-card" id="esp-card-salon"       onclick="toggleEspacioV4(this,'salon')">       <div class="opt-check">✓</div><div class="opt-icon">🛋️</div><div class="opt-name">Salón</div></div>
+          <div class="opt-card" id="esp-card-pasillo"     onclick="toggleEspacioV4(this,'pasillo')">     <div class="opt-check">✓</div><div class="opt-icon">🚪</div><div class="opt-name">Pasillo</div></div>
+          <div class="opt-card" id="esp-card-terraza"     onclick="toggleEspacioV4(this,'terraza')">     <div class="opt-check">✓</div><div class="opt-icon">🏡</div><div class="opt-name">Terraza</div></div>
+          <div class="opt-card" id="esp-card-toda_la_obra" onclick="toggleEspacioV4(this,'toda_la_obra')"><div class="opt-check">✓</div><div class="opt-icon">🏗️</div><div class="opt-name">Reforma integral</div><div class="opt-desc">Toda la vivienda</div></div>
+        </div>
+      </div>
+
+      <!-- Aviso lateral exclusividad -->
+      <div class="p2-aviso" id="p2-aviso" style="display:none">
+        <div class="p2-aviso-icon" id="p2-aviso-icon">ℹ️</div>
+        <div id="p2-aviso-text"></div>
+      </div>
+    </div>
+
+    <div class="step-actions">
+      <button class="btn-back" onclick="goStep(1)">← Atrás</button>
+      <button class="btn-next" onclick="iniciarPaso3()">Siguiente →</button>
+    </div>
+  </div>
+
+  <!-- ══ PASO 3: TRABAJOS (dinámico por espacio) ══ -->
+  <div class="panel" id="p3">
+    <div class="espacio-progress" id="esp-progress"></div>
+    <div class="esp-badge" id="esp-badge">🛁 Baño</div>
+    <div class="panel-title" id="esp-titulo">¿Qué quieres hacer aquí?</div>
+    <div class="panel-sub">Marca todo lo que necesites</div>
+
+    <div id="trabajos-form"></div>
+
+    <div class="m2-surf">
+      <div>
+        <div style="font-weight:500;font-size:14px">Superficie de este espacio</div>
+        <div style="font-size:12px;color:var(--muted);margin-top:2px">Metros cuadrados</div>
+      </div>
+      <div class="m2-ctrl">
+        <button class="m2-btn" onclick="cambiarM2(-1)">−</button>
+        <div><div class="m2-num" id="m2-display">12</div><div style="text-align:center;font-size:11px;color:var(--muted)">m²</div></div>
+        <button class="m2-btn" onclick="cambiarM2(1)">+</button>
+      </div>
+    </div>
+
+    <div class="comentarios-wrap" id="comentarios-esp">
+      <button class="comentarios-toggle" onclick="toggleComentariosEsp()">
+        <span id="coment-arrow">▶</span> Añadir comentarios adicionales para este espacio
+      </button>
+      <div class="comentarios-body" id="comentarios-body" style="display:none">
+        <textarea class="field-inp" id="notas-espacio" rows="3" placeholder="Ej: hay un pilar que no se puede mover, conservar la bañera, el suelo ya está bien…" oninput="setNotasEspacio(this.value)"></textarea>
+      </div>
+    </div>
+
+    <div class="step-actions" style="margin-top:14px">
+      <button class="btn-back" onclick="anteriorEspacio()">← Atrás</button>
+      <button class="btn-next" id="btn-siguiente-esp" onclick="siguienteEspacio()">Siguiente espacio →</button>
+    </div>
+  </div>
+
+  <!-- ══ PASO 4: MATERIALES ══ -->
+  <div class="panel" id="p4">
+    <div class="panel-title">Elige los materiales</div>
+    <div class="panel-sub">Solo aparecen los relevantes según lo que quieres hacer · Puedes elegir distintos materiales por estancia</div>
+
+    <div id="materiales-contenido">
+      <div class="mat-skip">Puedes saltarte este paso y calcularemos con estimaciones estándar.</div>
+    </div>
+
+    <div class="step-actions">
+      <button class="btn-back" onclick="goStep(3, S.espacios.length - 1)">← Atrás</button>
+      <button class="btn-next" onclick="goStep(5)">Siguiente →</button>
+    </div>
+  </div>
+
+  <!-- ══ PASO 5: EXTRAS LOGÍSTICOS ══ -->
+  <div class="panel" id="p5">
+    <div class="panel-title">¿Hay condiciones especiales?</div>
+    <div class="panel-sub">Cada extra que marques se sumará automáticamente al presupuesto</div>
+
+    <div class="extra-grid" id="extras-grid"></div>
+
+    <div class="step-actions">
+      <button class="btn-back" onclick="goStep(4)">← Atrás</button>
+      <button class="btn-next" onclick="goStep(6)">Siguiente →</button>
+    </div>
+  </div>
+
+  <!-- ══ PASO 6: CALIDAD + URGENCIA + NOTAS ══ -->
+  <div class="panel" id="p6">
+    <div class="panel-title">Últimos detalles</div>
+    <div class="panel-sub">Toda esta información es opcional pero ayuda a afinar el presupuesto</div>
+
+    <div class="field-solo">
+      <div class="field-lbl" style="margin-bottom:8px">Calidad de los acabados</div>
+      <div class="opt-grid" id="cal-grid">
+        <div class="opt-card" onclick="selCalidad(this,'basica')">
+          <div class="opt-check">✓</div><div class="opt-icon">🔧</div>
+          <div class="opt-name">Básica</div><div class="opt-desc">Funcional y económica</div>
+        </div>
+        <div class="opt-card sel" onclick="selCalidad(this,'media')">
+          <div class="opt-check">✓</div><div class="opt-icon">⭐</div>
+          <div class="opt-name">Media</div><div class="opt-desc">Calidad-precio óptima</div>
+        </div>
+        <div class="opt-card" onclick="selCalidad(this,'premium')">
+          <div class="opt-check">✓</div><div class="opt-icon">💎</div>
+          <div class="opt-name">Premium</div><div class="opt-desc">Materiales de alta gama</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="field-solo">
+      <div class="field-lbl" style="margin-bottom:8px">¿Cuándo necesitas la reforma?</div>
+      <div class="urgencia-grid">
+        <div class="urgencia-card" onclick="selUrgencia(this,'urgente')">      <span class="urg-icon">🔴</span><span class="urg-lbl">Lo antes posible</span></div>
+        <div class="urgencia-card" onclick="selUrgencia(this,'proximo_mes')">  <span class="urg-icon">🟡</span><span class="urg-lbl">En el próximo mes</span></div>
+        <div class="urgencia-card" onclick="selUrgencia(this,'tres_meses')">   <span class="urg-icon">🟢</span><span class="urg-lbl">En los próximos 3 meses</span></div>
+        <div class="urgencia-card sel" onclick="selUrgencia(this,'sin_prisa')"><span class="urg-icon">📅</span><span class="urg-lbl">Estoy planeando, sin prisa</span></div>
+      </div>
+    </div>
+
+    <div class="field-solo">
+      <div class="field-lbl">¿Algo más que debamos saber? (opcional)</div>
+      <textarea class="field-inp" id="notas" placeholder="Ej: el baño está en planta 2, hay que respetar la bañera existente, acceso por portería…" rows="3"></textarea>
+    </div>
+
+    <div class="step-actions">
+      <button class="btn-back" onclick="goStep(5)">← Atrás</button>
+      <button class="btn-next" onclick="calcularYMostrar()">Ver mi presupuesto →</button>
+    </div>
+  </div>
+
+  <!-- ══ RESULTADO ══ -->
+  <div class="panel" id="p-resultado">
+    <div class="res-hero">
+      <div class="res-tag">Estimación orientativa · IVA incluido</div>
+      <div class="res-total"><span class="res-cur">€</span><span id="res-num">—</span></div>
+      <div class="res-sub" id="res-base">—</div>
+      <div class="res-tiempo" id="res-tiempo">—</div>
+    </div>
+
+    <div id="res-desglose"></div>
+
+    <div class="res-sumario" id="res-sumario"></div>
+
+    <div class="aviso-box" style="display:none" id="aviso-minimo">
+      ⚠️ Se ha aplicado el presupuesto mínimo de taller.
+    </div>
+    <div style="font-size:12px;color:var(--muted);margin-bottom:20px;line-height:1.6">
+      Precio orientativo · no vinculante · sujeto a visita técnica del profesional.
+    </div>
+
+    <div class="step-actions" style="flex-wrap:wrap;gap:10px">
+      <button class="btn-back" onclick="goStep(6)">← Modificar</button>
+      <button class="btn-next" onclick="goStep(8)">Solicitar este presupuesto →</button>
+    </div>
+    <div style="text-align:center;margin-top:10px">
+      <button class="btn-guardar-luego" onclick="goStep('guardar')">💾 ¿Quieres continuar en otro momento?</button>
+    </div>
+  </div>
+
+  <!-- ══ GUARDAR PARA LUEGO ══ -->
+  <div class="panel" id="p-guardar">
+    <div class="panel-title">Guarda tu presupuesto</div>
+    <div class="panel-sub">No tienes que acabarlo ahora</div>
+
+    <div class="guardar-info">
+      <div class="guardar-icon">💌</div>
+      <p>Introduce tu correo y te enviaremos un <strong>borrador con todo lo que has seleccionado</strong> hasta ahora, junto con un enlace para volver exactamente por donde lo dejaste.</p>
+      <p style="color:var(--muted);font-size:13px">Podrás modificar cualquier dato, añadir más estancias o ajustar los materiales antes de enviar la solicitud final. El enlace es tuyo y puedes usarlo cuando quieras.</p>
+    </div>
+
+    <div class="field-solo">
+      <label class="field-lbl">Tu correo electrónico</label>
+      <input class="field-inp" type="email" id="guardar-email" placeholder="tu@correo.com">
+    </div>
+
+    <div class="step-actions" style="flex-wrap:wrap;gap:10px">
+      <button class="btn-back" onclick="goStep('resultado')">← Volver al presupuesto</button>
+      <button class="btn-next" onclick="enviarBorrador()">Enviarme el borrador →</button>
+    </div>
+  </div>
+
+  <!-- ══ PASO 8: DATOS DE CONTACTO ══ -->
+  <div class="panel" id="p8">
+    <div class="panel-title">¡Casi listo!</div>
+    <div class="panel-sub">¿Cómo te contactamos con el presupuesto definitivo?</div>
+
+    <!-- Adjuntar fotos / vídeos / planos -->
+    <div class="field-solo" style="margin-bottom:18px">
+      <div class="field-lbl" style="margin-bottom:6px">Fotos, vídeos o planos del espacio <span style="color:var(--accent);font-weight:400">(recomendado)</span></div>
+      <div style="font-size:12px;color:var(--muted);margin-bottom:10px;line-height:1.6">
+        📸 Cuantas más imágenes nos envíes, mejor podremos ajustar el presupuesto.<br>
+        Sube fotos de todas las estancias, el estado actual, detalles que quieras conservar o cambiar, y planos si los tienes.
+      </div>
+      <label class="upload-area" id="upload-area" for="file-input">
+        <div class="upload-icon">📁</div>
+        <div class="upload-txt">Arrastra aquí o <span style="color:var(--accent)">haz clic para seleccionar</span></div>
+        <div style="font-size:11px;color:var(--muted);margin-top:4px">JPG, PNG, MP4, PDF · Hasta 25 MB por archivo</div>
+      </label>
+      <input type="file" id="file-input" multiple accept="image/*,video/*,.pdf,.jpg,.jpeg,.png,.mp4,.mov" style="display:none" onchange="handleFiles(this.files)">
+      <div id="file-list" style="margin-top:10px;display:flex;flex-wrap:wrap;gap:6px"></div>
+    </div>
+
+    <!-- Aviso visita técnica -->
+    <div class="aviso-visita">
+      🔍 <strong>Visita técnica previa:</strong> Para confirmar el presupuesto definitivo, el profesional realizará una visita técnica al inmueble. El coste de la visita varía según la distancia y se abonará antes del inicio de la obra. Te informaremos del importe exacto al contactarte.
+    </div>
+
+    <div class="form-grid">
+      <div>
+        <div class="form-lbl">Nombre completo *</div>
+        <input class="field-inp" type="text" id="c-nom" placeholder="Tu nombre">
+      </div>
+      <div>
+        <div class="form-lbl">Teléfono</div>
+        <input class="field-inp" type="tel" id="c-tel" placeholder="600 000 000">
+      </div>
+      <div class="form-full">
+        <div class="form-lbl">Email *</div>
+        <input class="field-inp" type="email" id="c-email" placeholder="tu@email.com">
+      </div>
+    </div>
+
+    <div class="field-lbl" style="margin-bottom:8px">¿Cómo prefieres que te contactemos?</div>
+    <div class="canal-row">
+      <div class="canal-btn sel" onclick="selCanal(this,'email')">📧 Email</div>
+      <div class="canal-btn" onclick="selCanal(this,'whatsapp')">💬 WhatsApp</div>
+      <div class="canal-btn" onclick="selCanal(this,'llamada')">📞 Llamada</div>
+    </div>
+
+    <div class="field-lbl" style="margin-bottom:8px">Horario preferido</div>
+    <div class="horario-row">
+      <div class="horario-btn" onclick="selHorario(this,'mananas')">Mañanas</div>
+      <div class="horario-btn" onclick="selHorario(this,'tardes')">Tardes</div>
+      <div class="horario-btn sel" onclick="selHorario(this,'cualquiera')">Cualquiera</div>
+    </div>
+
+    <div class="rgpd-row">
+      <div class="rgpd-box" id="rgpd-box" onclick="toggleRgpd()"></div>
+      <div class="rgpd-txt">Acepto la <a href="#">política de privacidad</a>. Mis datos serán usados por Anatoliy Reformas S.L. únicamente para gestionar esta solicitud de presupuesto.</div>
+    </div>
+
+    <div class="step-actions">
+      <button class="btn-back" onclick="goStep('resultado')">← Ver presupuesto</button>
+      <button class="btn-next" id="btn-enviar" onclick="enviarSolicitud()" disabled>Enviar solicitud ✓</button>
+    </div>
+  </div>
+
+  <!-- ══ ÉXITO ══ -->
+  <div class="panel" id="p-exito">
+    <div class="success-wrap">
+      <div class="success-icon">✓</div>
+      <h2 class="success-title">¡Solicitud enviada!</h2>
+      <p style="color:var(--muted);font-size:15px;font-weight:300;max-width:380px;margin:0 auto 6px">Anatoliy Reformas revisará tu solicitud y te contactará en las próximas horas.</p>
+      <div class="success-ref" id="exito-detalle"></div>
+      <button class="btn-next" style="max-width:240px;margin:0 auto" onclick="reiniciar()">Hacer otra consulta</button>
+    </div>
+  </div>
+
+</div><!-- /wizard-wrap -->
+
+<div id="toast"></div>
+
+<script>
+'use strict';
+
+// ═══════════════════════════════════════════════════════════════
+//  CONFIG — cambia API_URL cuando despliegues motor_v2
+// ═══════════════════════════════════════════════════════════════
+const CFG = {
+  API_URL:     "",           // ej: "https://tu-motor.railway.app"  (vacío = cálculo local)
+  TENANT_SLUG: "reformas-demo",
+  MARGEN_TIPO: "porcentaje_total",
+  MARGEN_VALOR: 22,
+  IVA:          21,
+  MINIMO:       500,
+  DIAS_VALIDEZ: 30,
+};
+
+// ═══════════════════════════════════════════════════════════════
+//  TABLAS DE PRECIOS (espejo exacto de motor_v2.py)
+// ═══════════════════════════════════════════════════════════════
+const TRABAJOS = {
+  bano: {
+    // DEMOLICIÓN
+    demolicion_completa:    {label:"Demolición completa",                unidad:"m2",       mo:40,  mat:5,   dias:1.0},
+    solo_revestimientos:    {label:"Solo retirada de revestimientos",    unidad:"m2",       mo:18,  mat:3,   dias:0.5},
+    mover_distribucion:     {label:"Redistribución de tabiques",         unidad:"ud",       mo:600, mat:200, dias:2.0, udLabel:"tabiques"},
+    // INSTALACIONES
+    renovar_fontaneria:     {label:"Renovar fontanería completa",        unidad:"ud",       mo:700, mat:450, dias:2.5},
+    renovar_electricidad:   {label:"Instalación eléctrica",              unidad:"ud",       mo:350, mat:200, dias:1.5},
+    suelo_radiante:         {label:"Suelo radiante",                     unidad:"m2",       mo:35,  mat:40,  dias:0.5},
+    // ¿QUÉ QUIERES CAMBIAR?
+    cambiar_baldosas:       {label:"Cambiar baldosas (zona húmeda/ducha)",unidad:"m2_pared", mo:38,  mat:48,  dias:0.6, nota:"Incluye enfoscado e impermeabilización"},
+    cambiar_suelo:          {label:"Cambiar suelo del baño",             unidad:"m2",       mo:28,  mat:28,  dias:0.4, nota:"Incluye retirada y preparación"},
+    pintar_paredes:         {label:"Pintura de paredes y techo",          unidad:"m2_pared", mo:8,   mat:4,   dias:0.2},
+    falso_techo:            {label:"Techo / Falso techo",                unidad:"m2",       mo:25,  mat:18,  dias:0.3},
+    // SANITARIOS
+    instalar_ducha:         {label:"Instalación de ducha/plato",         unidad:"ud",       mo:200, mat:350, dias:1.0, noQty:true},
+    instalar_banera:        {label:"Instalación de bañera",              unidad:"ud",       mo:250, mat:450, dias:1.0, noQty:true},
+    instalar_inodoro:       {label:"Instalar inodoro",                   unidad:"ud",       mo:120, mat:200, dias:0.5, noQty:true},
+    instalar_lavabo:        {label:"Instalar lavabo",                    unidad:"ud",       mo:150, mat:280, dias:0.5, noQty:true},
+    instalar_mueble:        {label:"Montaje de mueble de baño",           unidad:"ud",       mo:100, mat:200, dias:0.5, udLabel:"muebles"},
+    instalar_espejo:        {label:"Espejo o botiquín",                  unidad:"ud",       mo:40,  mat:90,  dias:0.2},
+    radiador_toallero:      {label:"Radiador toallero",                  unidad:"ud",       mo:80,  mat:140, dias:0.3},
+    // CARPINTERÍA
+    cambiar_puerta:         {label:"Cambiar puerta",                     unidad:"ud",       mo:150, mat:290, dias:0.5},
+    cambiar_ventana:        {label:"Cambiar ventana",                    unidad:"ud",       mo:200, mat:430, dias:0.5},
+  },
+  aseo: {
+    // DEMOLICIÓN
+    demolicion_completa:    {label:"Demolición completa",                unidad:"m2",       mo:40,  mat:5,   dias:0.5},
+    solo_revestimientos:    {label:"Solo retirada de revestimientos",    unidad:"m2",       mo:18,  mat:3,   dias:0.3},
+    mover_distribucion:     {label:"Redistribución de tabiques",         unidad:"ud",       mo:600, mat:200, dias:2.0, udLabel:"tabiques"},
+    // INSTALACIONES
+    renovar_fontaneria:     {label:"Renovar fontanería",                 unidad:"ud",       mo:500, mat:350, dias:2.0},
+    renovar_electricidad:   {label:"Instalación eléctrica",              unidad:"ud",       mo:280, mat:160, dias:1.0},
+    // ¿QUÉ QUIERES CAMBIAR?
+    cambiar_baldosas:       {label:"Cambiar baldosas (zona húmeda)",     unidad:"m2_pared", mo:38,  mat:48,  dias:0.6, nota:"Incluye enfoscado e impermeabilización"},
+    cambiar_suelo:          {label:"Cambiar suelo del aseo",             unidad:"m2",       mo:28,  mat:28,  dias:0.4},
+    pintar_paredes:         {label:"Pintura de paredes y techo",          unidad:"m2_pared", mo:8,   mat:4,   dias:0.2},
+    falso_techo:            {label:"Techo / Falso techo",                unidad:"m2",       mo:25,  mat:18,  dias:0.2},
+    // SANITARIOS
+    instalar_ducha:         {label:"Instalación de ducha",               unidad:"ud",       mo:200, mat:350, dias:1.0},
+    instalar_inodoro:       {label:"Instalar inodoro",                   unidad:"ud",       mo:120, mat:200, dias:0.5},
+    instalar_lavabo:        {label:"Instalar lavabo",                    unidad:"ud",       mo:150, mat:230, dias:0.5},
+    instalar_mueble:        {label:"Montaje de mueble de baño/aseo",      unidad:"ud",       mo:100, mat:200, dias:0.5},
+    radiadores:             {label:"Instalar radiador",                  unidad:"ud",       mo:150, mat:280, dias:0.5},
+    // CARPINTERÍA
+    cambiar_puerta:         {label:"Cambiar puerta",                     unidad:"ud",       mo:150, mat:290, dias:0.5},
+    cambiar_ventana:        {label:"Cambiar ventana",                    unidad:"ud",       mo:200, mat:380, dias:0.5},
+  },
+  cocina: {
+    // DEMOLICIÓN
+    demolicion_completa:    {label:"Demolición y vaciado",               unidad:"m2",       mo:45,  mat:5,   dias:1.0},
+    mover_distribucion:     {label:"Redistribución de tabiques",         unidad:"ud",       mo:700, mat:250, dias:2.0, udLabel:"tabiques"},
+    // INSTALACIONES
+    renovar_fontaneria:     {label:"Renovar fontanería",                 unidad:"ud",       mo:600, mat:400, dias:2.0},
+    renovar_electricidad:   {label:"Instalación eléctrica",              unidad:"ud",       mo:500, mat:300, dias:1.5},
+    // ¿QUÉ QUIERES CAMBIAR?
+    alicatar_paredes:       {label:"Cambiar azulejos / revestimiento",   unidad:"m2_pared", mo:22,  mat:25,  dias:0.3},
+    cambiar_suelo:          {label:"Cambiar suelo",                      unidad:"m2",       mo:18,  mat:22,  dias:0.3},
+    pintar_paredes:         {label:"Pintura de paredes y techo",          unidad:"m2_pared", mo:8,   mat:4,   dias:0.2},
+    falso_techo:            {label:"Techo / Falso techo",                unidad:"m2",       mo:25,  mat:18,  dias:0.3},
+    // MOBILIARIO
+    instalar_muebles:       {label:"Muebles de cocina",                  unidad:"ml",       mo:180, mat:350, dias:1.5},
+    encimera:               {label:"Encimera",                           unidad:"ml",       mo:120, mat:250, dias:0.5},
+    instalar_campana:       {label:"Campana extractora",                 unidad:"ud",       mo:120, mat:280, dias:0.5},
+    instalar_fregadero:     {label:"Fregadero",                          unidad:"ud",       mo:150, mat:220, dias:0.5},
+    instalar_caldera:       {label:"Instalar caldera",                   unidad:"ud",       mo:350, mat:800, dias:1.5},
+    radiadores:             {label:"Instalar radiador",                  unidad:"ud",       mo:150, mat:280, dias:0.5},
+    // CARPINTERÍA
+    cambiar_puerta:         {label:"Cambiar puerta",                     unidad:"ud",       mo:150, mat:290, dias:0.5},
+    cambiar_ventana:        {label:"Cambiar ventana",                    unidad:"ud",       mo:200, mat:430, dias:0.5},
+  },
+  habitacion: {
+    // DEMOLICIÓN
+    tirar_pared:            {label:"Demolición de pared",                unidad:"ud",       mo:600, mat:100, dias:1.0},
+    redistribucion_tabiques:{label:"Redistribución de tabiques",         unidad:"ud",       mo:900, mat:350, dias:2.5, udLabel:"tabiques"},
+    abrir_hueco:            {label:"Abrir o tapiar un hueco",            unidad:"ud",       mo:350, mat:50,  dias:0.5},
+    // REVESTIMIENTOS
+    pintar_paredes:         {label:"Pintura de paredes y techo",          unidad:"m2_pared", mo:8,   mat:4,   dias:0.2},
+    papel_pintado:          {label:"Papel pintado",                      unidad:"m2_pared", mo:12,  mat:18,  dias:0.2},
+    cambiar_suelo:          {label:"Cambiar suelo",                      unidad:"m2",       mo:18,  mat:22,  dias:0.3},
+    pulir_parquet:          {label:"Pulir y barnizar parquet",           unidad:"m2",       mo:12,  mat:4,   dias:0.2},
+    falso_techo:            {label:"Falso techo o molduras",             unidad:"m2",       mo:25,  mat:18,  dias:0.3},
+    // CARPINTERÍA
+    cambiar_ventanas:       {label:"Cambiar ventana(s)",                 unidad:"ud",       mo:200, mat:430, dias:0.5},
+    armario_empotrado:      {label:"Armario empotrado",                  unidad:"ml",       mo:200, mat:380, dias:1.0},
+    cambiar_puerta:         {label:"Cambiar puerta",                     unidad:"ud",       mo:150, mat:290, dias:0.5},
+    // INSTALACIONES
+    puntos_de_luz:          {label:"Puntos de luz y enchufes",           unidad:"ud",       mo:80,  mat:30,  dias:0.3},
+    aire_acondicionado:     {label:"Aire acondicionado split",           unidad:"ud",       mo:300, mat:900, dias:1.0},
+    suelo_radiante:         {label:"Suelo radiante",                     unidad:"m2",       mo:35,  mat:40,  dias:0.4},
+    radiadores:             {label:"Instalar radiador",                  unidad:"ud",       mo:150, mat:280, dias:0.5},
+  },
+  salon: {
+    // DEMOLICIÓN
+    tirar_pared:            {label:"Demolición de pared",                unidad:"ud",       mo:600, mat:100, dias:1.0},
+    redistribucion_tabiques:{label:"Redistribución de tabiques",         unidad:"ud",       mo:900, mat:350, dias:2.5, udLabel:"tabiques"},
+    // REVESTIMIENTOS
+    pintar_paredes:         {label:"Pintura de paredes y techo",          unidad:"m2_pared", mo:8,   mat:4,   dias:0.2},
+    papel_pintado:          {label:"Papel pintado",                      unidad:"m2_pared", mo:12,  mat:18,  dias:0.2},
+    cambiar_suelo:          {label:"Cambiar suelo",                      unidad:"m2",       mo:18,  mat:22,  dias:0.3},
+    pulir_parquet:          {label:"Pulir y barnizar parquet",           unidad:"m2",       mo:12,  mat:4,   dias:0.2},
+    falso_techo:            {label:"Falso techo o molduras",             unidad:"m2",       mo:25,  mat:18,  dias:0.3},
+    // INSTALACIONES
+    puntos_de_luz:          {label:"Puntos de luz y enchufes",           unidad:"ud",       mo:80,  mat:30,  dias:0.3},
+    aire_acondicionado:     {label:"Aire acondicionado split",           unidad:"ud",       mo:300, mat:900, dias:1.0},
+    cambiar_ventanas:       {label:"Cambiar ventana(s)",                 unidad:"ud",       mo:200, mat:430, dias:0.5},
+    radiadores:             {label:"Radiadores",                         unidad:"ud",       mo:150, mat:280, dias:0.5},
+  },
+  pasillo: {
+    // DEMOLICIÓN
+    tirar_pared:            {label:"Demolición de pared",                unidad:"ud",       mo:500, mat:80,  dias:0.8},
+    redistribucion_tabiques:{label:"Redistribución de tabiques",         unidad:"ud",       mo:800, mat:300, dias:2.0, udLabel:"tabiques"},
+    // ACABADOS
+    pintar_paredes:         {label:"Pintura de paredes y techo",         unidad:"m2_pared", mo:8,   mat:4,   dias:0.2},
+    cambiar_suelo:          {label:"Cambiar suelo",                      unidad:"m2",       mo:18,  mat:22,  dias:0.2},
+    falso_techo:            {label:"Falso techo",                        unidad:"m2",       mo:25,  mat:18,  dias:0.2},
+    cambiar_puerta:         {label:"Cambiar puerta(s)",                  unidad:"ud",       mo:150, mat:290, dias:0.5},
+    radiadores:             {label:"Instalar radiador",                  unidad:"ud",       mo:150, mat:280, dias:0.5},
+  },
+  toda_la_obra: {
+    pintura_integral:       {label:"Pintura integral vivienda",          unidad:"m2",       mo:7,   mat:4,   dias:0.1},
+    suelos_integral:        {label:"Cambio de suelos completo",          unidad:"m2",       mo:18,  mat:22,  dias:0.2},
+    electricidad_integral:  {label:"Instalación eléctrica compl.",       unidad:"m2",       mo:25,  mat:15,  dias:0.2},
+    fontaneria_integral:    {label:"Fontanería completa",                unidad:"m2",       mo:20,  mat:12,  dias:0.2},
+    demolicion_integral:    {label:"Demolición y redistribución",        unidad:"m2",       mo:35,  mat:5,   dias:0.2},
+  },
+  terraza: {
+    limpiar_rejuntar:       {label:"Limpiar y rejuntar baldosas",        unidad:"m2",       mo:8,   mat:3,   dias:0.1},
+    cambiar_suelo:          {label:"Cambiar baldosas / suelo de terraza",unidad:"m2",       mo:22,  mat:28,  dias:0.3},
+    impermeabilizar:        {label:"Impermeabilización de terraza",      unidad:"m2",       mo:22,  mat:18,  dias:0.3},
+    pintar_paredes:         {label:"Pintura de paredes / barandillas",   unidad:"m2_pared", mo:8,   mat:4,   dias:0.2},
+    cerrar_terraza:         {label:"Cerramiento de terraza",             unidad:"m2",       mo:85,  mat:130, dias:1.0},
+    pergola_toldo:          {label:"Pérgola o toldo",                    unidad:"ud",       mo:200, mat:400, dias:1.0},
+    cambiar_barandilla:     {label:"Cambiar barandilla",                 unidad:"ml",       mo:80,  mat:120, dias:0.5},
+    falso_techo:            {label:"Techo / Falso techo",                unidad:"m2",       mo:25,  mat:18,  dias:0.3},
+    radiadores:             {label:"Instalar radiador/calefactor",      unidad:"ud",       mo:150, mat:280, dias:0.5},
+  },
+};
+
+// Categorías de trabajos por espacio (para organizar los checkboxes)
+const TRABAJOS_CATS = {
+  bano: [
+    {cat:"DEMOLICIÓN",              items:["demolicion_completa","solo_revestimientos","mover_distribucion"]},
+    {cat:"INSTALACIONES",           items:["renovar_fontaneria","renovar_electricidad","suelo_radiante","radiadores"]},
+    {cat:"¿QUÉ QUIERES CAMBIAR?",  items:["cambiar_baldosas","cambiar_suelo","pintar_paredes","falso_techo"]},
+    {cat:"SANITARIOS",              items:["instalar_ducha","instalar_banera","instalar_inodoro","instalar_lavabo","instalar_espejo","radiador_toallero"],avisoEstimado:true},
+    {cat:"CARPINTERÍA",             items:["cambiar_puerta","cambiar_ventana"]},
+  ],
+  aseo: [
+    {cat:"DEMOLICIÓN",              items:["demolicion_completa","solo_revestimientos","mover_distribucion"]},
+    {cat:"INSTALACIONES",           items:["renovar_fontaneria","renovar_electricidad","radiadores"]},
+    {cat:"¿QUÉ QUIERES CAMBIAR?",  items:["cambiar_baldosas","cambiar_suelo","pintar_paredes","falso_techo"]},
+    {cat:"SANITARIOS",              items:["instalar_ducha","instalar_inodoro","instalar_lavabo"],avisoEstimado:true},
+    {cat:"CARPINTERÍA",             items:["cambiar_puerta","cambiar_ventana"]},
+  ],
+  cocina: [
+    {cat:"DEMOLICIÓN",              items:["demolicion_completa","mover_distribucion"]},
+    {cat:"INSTALACIONES",           items:["renovar_fontaneria","renovar_electricidad","instalar_caldera","radiadores"],avisoCaldera:true},
+    {cat:"¿QUÉ QUIERES CAMBIAR?",  items:["alicatar_paredes","cambiar_suelo","pintar_paredes","falso_techo"]},
+    {cat:"MOBILIARIO",              items:["instalar_muebles","encimera","instalar_campana","instalar_fregadero"]},
+    {cat:"CARPINTERÍA",             items:["cambiar_puerta","cambiar_ventana"]},
+  ],
+  habitacion: [
+    {cat:"DEMOLICIÓN",              items:["tirar_pared","redistribucion_tabiques","abrir_hueco"]},
+    {cat:"REVESTIMIENTOS",          items:["pintar_paredes","papel_pintado","cambiar_suelo","pulir_parquet","falso_techo"]},
+    {cat:"CARPINTERÍA",             items:["cambiar_ventanas","armario_empotrado","cambiar_puerta"]},
+    {cat:"INSTALACIONES",           items:["puntos_de_luz","aire_acondicionado","suelo_radiante","radiadores"]},
+  ],
+  salon: [
+    {cat:"DEMOLICIÓN",              items:["tirar_pared","redistribucion_tabiques"]},
+    {cat:"REVESTIMIENTOS",          items:["pintar_paredes","papel_pintado","cambiar_suelo","pulir_parquet","falso_techo"]},
+    {cat:"CARPINTERÍA",             items:["cambiar_puerta","cambiar_ventanas"]},
+    {cat:"INSTALACIONES",           items:["puntos_de_luz","aire_acondicionado","radiadores"]},
+  ],
+  pasillo: [
+    {cat:"DEMOLICIÓN",              items:["tirar_pared","redistribucion_tabiques"]},
+    {cat:"ACABADOS",                items:["pintar_paredes","cambiar_suelo","falso_techo","cambiar_puerta","radiadores"]},
+  ],
+  toda_la_obra: [
+    {cat:"TODA LA VIVIENDA",        items:["pintura_integral","suelos_integral","electricidad_integral","fontaneria_integral","demolicion_integral"]},
+  ],
+  terraza: [
+    {cat:"ACABADOS",                items:["limpiar_rejuntar","cambiar_suelo","pintar_paredes","falso_techo","radiadores"]},
+    {cat:"OBRA",                    items:["impermeabilizar","cerrar_terraza","cambiar_barandilla"],avisoTerrazaObra:true},
+    {cat:"EQUIPAMIENTO",            items:["pergola_toldo"],avisoTerrazaObra:true},
+  ],
+};
+
+// Extras logísticos
+const EXTRAS_CONFIG = {
+  sin_ascensor:           {label:"Edificio sin ascensor",             desc:"Se aplica recargo por planta según el piso seleccionado (3–9% s/total)", icon:"🏗️", importe:0, esDinamico:true},
+  gestion_residuos:       {label:"Gestión de residuos y escombros",    desc:"Retirada y vertedero incluidos",          icon:"🗑️", importe:280},
+  necesita_grua:          {label:"Necesito grúa o montacargas",        desc:"Para muebles o maquinaria pesada",        icon:"🏋️", importe:450},
+  proteccion_zonas:       {label:"Protección de zonas no reformadas",  desc:"Mobiliario y suelos protegidos",          icon:"🛡️", importe:180},
+  obra_habitada:          {label:"Obra en vivienda habitada",          desc:"Requiere coordinación especial",          icon:"🏠", importe:350},
+  autorizacion_comunidad: {label:"Gestión autorización de comunidad",  desc:"Trámite con el administrador",            icon:"📋", importe:80},
+  sin_parking:            {label:"Sin parking para furgoneta",         desc:"Desplazamiento desde parking lejano",     icon:"🅿️", importe:120},
+};
+
+// Productos de catálogo (mock — en prod vienen de la API)
+const PRODUCTOS = [
+  {id:"s1", cat:"suelo",  nombre:"Porcelánico Travertino Beige 60×60",  marca:"Aparici",  precio:18.90, unidad:"m²", img:"https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=300&q=70"},
+  {id:"s2", cat:"suelo",  nombre:"Parquet laminado Roble Natural AC5",   marca:"Kronotex", precio:16.50, unidad:"m²", img:"https://images.unsplash.com/photo-1541123437800-1bb1317badc2?w=300&q=70"},
+  {id:"s3", cat:"suelo",  nombre:"Gres porcelánico Cemento Gris 80×80",  marca:"Vives",    precio:24.30, unidad:"m²", img:"https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?w=300&q=70"},
+  {id:"az1",cat:"azulejo",nombre:"Azulejo metro blanco mate 10×20",       marca:"Equipe",   precio:22.00, unidad:"m²", img:"https://images.unsplash.com/photo-1552321554-5fefe8c9ef14?w=300&q=70"},
+  {id:"az2",cat:"azulejo",nombre:"Azulejo hidráulico azul 20×20",         marca:"Realonda", precio:28.50, unidad:"m²", img:"https://images.unsplash.com/photo-1617806118233-18e1de247200?w=300&q=70"},
+  {id:"p1", cat:"pintura",nombre:"Pintura plástica blanca mate 15L",      marca:"Titanlux", precio:32.50, unidad:"bote",img:"https://images.unsplash.com/photo-1589939705384-5185137a7f0f?w=300&q=70"},
+  {id:"p2", cat:"pintura",nombre:"Esmalte satinado blanco 4L",            marca:"Valentine",precio:18.90, unidad:"bote",img:"https://images.unsplash.com/photo-1562259929-b4e1fd3aef09?w=300&q=70"},
+];
+
+// Trabajo → categoría de material (para saber qué productos mostrar en paso 4)
+const TRABAJO_CAT_MAP = {
+  cambiar_baldosas:"azulejo", alicatar_paredes:"azulejo",
+  cambiar_suelo:"suelo", suelos_integral:"suelo",
+  pintar_paredes:"pintura", pintura_integral:"pintura", papel_pintado:"pintura",
+};
+
+const CALIDAD_COEF   = {basica:0.80, media:1.0, premium:1.40};
+// Recargo por planta — aplica a partir de 1ª planta (sin ascensor agrava este coste)
+const PLANTA_RECARGO = {baja:0, '1_2':0.03, '3_4':0.06, mas5:0.09};
+const TIEMPO_BASE    = {bano:8, aseo:5, cocina:10, habitacion:5, salon:7, pasillo:2, toda_la_obra:20, terraza:3};
+const ML_ESTIMATE    = {cocina:{instalar_muebles:4, encimera:3}, habitacion:{armario_empotrado:2.5}, terraza:{cambiar_barandilla:6}};
+
+const ESPACIO_LABELS = {
+  bano:"🛁 Baño", aseo:"🚿 Aseo", cocina:"🍳 Cocina",
+  habitacion:"🛏️ Habitación", salon:"🛋️ Salón",
+  pasillo:"🚪 Pasillo", toda_la_obra:"🏗️ Toda la obra", terraza:"🏡 Terraza"
+};
+
+// Trabajos que activan la pregunta de estado de demolición
+const DEMO_TRABAJOS = new Set(['demolicion_completa','solo_revestimientos','tirar_pared','demolicion_integral']);
+// Trabajos que activan la pregunta de número de tabiques
+const TABIQUES_TRABAJOS = new Set(['redistribucion_tabiques','mover_distribucion']);
+
+// Agrupación de trabajos por categoría (para desglose del resultado)
+const TRABAJO_GRUPOS = {
+  demolicion_completa:'Demolición', solo_revestimientos:'Demolición',
+  tirar_pared:'Demolición', demolicion_integral:'Demolición',
+  redistribucion_tabiques:'Tabiquería y distribución', mover_distribucion:'Tabiquería y distribución',
+  abrir_hueco:'Tabiquería y distribución',
+  renovar_fontaneria:'Fontanería', fontaneria_integral:'Fontanería', suelo_radiante:'Fontanería',
+  renovar_electricidad:'Instalación eléctrica', electricidad_integral:'Instalación eléctrica', puntos_de_luz:'Instalación eléctrica',
+  cambiar_suelo:'Suelos y pavimentos', suelos_integral:'Suelos y pavimentos',
+  pulir_parquet:'Suelos y pavimentos', limpiar_rejuntar:'Suelos y pavimentos',
+  cambiar_baldosas:'Revestimientos', alicatar_paredes:'Revestimientos',
+  pintar_paredes:'Pintura', papel_pintado:'Pintura', pintura_integral:'Pintura',
+  falso_techo:'Techos',
+  instalar_ducha:'Sanitarios', instalar_banera:'Sanitarios',
+  instalar_inodoro:'Sanitarios', instalar_lavabo:'Sanitarios',
+  instalar_mueble:'Mobiliario de baño', instalar_espejo:'Mobiliario de baño', radiador_toallero:'Mobiliario de baño',
+  instalar_muebles:'Mobiliario de cocina', encimera:'Mobiliario de cocina',
+  instalar_campana:'Mobiliario de cocina', instalar_fregadero:'Mobiliario de cocina',
+  cambiar_puerta:'Carpintería', cambiar_ventana:'Carpintería',
+  cambiar_ventanas:'Carpintería', armario_empotrado:'Carpintería', cambiar_barandilla:'Carpintería',
+  aire_acondicionado:'Climatización', radiadores:'Climatización',
+  impermeabilizar:'Impermeabilizaciones', cerrar_terraza:'Cerramientos', pergola_toldo:'Equipamiento exterior',
+};
+
+// ═══════════════════════════════════════════════════════════════
+//  ESTADO
+// ═══════════════════════════════════════════════════════════════
+const S = {
+  paso: 1,
+  espacioIdx: 0,
+  inmueble:      {tipo: null, planta: '1_2', superficie: null, cp: null, numPlantasChalet: 2},
+  // Nuevos: cantidad por tipo (baño, aseo, habitación)
+  cantEspacios:  {bano: 0, aseo: 0, habitacion: 0},
+  // Espacios de toggle único (cocina, salon, pasillo, terraza, toda_la_obra)
+  espaciosSingle: new Set(),
+  // Lista generada de instancias: ['bano_1','bano_2','cocina','salon',...]
+  espacios:      [],
+  cfgEspacios:   {},
+  calidad:       'media',
+  materiales:    [],
+  extras:        new Set(),
+  urgencia:      'sin_prisa',
+  notas:         '',
+  adjuntos:      [],
+  resultado:     null,
+  cliente:       {nombre:'', email:'', tel:'', canal:'email', horario:'cualquiera', rgpd:false},
+  materialesPorEspacio: {},
+  matCompartidos: {},
+};
+
+// ═══════════════════════════════════════════════════════════════
+//  NAVEGACIÓN PRINCIPAL
+// ═══════════════════════════════════════════════════════════════
+const STEP_IDS = {1:'p1',2:'p2',3:'p3',4:'p4',5:'p5',6:'p6',resultado:'p-resultado',guardar:'p-guardar',8:'p8',exito:'p-exito'};
+const STEP_NUM  = {1:1,2:2,3:3,4:4,5:5,6:6,resultado:6,guardar:6,8:6,exito:6};
+
+function goStep(n, espacioIdxOverride) {
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  const panelId = STEP_IDS[n] || ('p' + n);
+  document.getElementById(panelId)?.classList.add('active');
+  actualizarStepper(STEP_NUM[n] || n);
+  if (n === 3) {
+    if (espacioIdxOverride !== undefined) S.espacioIdx = espacioIdxOverride;
+    renderEspacioForm();
+  }
+  if (n === 4) renderMateriales();
+  if (n === 5) renderExtras();
+  window.scrollTo({top:0, behavior:'smooth'});
+}
+
+function actualizarStepper(nActivo) {
+  for (let i = 1; i <= 6; i++) {
+    const sp = document.getElementById('sp' + i);
+    if (!sp) continue;
+    sp.classList.remove('act', 'done');
+    const dot = sp.querySelector('.step-dot');
+    if (i < nActivo)  { sp.classList.add('done'); dot.textContent = '✓'; }
+    if (i === nActivo){ sp.classList.add('act');  dot.textContent = i; }
+    if (i > nActivo)    dot.textContent = i;
+  }
+}
+
+// ── Helpers de instancias ──────────────────────────────────────
+function getTipoBase(id) {
+  const m = id.match(/^(.+?)_(\d+)$/);
+  return m ? m[1] : id;
+}
+function getLabelEspacio(id) {
+  const tipo = getTipoBase(id);
+  const num  = id.match(/_(\d+)$/)?.[1];
+  const base = {bano:'Baño',aseo:'Aseo',cocina:'Cocina',habitacion:'Habitación',
+                salon:'Salón',pasillo:'Pasillo',toda_la_obra:'Obra integral',terraza:'Terraza'};
+  return (base[tipo] || tipo) + (num ? ' ' + num : '');
+}
+function getLabelConEmoji(id) {
+  const tipo = getTipoBase(id);
+  const em = {bano:'🛁',aseo:'🚿',cocina:'🍳',habitacion:'🛏️',
+              salon:'🛋️',pasillo:'🚪',toda_la_obra:'🏗️',terraza:'🏡'};
+  return (em[tipo] || '') + ' ' + getLabelEspacio(id);
+}
+
+// ── Paso 1 ─────────────────────────────────────────────────────
+function irPaso2() {
+  S.inmueble.superficie = parseFloat(document.getElementById('sup-total').value) || null;
+  S.inmueble.cp         = document.getElementById('cp').value.trim() || null;
+  goStep(2);
+}
+function selTipo(el, val) {
+  document.querySelectorAll('#grid-tipo .opt-card').forEach(c => c.classList.remove('sel'));
+  el.classList.add('sel');
+  S.inmueble.tipo = val;
+  document.getElementById('sec-planta-piso').style.display   = val === 'piso'   ? 'block' : 'none';
+  document.getElementById('sec-chalet-plantas').style.display = val === 'chalet' ? 'block' : 'none';
+  if (val !== 'piso') S.inmueble.planta = 'baja';
+}
+function selPlanta(el, val) {
+  document.querySelectorAll('#sec-planta-piso .planta-btn').forEach(b => b.classList.remove('sel'));
+  el.classList.add('sel');
+  S.inmueble.planta = val;
+}
+function selNumPlantasChalet(el, n) {
+  document.querySelectorAll('#sec-chalet-plantas .planta-btn').forEach(b => b.classList.remove('sel'));
+  el.classList.add('sel');
+  S.inmueble.numPlantasChalet = n;
+}
+
+// ── Paso 2: exclusividad reforma integral ──────────────────────
+function tieneEspaciosNoIntegral() {
+  const singles = ['cocina','salon','pasillo','terraza'];
+  return singles.some(t => S.espaciosSingle.has(t)) ||
+    Object.values(S.cantEspacios).some(n => n > 0);
+}
+
+function actualizarAvisoP2() {
+  const aviso     = document.getElementById('p2-aviso');
+  const avisoText = document.getElementById('p2-aviso-text');
+  const tieneIntegral = S.espaciosSingle.has('toda_la_obra');
+  const tieneOtros    = tieneEspaciosNoIntegral();
+
+  if (tieneIntegral && !tieneOtros) {
+    aviso.style.display = 'block';
+    avisoText.innerHTML = '<strong>Reforma integral seleccionada.</strong><br>Esta opción cubre toda la vivienda. Para reformar espacios individuales, primero <a onclick="deselIntegral()">deselecciona la reforma integral</a>.';
+  } else if (!tieneIntegral && tieneOtros && document.getElementById('esp-card-toda_la_obra')?.classList.contains('disabled')) {
+    aviso.style.display = 'none';
+  } else if (!tieneIntegral && !tieneOtros) {
+    aviso.style.display = 'none';
+  } else {
+    aviso.style.display = 'none';
+  }
+
+  // Bloquear/desbloquear
+  const cardIntegral = document.getElementById('esp-card-toda_la_obra');
+  if (cardIntegral) {
+    if (tieneOtros && !tieneIntegral) {
+      cardIntegral.classList.add('disabled');
+      if (!document.getElementById('p2-aviso-otros')) {
+        aviso.style.display = 'block';
+        avisoText.innerHTML = '<strong>Espacios individuales seleccionados.</strong><br>La opción de reforma integral no está disponible si ya has seleccionado estancias concretas. Primero <a onclick="deselTodos()">deselecciona todo</a> para elegir reforma integral.';
+      }
+    } else {
+      cardIntegral.classList.remove('disabled');
+    }
+  }
+
+  // Bloquear contadores y otros si reforma integral
+  ['bano','aseo','habitacion'].forEach(tipo => {
+    const row = document.getElementById('ecr-' + tipo);
+    if (row) row.style.opacity = tieneIntegral ? '0.4' : '1';
+    const btns = row?.querySelectorAll('.ec-btn');
+    btns?.forEach(b => b.disabled = tieneIntegral);
+  });
+  ['cocina','salon','pasillo','terraza'].forEach(tipo => {
+    const card = document.getElementById('esp-card-' + tipo);
+    if (card) {
+      card.classList.toggle('disabled', tieneIntegral);
+    }
+  });
+
+  // Mostrar/ocultar aviso para bloqueo por otros
+  if (tieneOtros && !tieneIntegral) {
+    aviso.style.display = 'block';
+    avisoText.innerHTML = '<strong>Reforma por estancias</strong><br>La opción de <em>Reforma integral</em> no está disponible mientras tengas estancias seleccionadas.<br><a onclick="deselTodos()">Limpiar selección</a>';
+  }
+}
+
+function deselIntegral() {
+  S.espaciosSingle.delete('toda_la_obra');
+  document.getElementById('esp-card-toda_la_obra')?.classList.remove('sel');
+  actualizarAvisoP2();
+}
+
+function deselTodos() {
+  S.cantEspacios = {bano:0,aseo:0,habitacion:0};
+  S.espaciosSingle = new Set();
+  ['bano','aseo','habitacion'].forEach(tipo => {
+    const el  = document.getElementById('ecv-' + tipo);
+    const row = document.getElementById('ecr-' + tipo);
+    if (el)  { el.textContent = '0'; el.classList.remove('nonzero'); }
+    if (row)   row.classList.remove('has-val');
+  });
+  ['cocina','salon','pasillo','terraza','toda_la_obra'].forEach(tipo => {
+    document.getElementById('esp-card-' + tipo)?.classList.remove('sel');
+  });
+  actualizarAvisoP2();
+}
+
+function cambiarCantEspacio(tipo, d) {
+  if (S.espaciosSingle.has('toda_la_obra')) return;
+  S.cantEspacios[tipo] = Math.max(0, Math.min(6, (S.cantEspacios[tipo] || 0) + d));
+  const el = document.getElementById('ecv-' + tipo);
+  if (el) { el.textContent = S.cantEspacios[tipo]; el.classList.toggle('nonzero', S.cantEspacios[tipo] > 0); }
+  const row = document.getElementById('ecr-' + tipo);
+  if (row) row.classList.toggle('has-val', S.cantEspacios[tipo] > 0);
+  actualizarAvisoP2();
+}
+
+function toggleEspacioV4(el, val) {
+  if (val !== 'toda_la_obra' && S.espaciosSingle.has('toda_la_obra')) return;
+  if (val === 'toda_la_obra' && tieneEspaciosNoIntegral()) return;
+  if (el.classList.contains('disabled')) return;
+  if (S.espaciosSingle.has(val)) { S.espaciosSingle.delete(val); el.classList.remove('sel'); }
+  else                           { S.espaciosSingle.add(val);    el.classList.add('sel'); }
+  actualizarAvisoP2();
+}
+
+// Alias for old v3 calls
+function toggleEspacio(el, val) { toggleEspacioV4(el, val); }
+
+function construirListaEspacios() {
+  const lista = [];
+  ['bano','aseo','habitacion'].forEach(tipo => {
+    const n = S.cantEspacios[tipo] || 0;
+    for (let i = 1; i <= n; i++) lista.push(tipo + '_' + i);
+  });
+  ['cocina','salon','pasillo','terraza','toda_la_obra'].forEach(tipo => {
+    if (S.espaciosSingle.has(tipo)) lista.push(tipo);
+  });
+  return lista;
+}
+
+function iniciarPaso3() {
+  const lista = construirListaEspacios();
+  if (lista.length === 0) { toast('Añade al menos un espacio', 'warn'); return; }
+  const m2Def = {bano:8,aseo:5,cocina:12,habitacion:10,salon:20,pasillo:6,toda_la_obra:80,terraza:15};
+  lista.forEach(espId => {
+    if (!S.cfgEspacios[espId]) {
+      const tipo = getTipoBase(espId);
+      S.cfgEspacios[espId] = {
+        m2: m2Def[tipo] || 10,
+        trabajos: [], cantUd: {}, mlOvr: {},
+        demolicionEstado: null, plantaEspacio: null,
+        tabiquesConfig: [],
+        pinturaConMuebles: null,
+        ventanasConfig: [],
+        notas: '',
+      };
+    }
+  });
+  S.espacios    = lista;
+  S.espacioIdx  = 0;
+  goStep(3);
+  renderEspacioForm();
+}
+
+// ── Paso 3 ─────────────────────────────────────────────────────
+const VENTANA_APERTURAS = [
+  {val:'corredera',  label:'Corredera',      icon:'↔️'},
+  {val:'batiente',   label:'Batiente',       icon:'🚪'},
+  {val:'oscilobat',  label:'Oscilobatiente', icon:'↕️'},
+  {val:'fija',       label:'Fija',           icon:'⬜'},
+  {val:'basculante', label:'Basculante',     icon:'🔄'},
+];
+const VENTANA_MATERIALES = [
+  {val:'pvc',       label:'PVC',       icon:'🔵'},
+  {val:'aluminio',  label:'Aluminio',  icon:'⚪'},
+  {val:'madera',    label:'Madera',    icon:'🟤'},
+];
+const VENTANA_VIDRIOS = [
+  {val:'doble',    label:'Doble acristalamiento', icon:'🪟'},
+  {val:'triple',   label:'Triple acristalamiento',icon:'🪟'},
+  {val:'bajo_em',  label:'Bajo emisivo',          icon:'♨️'},
+  {val:'seguridad',label:'De seguridad',           icon:'🛡️'},
+  {val:'acustico', label:'Acústico',              icon:'🔇'},
+];
+
+function renderEspacioForm() {
+  const espId = S.espacios[S.espacioIdx];
+  const tipo  = getTipoBase(espId);
+  const cfg   = S.cfgEspacios[espId];
+  const cats  = TRABAJOS_CATS[tipo] || [];
+  const total = S.espacios.length;
+  const idx   = S.espacioIdx;
+
+  document.getElementById('esp-progress').innerHTML = S.espacios.map((e, i) =>
+    '<div class="esp-dot ' + (i < idx ? 'done' : i === idx ? 'act' : '') + '"></div>'
+  ).join('') + '<span style="font-size:11px;color:var(--muted);margin-left:4px">' + (idx+1) + ' de ' + total + '</span>';
+
+  document.getElementById('esp-badge').textContent  = getLabelConEmoji(espId);
+  document.getElementById('esp-titulo').textContent = '¿Qué quieres hacer en ' + preposEsp(espId) + '?';
+
+  let plantaHtml = '';
+  if (S.inmueble.tipo === 'chalet') {
+    const nPlantas = S.inmueble.numPlantasChalet || 2;
+    const opciones = ['Baja'];
+    for (let p = 1; p < nPlantas; p++) opciones.push(p + 'ª');
+    plantaHtml = '<div style="margin-bottom:14px"><div class="field-lbl" style="margin-bottom:6px">¿En qué planta está este espacio?</div><div class="planta-esp-row">' +
+      opciones.map((lbl, i) => {
+        const val = i === 0 ? 'baja' : String(i);
+        const sel = (cfg.plantaEspacio || 'baja') === val;
+        return '<div class="planta-esp-btn' + (sel ? ' sel' : '') + '" onclick="selPlantaEspacio(\'' + espId + '\',\'' + val + '\',this)">' + lbl + '</div>';
+      }).join('') + '</div></div>';
+  }
+
+  let html = plantaHtml;
+  const hasDemo = cfg.trabajos.some(k => DEMO_TRABAJOS.has(k));
+  const TABIQUE_KEYS = new Set(['redistribucion_tabiques','mover_distribucion']);
+  const VENTANA_KEYS = new Set(['cambiar_ventana','cambiar_ventanas']);
+  const SANITARIO_KEYS = new Set(['instalar_ducha','instalar_banera','instalar_inodoro','instalar_lavabo']);
+  const hasSanitarioSel = cfg.trabajos.some(k => SANITARIO_KEYS.has(k));
+  const tieneTabiqueSel = cfg.trabajos.some(k => TABIQUE_KEYS.has(k));
+  const tieneVentanaSel = cfg.trabajos.some(k => VENTANA_KEYS.has(k));
+  const TERRAZA_OBRA_KEYS = new Set(['cerrar_terraza','cambiar_barandilla','pergola_toldo']);
+  const hasTerrazaObra = cfg.trabajos.some(k => TERRAZA_OBRA_KEYS.has(k));
+
+  cats.forEach(({cat, items, avisoEstimado, avisoCaldera, avisoTerrazaObra}) => {
+    const esDemo    = cat === 'DEMOLICIÓN';
+    const needsAvisoEstimado = (avisoEstimado && hasSanitarioSel) ||
+                               (avisoCaldera && cfg.trabajos.includes('instalar_caldera')) ||
+                               (avisoTerrazaObra && hasTerrazaObra);
+
+    html += '<div class="cat-label">' + cat + '</div>';
+
+    if (needsAvisoEstimado) {
+      let avisoMsg = '';
+      if (avisoEstimado)    avisoMsg = 'Se aplicará un precio medio estimado por elemento. El modelo definitivo se acordará tras la visita técnica.';
+      if (avisoCaldera)     avisoMsg = 'Se aplicará un precio estimado para la caldera. El modelo y el precio final se acordarán tras la visita técnica.';
+      if (avisoTerrazaObra) avisoMsg = 'Se aplicará un precio estimado para este elemento. El modelo y el precio final de instalación se acordarán tras la visita técnica.';
+      html += '<div class="cat-aviso"><span class="cat-aviso-icon">ℹ️</span><span>' + avisoMsg + '</span></div>';
+    }
+
+    html += '<div class="chk-grid">';
+    items.forEach(tKey => {
+      const t = TRABAJOS[tipo]?.[tKey];
+      if (!t) return;
+      const sel    = cfg.trabajos.includes(tKey);
+      const isUd   = t.unidad === 'ud';
+      const isMl   = t.unidad === 'ml';
+      const udLbl  = t.udLabel || 'uds';
+      const cantUd = cfg.cantUd[tKey] || 1;
+      const cantMl = cfg.mlOvr[tKey] || (ML_ESTIMATE[tipo]?.[tKey] || 3);
+      html += '<div class="chk-card' + (sel ? ' sel' : '') + '" id="chk-' + tKey + '" onclick="toggleTrabajo(\'' + espId + '\',\'' + tKey + '\')">' +
+        '<div class="chk-box"></div>' +
+        '<div style="flex:1"><div>' + t.label + '</div>' +
+        (t.nota ? '<div class="trabajo-nota">✦ ' + t.nota + '</div>' : '') +
+        (isUd && sel && !t.noQty ? '<div class="qty-row" onclick="event.stopPropagation()"><input class="qty-inp" type="number" min="1" max="20" value="' + cantUd + '" id="qu-' + tKey + '" oninput="setCantUd(\'' + espId + '\',\'' + tKey + '\',this.value)"><span class="qty-lbl">' + udLbl + '</span></div>' : '') +
+        (isMl && sel ? '<div class="qty-row" onclick="event.stopPropagation()"><input class="qty-inp" type="number" min="0.5" max="30" step="0.5" value="' + cantMl + '" id="ml-' + tKey + '" oninput="setMlOvr(\'' + espId + '\',\'' + tKey + '\',this.value)"><span class="qty-lbl">ml</span></div>' : '') +
+        '</div></div>';
+
+      // Sub-opciones: suelo warning
+      if (tKey === 'cambiar_suelo' && sel) {
+        html += '<div class="suelo-aviso">💧 Al cambiar el suelo revisaremos el estado de la fontanería existente. En caso necesario, se podrá presupuestar su renovación durante la visita técnica.</div>';
+      }
+    });
+    html += '</div>';
+
+    // DEMOLICIÓN: estado del espacio
+    if (esDemo && hasDemo) {
+      const est = cfg.demolicionEstado;
+      html += '<div class="demo-sub">' +
+        '<div class="demo-sub-lbl">¿Cómo está actualmente el espacio?</div>' +
+        '<div class="demo-opts">' +
+        '<div class="demo-btn' + (est==='vacio'?' sel':'') + '" onclick="setDemoEstado(\'' + espId + '\',\'vacio\')">Vacío / sin muebles</div>' +
+        '<div class="demo-btn' + (est==='con_muebles'?' sel':'') + '" onclick="setDemoEstado(\'' + espId + '\',\'con_muebles\')">Con muebles</div>' +
+        '<div class="demo-btn' + (est==='habitada'?' sel':'') + '" onclick="setDemoEstado(\'' + espId + '\',\'habitada\')">Vivienda habitada</div>' +
+        '</div></div>';
+    }
+
+    // Tabiques sub-questionnaire
+    const tabiqueTKey = items.find(k => TABIQUE_KEYS.has(k));
+    if (tabiqueTKey && cfg.trabajos.includes(tabiqueTKey)) {
+      const nTabiques = cfg.cantUd[tabiqueTKey] || 1;
+      if (nTabiques !== cfg.tabiquesConfig.length) {
+        while (cfg.tabiquesConfig.length < nTabiques) cfg.tabiquesConfig.push({material:'pladur',soloLevantar:false});
+        while (cfg.tabiquesConfig.length > nTabiques) cfg.tabiquesConfig.pop();
+      }
+      html += '<div class="tabique-set">';
+      cfg.tabiquesConfig.forEach((tc, i) => {
+        html += '<div class="tabique-card">' +
+          '<div class="tabique-card-title">Tabique ' + (i+1) + '</div>' +
+          '<div class="tabique-opts">' +
+          '<span style="font-size:12px;color:var(--muted);margin-right:4px">Material:</span>' +
+          '<button class="tab-btn' + (tc.material==='pladur'?' sel':'') + '" onclick="setTabiqueMat(\'' + espId + '\',' + i + ',\'pladur\')">Pladur</button>' +
+          '<button class="tab-btn' + (tc.material==='ladrillo'?' sel':'') + '" onclick="setTabiqueMat(\'' + espId + '\',' + i + ',\'ladrillo\')">Ladrillo</button>' +
+          '</div>' +
+          '<div class="tab-check-row" onclick="toggleTabiqueSolo(\'' + espId + '\',' + i + ')">' +
+          '<span class="tab-check' + (tc.soloLevantar?' on':'') + '">' + (tc.soloLevantar?'✓':'') + '</span>' +
+          '<span>Solo levantar tabique nuevo (sin derribar el existente)</span>' +
+          '</div>' +
+          '</div>';
+      });
+      html += '</div>';
+    }
+
+    // Pintura con muebles
+    const pinturaIdx = items.indexOf('pintar_paredes');
+    if (pinturaIdx !== -1 && cfg.trabajos.includes('pintar_paredes')) {
+      const pm = cfg.pinturaConMuebles;
+      html += '<div class="pintura-sub">' +
+        '<div class="pintura-sub-lbl">¿Hay mobiliario que gestionar?</div>' +
+        '<div class="pintura-opts">' +
+        '<button class="pintura-btn' + (pm==='sin_muebles'?' sel':'') + '" onclick="setPinturaConMuebles(\'' + espId + '\',\'sin_muebles\')">Sin muebles</button>' +
+        '<button class="pintura-btn' + (pm==='tapar'?' sel':'') + '" onclick="setPinturaConMuebles(\'' + espId + '\',\'tapar\')">Tapar con plásticos</button>' +
+        '<button class="pintura-btn' + (pm==='desmontar'?' sel':'') + '" onclick="setPinturaConMuebles(\'' + espId + '\',\'desmontar\')">Desmontar muebles</button>' +
+        '</div></div>';
+    }
+
+    // Ventanas questionnaire
+    const ventanaTKey = items.find(k => VENTANA_KEYS.has(k));
+    if (ventanaTKey && cfg.trabajos.includes(ventanaTKey)) {
+      const nVentanas = cfg.cantUd[ventanaTKey] || 1;
+      while (cfg.ventanasConfig.length < nVentanas) cfg.ventanasConfig.push({apertura:'',material:'',vidrio:'',open:true});
+      while (cfg.ventanasConfig.length > nVentanas) cfg.ventanasConfig.pop();
+
+      html += '<div class="vent-aviso">ℹ️ Se aplicará un <strong>precio medio estimado</strong> según las opciones que elijas. Si no especificas nada, usaremos un precio orientativo genérico. El modelo definitivo se acordará en la visita técnica. ' +
+        '<a href="https://www.leroymerlin.es/productos/puertas-ventanas-y-escaleras/ventanas/" target="_blank" style="color:var(--terra)">Ver tipos de ventanas →</a></div>';
+
+      html += '<div class="ventanas-set">';
+      cfg.ventanasConfig.forEach((vc, i) => {
+        const statusParts = [];
+        if (vc.apertura)  statusParts.push(VENTANA_APERTURAS.find(x=>x.val===vc.apertura)?.label || '');
+        if (vc.material)  statusParts.push(VENTANA_MATERIALES.find(x=>x.val===vc.material)?.label || '');
+        if (vc.vidrio)    statusParts.push(VENTANA_VIDRIOS.find(x=>x.val===vc.vidrio)?.label || '');
+        const status = statusParts.filter(Boolean).join(' · ') || 'Sin especificar';
+        const open   = vc.open;
+        html += '<div class="ventana-card">' +
+          '<div class="ventana-card-head" onclick="toggleVentanaCard(\'' + espId + '\',' + i + ')">' +
+          '<span class="ventana-card-head-lbl">Ventana ' + (i+1) + '</span>' +
+          '<span class="ventana-status">' + status + '</span>' +
+          '<span class="ventana-arrow' + (open?' open':'') + '">▼</span>' +
+          '</div>' +
+          '<div class="ventana-body' + (open?' open':'') + '">' +
+          // Apertura
+          '<div class="vent-step-lbl">1. Tipo de apertura</div>' +
+          '<div class="vent-opts">' +
+          VENTANA_APERTURAS.map(a =>
+            '<button class="vent-btn' + (vc.apertura===a.val?' sel':'') + '" onclick="setVentana(\'' + espId + '\',' + i + ',\'apertura\',\'' + a.val + '\')">' +
+            '<span class="vent-btn-icon">' + a.icon + '</span>' + a.label + '</button>'
+          ).join('') +
+          '</div>' +
+          // Material
+          '<div class="vent-step-lbl">2. Material del marco</div>' +
+          '<div class="vent-opts">' +
+          VENTANA_MATERIALES.map(m =>
+            '<button class="vent-btn' + (vc.material===m.val?' sel':'') + '" onclick="setVentana(\'' + espId + '\',' + i + ',\'material\',\'' + m.val + '\')">' +
+            '<span class="vent-btn-icon">' + m.icon + '</span>' + m.label + '</button>'
+          ).join('') +
+          '</div>' +
+          // Vidrio
+          '<div class="vent-step-lbl">3. Tipo de vidrio</div>' +
+          '<div class="vent-opts">' +
+          VENTANA_VIDRIOS.map(v =>
+            '<button class="vent-btn' + (vc.vidrio===v.val?' sel':'') + '" onclick="setVentana(\'' + espId + '\',' + i + ',\'vidrio\',\'' + v.val + '\')">' +
+            '<span class="vent-btn-icon">' + v.icon + '</span>' + v.label + '</button>'
+          ).join('') +
+          '</div>' +
+          '</div></div>';
+      });
+      html += '</div>';
+    }
+  });
+
+  // Mueble de baño / aseo
+  if (tipo === 'bano' || tipo === 'aseo') {
+    const cantMueble  = cfg.cantUd['instalar_mueble'] || 0;
+    const tieneEnTrab = cfg.trabajos.includes('instalar_mueble');
+    const valSelect   = tieneEnTrab ? (cantMueble || 1) : 0;
+    html += '<div class="mueble-wrap">' +
+      '<span class="field-lbl">Montaje de mueble de ' + (tipo === 'bano' ? 'baño' : 'aseo') + '</span>' +
+      '<select class="mueble-select" id="sel-mueble-' + espId + '" onchange="setMueblesSelect(\'' + espId + '\',this.value)">' +
+      '<option value="0"' + (valSelect===0?' selected':'') + '>Sin mueble nuevo</option>' +
+      '<option value="1"' + (valSelect===1?' selected':'') + '>1 mueble</option>' +
+      '<option value="2"' + (valSelect===2?' selected':'') + '>2 muebles</option>' +
+      '<option value="3"' + (valSelect===3?' selected':'') + '>3 muebles</option>' +
+      '<option value="4"' + (valSelect===4?' selected':'') + '>4 o más muebles</option>' +
+      '</select></div>';
+  }
+
+  document.getElementById('trabajos-form').innerHTML = html;
+  document.getElementById('m2-display').textContent  = cfg.m2;
+
+  // Restaurar notas del espacio
+  const notasEl = document.getElementById('notas-espacio');
+  const bodyEl  = document.getElementById('comentarios-body');
+  const arrowEl = document.getElementById('coment-arrow');
+  if (notasEl) {
+    notasEl.value = cfg.notas || '';
+    const hasNotas = !!(cfg.notas);
+    if (bodyEl)  bodyEl.style.display  = hasNotas ? 'block' : 'none';
+    if (arrowEl) arrowEl.textContent   = hasNotas ? '▼' : '▶';
+  }
+
+  const btnSig = document.getElementById('btn-siguiente-esp');
+  if (btnSig) btnSig.textContent = idx < total - 1 ? 'Siguiente espacio →' : 'Continuar →';
+}
+
+function preposEsp(espId) {
+  const tipo = getTipoBase(espId);
+  const pre  = {bano:'el baño',aseo:'el aseo',cocina:'la cocina',habitacion:'la habitación',
+                salon:'el salón',pasillo:'el pasillo',toda_la_obra:'toda la obra',terraza:'la terraza'};
+  const label = getLabelEspacio(espId);
+  const num   = label.split(' ').pop();
+  if (['1','2','3','4','5','6'].includes(num)) {
+    const basePrep = pre[tipo] || ('el ' + label.toLowerCase());
+    return basePrep.replace(/^(el|la) /, '$1 ') + ' ' + num;
+  }
+  return pre[tipo] || ('el ' + label.toLowerCase());
+}
+
+function toggleTrabajo(espId, tKey) {
+  const cfg = S.cfgEspacios[espId];
+  const idx = cfg.trabajos.indexOf(tKey);
+  if (idx === -1) cfg.trabajos.push(tKey);
+  else cfg.trabajos.splice(idx, 1);
+  renderEspacioForm();
+}
+
+function setCantUd(espId, tKey, val) {
+  S.cfgEspacios[espId].cantUd[tKey] = Math.max(1, parseInt(val) || 1);
+  renderEspacioForm();
+}
+function setMlOvr(espId, tKey, val) {
+  S.cfgEspacios[espId].mlOvr[tKey] = Math.max(0.5, parseFloat(val) || 1);
+}
+function selPlantaEspacio(espId, val, el) {
+  document.querySelectorAll('.planta-esp-btn').forEach(b => b.classList.remove('sel'));
+  el.classList.add('sel');
+  S.cfgEspacios[espId].plantaEspacio = val;
+}
+function setDemoEstado(espId, val) {
+  S.cfgEspacios[espId].demolicionEstado = val;
+  renderEspacioForm();
+}
+function setMueblesSelect(espId, val) {
+  const n   = parseInt(val) || 0;
+  const cfg = S.cfgEspacios[espId];
+  const idx = cfg.trabajos.indexOf('instalar_mueble');
+  if (n > 0) {
+    if (idx === -1) cfg.trabajos.push('instalar_mueble');
+    cfg.cantUd['instalar_mueble'] = n;
+  } else {
+    if (idx !== -1) cfg.trabajos.splice(idx, 1);
+    delete cfg.cantUd['instalar_mueble'];
+  }
+}
+function setTabiqueMat(espId, i, val) {
+  S.cfgEspacios[espId].tabiquesConfig[i].material = val;
+  renderEspacioForm();
+}
+function toggleTabiqueSolo(espId, i) {
+  const tc = S.cfgEspacios[espId].tabiquesConfig[i];
+  tc.soloLevantar = !tc.soloLevantar;
+  renderEspacioForm();
+}
+function setPinturaConMuebles(espId, val) {
+  S.cfgEspacios[espId].pinturaConMuebles = val;
+  renderEspacioForm();
+}
+function setVentana(espId, i, campo, val) {
+  S.cfgEspacios[espId].ventanasConfig[i][campo] = val;
+  renderEspacioForm();
+}
+function toggleVentanaCard(espId, i) {
+  const vc = S.cfgEspacios[espId].ventanasConfig[i];
+  vc.open = !vc.open;
+  renderEspacioForm();
+}
+function toggleComentariosEsp() {
+  const body  = document.getElementById('comentarios-body');
+  const arrow = document.getElementById('coment-arrow');
+  const open  = body.style.display === 'none';
+  body.style.display  = open ? 'block' : 'none';
+  arrow.textContent   = open ? '▼' : '▶';
+  if (open) document.getElementById('notas-espacio')?.focus();
+}
+function setNotasEspacio(val) {
+  if (S.espacios[S.espacioIdx]) S.cfgEspacios[S.espacios[S.espacioIdx]].notas = val;
+}
+
+function cambiarM2(d) {
+  const espId = S.espacios[S.espacioIdx];
+  const cfg   = S.cfgEspacios[espId];
+  cfg.m2 = Math.max(1, Math.min(500, cfg.m2 + d));
+  document.getElementById('m2-display').textContent = cfg.m2;
+}
+
+function siguienteEspacio() {
+  const espId = S.espacios[S.espacioIdx];
+  if (S.cfgEspacios[espId].trabajos.length === 0) {
+    toast('Marca al menos un trabajo para ' + getLabelEspacio(espId), 'warn');
+    return;
+  }
+  if (S.espacioIdx < S.espacios.length - 1) {
+    S.espacioIdx++;
+    renderEspacioForm();
+    window.scrollTo({top:0, behavior:'smooth'});
+  } else {
+    goStep(4);
+  }
+}
+
+function anteriorEspacio() {
+  if (S.espacioIdx > 0) {
+    S.espacioIdx--;
+    renderEspacioForm();
+    window.scrollTo({top:0, behavior:'smooth'});
+  } else {
+    goStep(2);
+  }
+}
+
+// ── Paso 4: Materiales por espacio ─────────────────────────────
+function getMatEsp(espId) {
+  if (!S.materialesPorEspacio[espId]) S.materialesPorEspacio[espId] = [];
+  return S.materialesPorEspacio[espId];
+}
+
+function renderMateriales() {
+  const catLabels = {suelo:'Suelos y pavimentos', azulejo:'Azulejos y revestimientos', pintura:'Pintura'};
+
+  // For each space, find which material categories it needs
+  const espNecesidades = {};  // {espId: Set<cat>}
+  S.espacios.forEach(espId => {
+    const tipo  = getTipoBase(espId);
+    const cfg   = S.cfgEspacios[espId] || {};
+    const cats  = new Set();
+    (cfg.trabajos || []).forEach(tKey => {
+      const cat = TRABAJO_CAT_MAP[tKey];
+      if (cat) cats.add(cat);
+    });
+    if (cats.size) espNecesidades[espId] = cats;
+  });
+
+  const todasCats = new Set(Object.values(espNecesidades).flatMap(s => [...s]));
+
+  if (todasCats.size === 0) {
+    document.getElementById('materiales-contenido').innerHTML =
+      '<div class="mat-skip">No has seleccionado trabajos que requieran elegir materiales. Continuaremos con estimaciones estándar.</div>';
+    return;
+  }
+
+  let html = '<div class="mat-skip">Para cada estancia puedes elegir un material diferente, o activar "usar el mismo" para aplicar el mismo a varios espacios.</div>';
+
+  // Group by material category, then by espacio
+  todasCats.forEach(cat => {
+    const prods = PRODUCTOS.filter(p => p.cat === cat);
+    if (!prods.length) return;
+
+    // Espacios que necesitan esta categoría
+    const espIdsForCat = Object.entries(espNecesidades)
+      .filter(([, cats]) => cats.has(cat))
+      .map(([id]) => id);
+
+    const compartidoKey = cat;
+    const compartido = S.matCompartidos[compartidoKey] || false;
+
+    if (espIdsForCat.length > 1) {
+      html += '<div class="mat-compartir-row" onclick="toggleMatCompartido(\'' + compartidoKey + '\')">' +
+        '<span class="mat-compartir-check' + (compartido?' on':'') + '">' + (compartido?'✓':'') + '</span>' +
+        '<span>Usar el mismo <strong>' + (catLabels[cat]||cat).toLowerCase() + '</strong> para todos los espacios</span>' +
+        '</div>';
+    }
+
+    if (compartido || espIdsForCat.length === 1) {
+      // Shared or single: show once, apply to all
+      html += '<div class="mat-esp-block">' +
+        (espIdsForCat.length > 1
+          ? '<div class="mat-esp-titulo">' + (catLabels[cat]||cat) + ' <span style="font-size:13px;font-weight:400;color:var(--muted)">— para todos los espacios</span></div>'
+          : '<div class="mat-esp-titulo">' + getLabelConEmoji(espIdsForCat[0]) + '</div>') +
+        '<div class="prod-grid">' + buildProdGrid(cat, prods, espIdsForCat[0], true, espIdsForCat) + '</div></div>';
+    } else {
+      // Per-space
+      espIdsForCat.forEach(espId => {
+        const hayTrabajoEnEsp = (S.cfgEspacios[espId]?.trabajos || []).some(k => TRABAJO_CAT_MAP[k] === cat);
+        if (!hayTrabajoEnEsp) return;
+        html += '<div class="mat-esp-block">' +
+          '<div class="mat-esp-titulo">' + getLabelConEmoji(espId) + ' <span style="font-size:12px;font-weight:400;color:var(--muted)">— ' + (catLabels[cat]||cat).toLowerCase() + '</span></div>' +
+          '<div class="prod-grid">' + buildProdGrid(cat, prods, espId, false, [espId]) + '</div></div>';
+      });
+    }
+  });
+
+  document.getElementById('materiales-contenido').innerHTML = html;
+}
+
+function buildProdGrid(cat, prods, refEspId, shared, espIds) {
+  let html = '';
+  prods.forEach(p => {
+    const mats = getMatEsp(refEspId);
+    const matExistente = mats.find(m => m.id === p.id);
+    const sel = !!matExistente;
+    html += '<div class="prod-card' + (sel ? ' sel' : '') + '" id="pm-' + refEspId + '-' + p.id + '" onclick="toggleMatEsp(\'' + refEspId + '\',\'' + p.id + '\',' + shared + ',' + JSON.stringify(espIds) + ')">' +
+      '<div class="opt-check">✓</div>' +
+      '<img class="prod-img" src="' + p.img + '" alt="' + p.nombre + '" loading="lazy">' +
+      '<div class="prod-body">' +
+      '<div class="prod-brand">' + p.marca + '</div>' +
+      '<div class="prod-name">' + p.nombre + '</div>' +
+      '<div class="prod-foot"><div><div class="prod-price">' + p.precio.toFixed(2) + ' €</div><div class="prod-unit">por ' + p.unidad + '</div></div></div>' +
+      (sel && p.unidad === 'm²' ? '<div class="prod-m2-row" onclick="event.stopPropagation()"><input type="number" min="1" max="2000" value="' + matExistente.cantidad + '" id="mc-' + refEspId + '-' + p.id + '" oninput="setCantMatEsp(\'' + refEspId + '\',\'' + p.id + '\',this.value,' + shared + ',' + JSON.stringify(espIds) + ')"><label>m²</label></div>' : '') +
+      '</div></div>';
+  });
+  return html;
+}
+
+function toggleMatCompartido(key) {
+  S.matCompartidos[key] = !S.matCompartidos[key];
+  renderMateriales();
+}
+
+function toggleMatEsp(refEspId, prodId, shared, espIds) {
+  const p   = PRODUCTOS.find(x => x.id === prodId);
+  if (!p) return;
+  const targets = shared ? espIds : [refEspId];
+  targets.forEach(espId => {
+    const mats = getMatEsp(espId);
+    const idx  = mats.findIndex(m => m.id === prodId);
+    if (idx === -1) mats.push({id:p.id,nombre:p.nombre,cat:p.cat,precio:p.precio,cantidad:1,unidad:p.unidad});
+    else mats.splice(idx, 1);
+  });
+  renderMateriales();
+}
+
+function setCantMatEsp(refEspId, prodId, val, shared, espIds) {
+  const targets = shared ? espIds : [refEspId];
+  targets.forEach(espId => {
+    const m = getMatEsp(espId).find(x => x.id === prodId);
+    if (m) m.cantidad = Math.max(0.5, parseFloat(val) || 1);
+  });
+}
+
+// ── Paso 5: Extras ──────────────────────────────────────────────
+function renderExtras() {
+  const pltRec = PLANTA_RECARGO[S.inmueble.planta] || 0;
+  document.getElementById('extras-grid').innerHTML = Object.entries(EXTRAS_CONFIG).map(([key, e]) => {
+    const sel = S.extras.has(key);
+    let importeStr;
+    if (e.esDinamico && key === 'sin_ascensor') {
+      if (pltRec > 0) importeStr = '+' + Math.round(pltRec * 100) + '% s/total';
+      else importeStr = S.inmueble.tipo === 'piso' ? 'Sin recargo (planta baja)' : 'Variable por planta';
+    } else {
+      importeStr = '+' + e.importe + ' €';
+    }
+    return '<div class="extra-card' + (sel ? ' sel' : '') + '" onclick="toggleExtra(\'' + key + '\')">' +
+      '<div class="extra-icon">' + e.icon + '</div>' +
+      '<div class="extra-info"><div class="extra-name">' + e.label + '</div><div class="extra-desc">' + e.desc + '</div></div>' +
+      '<div class="extra-importe">' + importeStr + '</div></div>';
+  }).join('');
+}
+
+function toggleExtra(key) {
+  S.extras.has(key) ? S.extras.delete(key) : S.extras.add(key);
+  renderExtras();
+}
+
+// ── Paso 6 ──────────────────────────────────────────────────────
+function selCalidad(el, val) {
+  document.querySelectorAll('#cal-grid .opt-card').forEach(c => c.classList.remove('sel'));
+  el.classList.add('sel');
+  S.calidad = val;
+}
+function selUrgencia(el, val) {
+  document.querySelectorAll('.urgencia-card').forEach(b => b.classList.remove('sel'));
+  el.classList.add('sel');
+  S.urgencia = val;
+}
+
+// ── Contacto ────────────────────────────────────────────────────
+function selCanal(el, val)   { document.querySelectorAll('.canal-btn').forEach(b=>b.classList.remove('sel'));   el.classList.add('sel'); S.cliente.canal=val; }
+function selHorario(el, val) { document.querySelectorAll('.horario-btn').forEach(b=>b.classList.remove('sel')); el.classList.add('sel'); S.cliente.horario=val; }
+function toggleRgpd() {
+  S.cliente.rgpd = !S.cliente.rgpd;
+  const el = document.getElementById('rgpd-box');
+  el.classList.toggle('on', S.cliente.rgpd);
+  el.textContent = S.cliente.rgpd ? '✓' : '';
+  document.getElementById('btn-enviar').disabled = !S.cliente.rgpd;
+}
+
+function handleFiles(files) {
+  const list = document.getElementById('file-list');
+  Array.from(files).forEach(f => {
+    if (S.adjuntos.includes(f.name)) return;
+    S.adjuntos.push(f.name);
+    const chip = document.createElement('div');
+    chip.className = 'file-chip';
+    chip.innerHTML = '📎 ' + f.name + ' <button onclick="eliminarAdjunto(this,\'' + f.name.replace(/'/g,"\\'") + '\')">✕</button>';
+    list.appendChild(chip);
+  });
+  document.getElementById('file-input').value = '';
+}
+function eliminarAdjunto(btn, nombre) {
+  S.adjuntos = S.adjuntos.filter(n => n !== nombre);
+  btn.closest('.file-chip').remove();
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  MOTOR DE CÁLCULO
+// ═══════════════════════════════════════════════════════════════
+function r(v) { return Math.round(v * 100) / 100; }
+
+function _getCantidadCfg(cfg, tKey, unidad, m2, tipo) {
+  if (unidad === 'm2')       return m2;
+  if (unidad === 'm2_pared') return r(m2 * 2.5);
+  if (unidad === 'ud')       return cfg.cantUd?.[tKey] || 1;
+  if (unidad === 'ml')       return cfg.mlOvr?.[tKey] || (ML_ESTIMATE[tipo]?.[tKey] || 3);
+  return m2;
+}
+
+function calcularLocal() {
+  const calCoef = CALIDAD_COEF[S.calidad] || 1.0;
+  let pltRec = 0;
+  if (S.extras.has('sin_ascensor')) {
+    if (S.inmueble.tipo === 'piso') pltRec = PLANTA_RECARGO[S.inmueble.planta] || 0;
+    else if (S.inmueble.tipo === 'chalet') {
+      const maxPlanta = S.espacios.reduce((mx, espId) => {
+        const p = parseInt(S.cfgEspacios[espId]?.plantaEspacio) || 0;
+        return Math.max(mx, p);
+      }, 0);
+      pltRec = maxPlanta > 0 ? Math.min(maxPlanta * 0.02, 0.08) : 0;
+    }
+  }
+
+  let totalMo = 0, totalMat = 0, diasAcum = 0;
+  const gruposMO  = {};
+  const gruposMat = {};
+
+  S.espacios.forEach(espId => {
+    const tipo   = getTipoBase(espId);
+    const espLbl = getLabelEspacio(espId);
+    const cfg    = S.cfgEspacios[espId] || {};
+    const m2     = cfg.m2 || 10;
+    const tMap   = TRABAJOS[tipo] || {};
+
+    (cfg.trabajos || []).forEach(tKey => {
+      const t = tMap[tKey];
+      if (!t) return;
+      const cant    = _getCantidadCfg(cfg, tKey, t.unidad, m2, tipo);
+      const costoMo = r(t.mo * cant);
+      totalMo  += costoMo;
+      diasAcum += t.dias * cant;
+
+      const grupo = TRABAJO_GRUPOS[tKey] || 'Otros trabajos';
+      if (!gruposMO[grupo]) gruposMO[grupo] = {total:0, items:[]};
+      gruposMO[grupo].total = r(gruposMO[grupo].total + costoMo);
+      gruposMO[grupo].items.push({espLabel:espLbl, concepto:t.label, cant:r(cant), unidad:t.unidad==='ud'?'ud':(t.unidad==='ml'?'ml':'m²'), precio:t.mo, sub:costoMo});
+
+      const catUser = TRABAJO_CAT_MAP[tKey];
+      const tieneMatUsuario = catUser && getMatEsp(espId).some(m => m.cat === catUser);
+      if (!tieneMatUsuario && t.mat > 0) {
+        const costoMat = r(t.mat * cant * calCoef);
+        totalMat += costoMat;
+        const mKey = 'est_' + tKey + '_' + espId;
+        if (!gruposMat[mKey]) gruposMat[mKey] = {nombre:'Material: ' + t.label + ' (' + espLbl + ')', unidad:t.unidad==='ud'?'ud':(t.unidad==='ml'?'ml':'m²'), precioBase:r(t.mat*calCoef), total:0, items:[]};
+        gruposMat[mKey].total = r(gruposMat[mKey].total + costoMat);
+        gruposMat[mKey].items.push({espLabel:espLbl, cant:r(cant), precio:r(t.mat*calCoef), sub:costoMat});
+      }
+    });
+
+    // Materiales por espacio
+    getMatEsp(espId).forEach(mat => {
+      const costoMat = r(mat.precio * mat.cantidad * calCoef);
+      totalMat += costoMat;
+      const mKey = 'usr_' + mat.id + '_' + espId;
+      if (!gruposMat[mKey]) gruposMat[mKey] = {nombre:mat.nombre + ' (' + espLbl + ')', unidad:mat.unidad, precioBase:r(mat.precio*calCoef), total:0, items:[]};
+      gruposMat[mKey].total = r(gruposMat[mKey].total + costoMat);
+      gruposMat[mKey].items.push({espLabel:espLbl, cant:mat.cantidad, precio:r(mat.precio*calCoef), sub:costoMat});
+    });
+  });
+
+  // Extras
+  let totalExtras = 0;
+  const desgloseExtras = [];
+  S.extras.forEach(key => {
+    const e = EXTRAS_CONFIG[key];
+    if (!e || key === 'sin_ascensor') return;
+    totalExtras += e.importe;
+    desgloseExtras.push({concepto:e.label, importe:e.importe});
+  });
+
+  const subSinRec = r(totalMo + totalMat + totalExtras);
+  const recargo   = r(subSinRec * pltRec);
+  const subtotal  = r(subSinRec + recargo);
+  if (recargo > 0) desgloseExtras.push({concepto:'Recargo planta sin ascensor (+' + Math.round(pltRec*100) + '%)', importe:recargo});
+  totalExtras = r(totalExtras + recargo);
+
+  let margen = 0;
+  if (CFG.MARGEN_TIPO === 'porcentaje_total')           margen = r(subtotal * CFG.MARGEN_VALOR / 100);
+  else if (CFG.MARGEN_TIPO === 'porcentaje_materiales') margen = r(totalMat * CFG.MARGEN_VALOR / 100);
+
+  const base  = r(subtotal + margen);
+  const iva   = r(base * CFG.IVA / 100);
+  let total   = r(base + iva);
+  const aviso = total < CFG.MINIMO;
+  if (aviso) total = CFG.MINIMO;
+
+  const diasBase  = S.espacios.reduce((s, id) => s + (TIEMPO_BASE[getTipoBase(id)] || 5), 0);
+  const diasTotal = Math.max(diasBase, Math.round(diasAcum));
+
+  return {totalMo:r(totalMo), totalMat:r(totalMat), totalExtras, subtotal, margen, base, iva, total, aviso, dias:diasTotal, recargo, gruposMO, gruposMat, desgloseExtras};
+}
+
+// ── Render resultado ────────────────────────────────────────────
+function calcularYMostrar() {
+  S.notas   = document.getElementById('notas').value;
+  const res = calcularLocal();
+  S.resultado = res;
+
+  document.getElementById('res-num').textContent    = res.total.toLocaleString('es-ES',{minimumFractionDigits:2});
+  document.getElementById('res-tiempo').textContent = '⏱ Tiempo estimado: ' + res.dias + ' días de trabajo';
+  const calLabels = {basica:'Calidad básica',media:'Calidad media',premium:'Calidad premium'};
+  document.getElementById('res-base').textContent   =
+    'Base ' + res.base.toLocaleString('es-ES',{minimumFractionDigits:2}) + '€ + IVA ' + res.iva.toLocaleString('es-ES',{minimumFractionDigits:2}) + '€ (' + CFG.IVA + '%) · ' + (calLabels[S.calidad] || '');
+
+  const fmt = v => v.toLocaleString('es-ES',{minimumFractionDigits:2}) + '€';
+  let htmlSum = '<div class="res-resumen">' +
+    resFilaSum('Trabajos y mano de obra', fmt(res.totalMo), 'sec-mo') +
+    resFilaSum('Materiales', fmt(res.totalMat), 'sec-mat') +
+    (res.totalExtras > 0 ? resFilaSum('Extras y condiciones especiales', fmt(res.totalExtras), 'sec-ext') : '') +
+    '<div class="res-resumen-row no-expand"><span class="res-resumen-label">Margen profesional (' + CFG.MARGEN_VALOR + '%)</span><span class="res-resumen-val">' + fmt(res.margen) + '</span></div>' +
+    '<div class="res-resumen-row no-expand"><span class="res-resumen-label">IVA (' + CFG.IVA + '%)</span><span class="res-resumen-val">' + fmt(res.iva) + '</span></div>' +
+    '<div class="res-resumen-row tot no-expand"><span class="res-resumen-label">TOTAL ESTIMADO</span><span class="res-resumen-val">' + fmt(res.total) + '</span></div>' +
+    '</div>';
+
+  let htmlSecs = buildSeccion('sec-mo', '🔨 Trabajos y mano de obra', fmt(res.totalMo), buildGruposMO(res.gruposMO));
+  let htmlMatItems = '';
+  Object.entries(res.gruposMat).forEach(([key, g]) => {
+    htmlMatItems += buildSubcat(key, g.nombre + (g.precioBase ? ' · ' + g.precioBase.toFixed(2) + '€/' + g.unidad : ''),
+      fmt(g.total),
+      g.items.map(it =>
+        '<div class="res-detail"><span class="res-detail-label">' + it.espLabel + '</span>' +
+        '<span class="res-detail-qty">' + it.cant + ' ' + g.unidad + (it.precio ? ' × ' + it.precio.toFixed(2) + '€' : '') + '</span>' +
+        '<span class="res-detail-val">' + fmt(it.sub) + '</span></div>'
+      ).join('')
+    );
+  });
+  htmlSecs += buildSeccion('sec-mat', '🧱 Materiales', fmt(res.totalMat), htmlMatItems || '<div style="padding:14px 16px;font-size:13px;color:var(--muted)">Estimados con precios estándar de catálogo.</div>');
+
+  if (res.totalExtras > 0) {
+    const extItems = res.desgloseExtras.map(e =>
+      '<div class="res-detail"><span class="res-detail-label">' + e.concepto + '</span><span class="res-detail-qty"></span><span class="res-detail-val">' + fmt(e.importe) + '</span></div>'
+    ).join('');
+    htmlSecs += buildSeccion('sec-ext', '➕ Extras y condiciones', fmt(res.totalExtras), extItems);
+  }
+
+  document.getElementById('res-desglose').innerHTML = htmlSum + htmlSecs;
+  document.getElementById('res-sumario').innerHTML  = '';
+  document.getElementById('aviso-minimo').style.display = res.aviso ? 'block' : 'none';
+
+  goStep('resultado');
+}
+
+function resFilaSum(label, val, secId) {
+  return '<div class="res-resumen-row" onclick="scrollToSeccion(\'' + secId + '\')">' +
+    '<span class="res-resumen-arrow" id="arr-' + secId + '">▼</span>' +
+    '<span class="res-resumen-label">' + label + '</span>' +
+    '<span class="res-resumen-val">' + val + '</span></div>';
+}
+function scrollToSeccion(secId) {
+  const el = document.getElementById(secId);
+  if (!el) return;
+  el.scrollIntoView({behavior:'smooth', block:'start'});
+  const body = document.getElementById('body-' + secId);
+  if (body && !body.classList.contains('open')) toggleExpandSection(secId);
+}
+function buildSeccion(id, titulo, val, contenido) {
+  return '<div class="res-expand-section" id="' + id + '">' +
+    '<div class="res-expand-head" onclick="toggleExpandSection(\'' + id + '\')">' +
+    '<span class="res-expand-head-label">' + titulo + '</span>' +
+    '<span class="res-expand-head-val">' + val + '</span>' +
+    '<span class="res-expand-arrow" id="earr-' + id + '">▼</span>' +
+    '</div>' +
+    '<div class="res-expand-body" id="body-' + id + '">' + contenido + '</div>' +
+    '</div>';
+}
+function buildGruposMO(gruposMO) {
+  let html = '';
+  Object.entries(gruposMO).forEach(([nombre, g]) => {
+    const key = 'mo_' + nombre.replace(/\s/g,'_');
+    html += buildSubcat(key, nombre, g.total.toLocaleString('es-ES',{minimumFractionDigits:2}) + '€',
+      g.items.map(it =>
+        '<div class="res-detail"><span class="res-detail-label">' + it.espLabel + ' — ' + it.concepto + '</span>' +
+        '<span class="res-detail-qty">' + (it.cant !== 1 ? it.cant + ' ' + it.unidad + ' × ' + it.precio.toFixed(2) + '€' : '') + '</span>' +
+        '<span class="res-detail-val">' + it.sub.toLocaleString('es-ES',{minimumFractionDigits:2}) + '€</span></div>'
+      ).join('')
+    );
+  });
+  return html || '<div style="padding:14px 16px;font-size:13px;color:var(--muted)">Sin trabajos seleccionados.</div>';
+}
+function buildSubcat(key, nombre, val, detalles) {
+  return '<div class="res-subcat"><div class="res-subcat-head" onclick="toggleSubcat(\'' + key + '\')">' +
+    '<span class="res-subcat-label">' + nombre + '</span>' +
+    '<span class="res-subcat-val">' + val + '</span>' +
+    '<span class="res-subcat-arrow" id="sarr-' + key + '">▼</span>' +
+    '</div><div class="res-subcat-items" id="sitems-' + key + '">' + detalles + '</div></div>';
+}
+function toggleExpandSection(id) {
+  const body = document.getElementById('body-' + id);
+  const arr  = document.getElementById('earr-' + id);
+  if (!body) return;
+  const open = body.classList.toggle('open');
+  if (arr) arr.classList.toggle('open', open);
+}
+function toggleSubcat(key) {
+  const items = document.getElementById('sitems-' + key);
+  const arr   = document.getElementById('sarr-' + key);
+  if (!items) return;
+  const open = items.classList.toggle('open');
+  if (arr) arr.classList.toggle('open', open);
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  GUARDAR PARA LUEGO
+// ═══════════════════════════════════════════════════════════════
+function guardarEnLocalStorage() {
+  try {
+    const key = 'presupuesto_' + Date.now();
+    const datos = {
+      version: 4,
+      timestamp: Date.now(),
+      key,
+      inmueble: S.inmueble,
+      cantEspacios: S.cantEspacios,
+      espaciosSingle: [...S.espaciosSingle],
+      espacios: S.espacios,
+      cfgEspacios: S.cfgEspacios,
+      calidad: S.calidad,
+      extras: [...S.extras],
+      urgencia: S.urgencia,
+      notas: S.notas,
+      materialesPorEspacio: S.materialesPorEspacio,
+      matCompartidos: S.matCompartidos,
+    };
+    localStorage.setItem(key, JSON.stringify(datos));
+    localStorage.setItem('presupuesto_ultimo', key);
+    return key;
+  } catch(e) { return null; }
+}
+
+function generarUrlResumen() {
+  const key = guardarEnLocalStorage();
+  if (!key) return window.location.href;
+  const url = new URL(window.location.href);
+  url.hash = key;
+  return url.toString();
+}
+
+async function enviarBorrador() {
+  const email = document.getElementById('guardar-email').value.trim();
+  if (!email || !email.includes('@')) {
+    document.getElementById('guardar-email').focus();
+    toast('Introduce un email válido', 'warn');
+    return;
+  }
+  const key = guardarEnLocalStorage();
+  const url = generarUrlResumen();
+  const espaciosStr = S.espacios.map(getLabelEspacio).join(', ') || 'Sin espacios';
+  const total = S.resultado?.total?.toLocaleString('es-ES',{minimumFractionDigits:2}) || '—';
+
+  // En producción esto haría un POST a la API. Aquí simulamos con log.
+  console.log('BORRADOR → enviar a:', email, {key, url, espaciosStr, total});
+  if (CFG.API_URL) {
+    try {
+      await fetch(CFG.API_URL + '/borradores', {method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({email, key, url, espaciosStr, totalEstimado: S.resultado?.total})});
+    } catch(e) { console.warn('API no disponible', e); }
+  }
+
+  // Mostrar confirmación inline
+  const panel = document.getElementById('p-guardar');
+  if (panel) {
+    panel.querySelector('.guardar-info').innerHTML =
+      '<div class="guardar-icon">✅</div>' +
+      '<p><strong>¡Listo!</strong> Te hemos enviado el borrador a <strong>' + email + '</strong>.</p>' +
+      '<p>Incluye un enlace para retomar exactamente desde donde lo dejaste. Puedes cerrarlo sin preocuparte.</p>' +
+      '<p style="font-size:12px;color:var(--muted)">¿No ves el correo? Revisa tu carpeta de spam.</p>' +
+      '<div style="margin-top:12px;padding:10px;background:var(--cream);border-radius:8px;font-size:12px;word-break:break-all;color:var(--muted)">🔗 ' + url + '</div>';
+    panel.querySelector('button.btn-next').textContent = '← Volver al presupuesto';
+    panel.querySelector('button.btn-next').onclick = function(){ goStep('resultado'); };
+    panel.querySelector('button.btn-back').style.display = 'none';
+  }
+  toast('Borrador enviado a ' + email);
+}
+
+// Restaurar estado desde URL hash
+function intentarRestaurarEstado() {
+  const hash = window.location.hash.replace('#','');
+  if (!hash || !hash.startsWith('presupuesto_')) return;
+  try {
+    const raw = localStorage.getItem(hash);
+    if (!raw) return;
+    const datos = JSON.parse(raw);
+    if (datos.version !== 4) return;
+    S.inmueble            = datos.inmueble;
+    S.cantEspacios        = datos.cantEspacios;
+    S.espaciosSingle      = new Set(datos.espaciosSingle);
+    S.espacios            = datos.espacios;
+    S.cfgEspacios         = datos.cfgEspacios;
+    S.calidad             = datos.calidad;
+    S.extras              = new Set(datos.extras);
+    S.urgencia            = datos.urgencia;
+    S.notas               = datos.notas;
+    S.materialesPorEspacio= datos.materialesPorEspacio || {};
+    S.matCompartidos      = datos.matCompartidos || {};
+    // Reconstruir sets
+    S.espaciosSingle = new Set(datos.espaciosSingle);
+    S.extras         = new Set(datos.extras);
+    // Re-render UI al paso 2
+    toast('Presupuesto restaurado — puedes continuar desde donde lo dejaste 👍');
+    goStep(2);
+    // Sincronizar UI del paso 2
+    setTimeout(() => {
+      ['bano','aseo','habitacion'].forEach(tipo => {
+        const n  = S.cantEspacios[tipo] || 0;
+        const el  = document.getElementById('ecv-' + tipo);
+        const row = document.getElementById('ecr-' + tipo);
+        if (el)  { el.textContent = n; el.classList.toggle('nonzero', n > 0); }
+        if (row)   row.classList.toggle('has-val', n > 0);
+      });
+      S.espaciosSingle.forEach(tipo => {
+        document.getElementById('esp-card-' + tipo)?.classList.add('sel');
+      });
+      actualizarAvisoP2();
+    }, 200);
+  } catch(e) { console.warn('Error al restaurar estado', e); }
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  ENVÍO SOLICITUD
+// ═══════════════════════════════════════════════════════════════
+async function enviarSolicitud() {
+  const nombre = document.getElementById('c-nom').value.trim();
+  const email  = document.getElementById('c-email').value.trim();
+  if (!nombre) { document.getElementById('c-nom').focus(); toast('Indica tu nombre', 'warn'); return; }
+  if (!email || !email.includes('@')) { document.getElementById('c-email').focus(); toast('Indica un email válido', 'warn'); return; }
+
+  S.cliente.nombre = nombre;
+  S.cliente.email  = email;
+  S.cliente.tel    = document.getElementById('c-tel').value;
+
+  const payload = {
+    tenant_slug:       CFG.TENANT_SLUG,
+    inmueble:          S.inmueble,
+    espacios:          S.espacios.map(espId => ({
+      id:       espId, label:getLabelEspacio(espId), tipo:getTipoBase(espId),
+      m2:       S.cfgEspacios[espId]?.m2 || 10,
+      trabajos: S.cfgEspacios[espId]?.trabajos || [],
+      notas:    S.cfgEspacios[espId]?.notas || '',
+    })),
+    calidad:           S.calidad,
+    extras:            [...S.extras],
+    urgencia:          S.urgencia,
+    notas:             S.notas,
+    resultado_calculo: {total:S.resultado?.total, base:S.resultado?.base, iva:S.resultado?.iva, margen:S.resultado?.margen, dias:S.resultado?.dias},
+    cliente:           S.cliente,
+    rgpd_consent:      true,
+  };
+
+  if (CFG.API_URL) {
+    try {
+      const res = await fetch(CFG.API_URL + '/quotes', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(payload)});
+      if (!res.ok) console.warn('API error:', await res.text());
+    } catch(e) { console.warn('API no disponible', e); }
+  } else {
+    console.log('PAYLOAD → API:', JSON.stringify(payload, null, 2));
+  }
+
+  const ref = 'REF-' + Date.now().toString().slice(-6);
+  const resTotal = S.resultado?.total?.toLocaleString('es-ES',{minimumFractionDigits:2}) || '—';
+  document.getElementById('exito-detalle').innerHTML =
+    '<strong>Nombre:</strong> ' + nombre + '<br>' +
+    '<strong>Email:</strong> ' + email + '<br>' +
+    '<strong>Espacios:</strong> ' + S.espacios.map(getLabelEspacio).join(', ') + '<br>' +
+    '<strong>Total estimado:</strong> ' + resTotal + '€<br>' +
+    '<strong>Referencia:</strong> ' + ref;
+
+  goStep('exito');
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  REINICIAR
+// ═══════════════════════════════════════════════════════════════
+function reiniciar() {
+  S.paso = 1; S.espacioIdx = 0;
+  S.inmueble    = {tipo:null, planta:'1_2', superficie:null, cp:null, numPlantasChalet:2};
+  S.cantEspacios = {bano:0,aseo:0,habitacion:0};
+  S.espaciosSingle = new Set();
+  S.espacios    = []; S.cfgEspacios = {};
+  S.calidad     = 'media'; S.materiales = [];
+  S.materialesPorEspacio = {}; S.matCompartidos = {};
+  S.extras      = new Set();
+  S.urgencia    = 'sin_prisa'; S.notas = ''; S.adjuntos = []; S.resultado = null;
+  S.cliente     = {nombre:'',email:'',tel:'',canal:'email',horario:'cualquiera',rgpd:false};
+
+  ['bano','aseo','habitacion'].forEach(tipo => {
+    const el  = document.getElementById('ecv-' + tipo);
+    const row = document.getElementById('ecr-' + tipo);
+    if (el)  { el.textContent = '0'; el.classList.remove('nonzero'); }
+    if (row)   row.classList.remove('has-val');
+  });
+  document.querySelectorAll('#grid-espacios .opt-card.sel').forEach(el => el.classList.remove('sel'));
+  document.querySelectorAll('#grid-espacios .opt-card.disabled').forEach(el => el.classList.remove('disabled'));
+  document.querySelectorAll('#grid-tipo .opt-card.sel').forEach(el => el.classList.remove('sel'));
+  document.getElementById('p2-aviso').style.display = 'none';
+  document.getElementById('sec-planta-piso').style.display    = 'none';
+  document.getElementById('sec-chalet-plantas').style.display = 'none';
+  document.querySelector('#sec-planta-piso .planta-btn:nth-child(2)')?.classList.add('sel');
+  document.querySelector('#sec-chalet-plantas .planta-btn:first-child')?.classList.add('sel');
+  document.querySelector('#cal-grid .opt-card:nth-child(2)')?.classList.add('sel');
+  document.querySelector('.urgencia-card:last-child')?.classList.add('sel');
+  document.querySelector('.canal-btn:first-child')?.classList.add('sel');
+  document.querySelector('.horario-btn:last-child')?.classList.add('sel');
+  ['sup-total','cp','c-nom','c-tel','c-email','notas'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+  document.getElementById('file-list').innerHTML  = '';
+  document.getElementById('file-input').value     = '';
+  document.getElementById('rgpd-box').classList.remove('on');
+  document.getElementById('rgpd-box').textContent = '';
+  document.getElementById('btn-enviar').disabled  = true;
+  goStep(1);
+}
+
+// ─── Init ───────────────────────────────────────────────────────
+window.addEventListener('load', () => {
+  intentarRestaurarEstado();
+});
+
+// ═══════════════════════════════════════════════════════════════
+//  TOAST
+// ═══════════════════════════════════════════════════════════════
+function toast(msg, tipo) {
+  tipo = tipo || 'ok';
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.className   = 'show ' + tipo;
+  clearTimeout(el._t);
+  el._t = setTimeout(() => { el.className = ''; }, 3500);
+}
+</script>
+</body>
+</html>

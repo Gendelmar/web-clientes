@@ -1,0 +1,1303 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Panel de Administración — Anatoliy Reformas</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=Cormorant+Garamond:wght@400;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --cream:  #f4efe6; --stone:  #e5ddd0; --warm:   #c4b49a;
+  --terra:  #8a5c38; --deep:   #18100a; --ink:    #1c140d;
+  --accent: #c96f28; --light:  #faf7f2; --muted:  #7a6b58;
+  --ok:     #3a6648; --danger: #963030; --border: #ddd5c5; --r: 10px;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+html{scroll-behavior:smooth;}
+body{font-family:'DM Sans',sans-serif;background:var(--cream);color:var(--ink);font-size:15px;line-height:1.6;overflow-x:hidden;}
+button,input,select,textarea{font-family:'DM Sans',sans-serif;}
+
+/* LOGIN */
+.login-screen{min-height:100vh;display:flex;align-items:center;justify-content:center;background:var(--cream);}
+.login-card{background:#fff;border:1px solid var(--border);border-radius:16px;padding:44px;width:380px;box-shadow:0 4px 24px rgba(0,0,0,.07);}
+.login-card h2{font-size:26px;margin-bottom:4px;}
+.login-sub{color:var(--muted);font-size:14px;margin-bottom:24px;}
+.login-hint{background:#fdf6ee;border:1px solid #f0d5b0;border-radius:8px;padding:10px 14px;font-size:13px;color:#7a4e0a;margin-bottom:24px;}
+.lfield{margin-bottom:16px;}
+.lfield label{display:block;font-size:13px;font-weight:500;margin-bottom:6px;color:var(--muted);}
+.lfield input{width:100%;padding:10px 14px;border:1.5px solid var(--border);border-radius:8px;font-size:14px;transition:border-color .2s;}
+.lfield input:focus{outline:none;border-color:var(--accent);}
+.btn-login{width:100%;padding:12px;background:var(--accent);color:#fff;border:none;border-radius:8px;font-size:15px;font-weight:500;cursor:pointer;transition:opacity .15s;}
+.btn-login:hover{opacity:.88;}
+.login-err{color:var(--danger);font-size:13px;margin-top:10px;min-height:18px;}
+
+/* ADMIN SHELL */
+.admin-shell{display:flex;height:100vh;}
+.sidebar{width:220px;background:#1a1208;flex-shrink:0;display:flex;flex-direction:column;position:sticky;top:0;height:100vh;}
+.sb-head{padding:20px 18px 16px;border-bottom:1px solid rgba(255,255,255,.08);}
+.sb-biz{font-size:14px;font-weight:500;color:var(--cream);}
+.sb-plan{font-size:11px;color:var(--muted);margin-top:2px;}
+.sb-nav{padding:10px 0;flex:1;}
+.sb-btn{display:flex;align-items:center;gap:10px;padding:10px 18px;font-size:13px;color:#9a8a7a;background:none;border:none;width:100%;text-align:left;cursor:pointer;transition:all .15s;}
+.sb-btn:hover{color:var(--cream);background:rgba(255,255,255,.04);}
+.sb-btn.active{color:var(--accent);background:rgba(201,111,40,.1);}
+.sb-icon{font-size:15px;opacity:.7;}
+.sb-foot{padding:14px 18px;border-top:1px solid rgba(255,255,255,.08);}
+.sb-email{font-size:11px;color:var(--muted);word-break:break-all;}
+.sb-logout{font-size:12px;color:var(--danger);background:none;border:none;cursor:pointer;margin-top:6px;}
+
+.admin-main{flex:1;overflow-y:auto;padding:28px 32px;background:#f0ece4;}
+.apage{display:none;}
+.apage.active{display:block;}
+.apage-head{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:24px;flex-wrap:wrap;gap:12px;}
+.apage-title{font-size:22px;font-weight:500;}
+.apage-sub{font-size:13px;color:var(--muted);margin-top:2px;}
+
+/* STAT CARDS */
+.stat-grid4{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:22px;}
+.astat{background:#fff;border:1px solid var(--border);border-radius:var(--r);padding:18px;}
+.astat-lbl{font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);margin-bottom:8px;}
+.astat-val{font-size:28px;font-weight:600;line-height:1;}
+.astat-sub{font-size:11px;color:var(--muted);margin-top:4px;}
+
+/* TABLE */
+.table-wrap{background:#fff;border:1px solid var(--border);border-radius:var(--r);overflow:hidden;margin-bottom:20px;}
+.table-toolbar{padding:12px 16px;border-bottom:1px solid var(--border);display:flex;flex-direction:column;gap:8px;}
+.filter-group{display:flex;align-items:center;gap:6px;flex-wrap:wrap;}
+.filter-label{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.6px;color:var(--muted);white-space:nowrap;min-width:68px;}
+.fpills{display:flex;gap:6px;flex-wrap:wrap;}
+.fpill{padding:3px 11px;border-radius:20px;border:1px solid var(--border);font-size:12px;background:#fff;cursor:pointer;transition:all .15s;}
+.fpill.active{background:var(--accent);border-color:var(--accent);color:#fff;}
+table{width:100%;border-collapse:collapse;}
+th{background:#f8f5f0;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.4px;color:var(--muted);padding:10px 14px;text-align:left;border-bottom:1px solid var(--border);}
+td{padding:12px 14px;border-bottom:1px solid var(--border);vertical-align:middle;font-size:13px;}
+tr:last-child td{border-bottom:none;}
+tr:hover td{background:#faf8f4;}
+.thumb{width:44px;height:44px;border-radius:6px;object-fit:cover;background:var(--stone);flex-shrink:0;}
+.td-prod{display:flex;align-items:center;gap:10px;}
+.td-name{font-weight:500;font-size:13px;}
+.td-meta{font-size:11px;color:var(--muted);margin-top:1px;}
+
+/* BADGES */
+.badge{display:inline-block;padding:2px 9px;border-radius:12px;font-size:11px;font-weight:500;}
+.b-ok  {background:#e2f0e8;color:#1f5c35;}
+.b-warn{background:#faeeda;color:#6b3f0b;}
+.b-info{background:#e6f0fb;color:#0c447c;}
+.b-mute{background:#f0ece4;color:#5f5e5a;}
+.b-err {background:#fce8e8;color:#7a1f1f;}
+
+/* PRICE CELL */
+.price-cell{display:flex;align-items:center;gap:6px;}
+.price-inp{width:72px;padding:4px 8px;border:1px solid var(--border);border-radius:6px;font-size:13px;text-align:right;}
+.price-inp:focus{outline:2px solid var(--accent);border-color:transparent;}
+.price-changed{border-color:var(--accent)!important;}
+
+/* TOGGLE */
+.vis-wrap{display:flex;align-items:center;gap:6px;cursor:pointer;}
+.vis-track{width:30px;height:17px;border-radius:9px;background:var(--border);position:relative;transition:background .2s;flex-shrink:0;}
+.vis-track.on{background:var(--ok);}
+.vis-knob{position:absolute;top:2px;left:2px;width:13px;height:13px;background:#fff;border-radius:50%;transition:transform .2s;}
+.vis-track.on .vis-knob{transform:translateX(13px);}
+
+/* SPARKLINE */
+.spark{display:flex;align-items:flex-end;gap:2px;height:22px;}
+.spark-bar{width:5px;border-radius:2px 2px 0 0;background:var(--stone);}
+.spark-bar.hi   {background:var(--accent);}
+.spark-bar.alert{background:var(--danger);}
+
+/* BUTTONS */
+.abtn{padding:6px 14px;border-radius:7px;border:none;font-size:12px;font-weight:500;cursor:pointer;transition:opacity .15s;}
+.abtn:hover{opacity:.85;}
+.abtn-primary{background:var(--accent);color:#fff;}
+.abtn-ghost  {background:transparent;border:1px solid var(--border);color:var(--ink);}
+.abtn-ok     {background:var(--ok);color:#fff;}
+.abtn-danger {background:var(--danger);color:#fff;}
+.abtn-warn   {background:#7a4e0a;color:#fff;}
+.abtn-run{display:flex;align-items:center;gap:7px;background:var(--deep);color:var(--cream);padding:8px 18px;border-radius:8px;border:none;font-size:13px;font-weight:500;cursor:pointer;transition:opacity .2s;}
+.abtn-run:hover{opacity:.85;}
+.abtn-run.running{opacity:.55;pointer-events:none;}
+
+/* CONFIG */
+.cfg-cols{display:grid;grid-template-columns:1fr 1fr;gap:20px;align-items:start;}
+.cfg-card{background:#fff;border:1px solid var(--border);border-radius:var(--r);padding:24px 28px;margin-bottom:20px;}
+.cfg-card h3{font-size:16px;margin-bottom:16px;font-family:'DM Sans',sans-serif;font-weight:500;display:flex;align-items:center;gap:8px;}
+.cfg-card h3 span{font-size:16px;}
+.cfg-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+.cfg-grid.g1{grid-template-columns:1fr;}
+.cfg-grid.g3{grid-template-columns:1fr 1fr 1fr;}
+.cfg-field{display:flex;flex-direction:column;gap:5px;}
+.cfg-field.full{grid-column:1/-1;}
+.cfg-label{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);}
+.cfg-input{padding:9px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;background:#faf8f4;}
+.cfg-input:focus{outline:2px solid var(--accent);border-color:transparent;background:#fff;}
+select.cfg-input{cursor:pointer;}
+textarea.cfg-input{resize:vertical;min-height:72px;}
+.cfg-toggle-row{display:flex;align-items:center;gap:10px;margin-top:4px;}
+.cfg-save-row{margin-top:18px;display:flex;gap:10px;align-items:center;}
+.cfg-saved{font-size:12px;color:var(--ok);display:none;}
+.cfg-check-row{display:flex;gap:16px;flex-wrap:wrap;margin-top:4px;}
+.cfg-check{display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer;}
+.cfg-check input{width:14px;height:14px;accent-color:var(--accent);}
+.cfg-section-head{font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.6px;color:var(--muted);margin:16px 0 8px;grid-column:1/-1;border-top:1px solid var(--border);padding-top:14px;}
+
+/* MODAL */
+.modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:999;align-items:center;justify-content:center;}
+.modal-bg.open{display:flex;}
+.the-modal{background:#fff;border-radius:14px;width:min(780px,96vw);max-height:90vh;display:flex;flex-direction:column;overflow:hidden;}
+.modal-head{padding:24px 28px 16px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:flex-start;flex-shrink:0;}
+.modal-head h3{font-size:17px;font-family:'DM Sans',sans-serif;font-weight:600;}
+.modal-head .mh-sub{font-size:13px;color:var(--muted);margin-top:2px;}
+.modal-scroll{overflow-y:auto;flex:1;padding:20px 28px;}
+.modal-ft{padding:16px 28px;border-top:1px solid var(--border);display:flex;gap:10px;flex-wrap:wrap;flex-shrink:0;background:#fff;}
+
+/* MODAL SECTIONS */
+.ms{margin-bottom:22px;}
+.ms:last-child{margin-bottom:0;}
+.ms-title{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.8px;color:var(--muted);margin-bottom:10px;}
+.mi-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px 20px;font-size:13px;}
+.mi-item{display:flex;flex-direction:column;}
+.mi-lbl{font-size:10px;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);}
+.mi-val{font-weight:500;}
+.mi-nota{margin-top:8px;font-size:12px;color:var(--muted);font-style:italic;background:var(--light);padding:8px 12px;border-radius:6px;border-left:3px solid var(--warm);}
+
+/* ESPACIOS IN MODAL */
+.me-card{background:var(--light);border:1px solid var(--border);border-radius:8px;padding:11px 14px;margin-bottom:7px;}
+.me-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:5px;}
+.me-nombre{font-weight:500;font-size:13px;}
+.me-m2{font-size:11px;color:var(--muted);background:var(--stone);padding:1px 8px;border-radius:10px;}
+.me-trajs{font-size:12px;color:var(--ink);line-height:1.5;}
+.me-mat{font-size:11px;color:var(--muted);margin-top:3px;}
+.me-nota{font-size:11px;color:var(--muted);font-style:italic;margin-top:3px;}
+
+/* EXTRAS */
+.extra-tag{display:inline-block;background:#faeeda;color:#6b3f0b;border-radius:12px;padding:2px 10px;font-size:12px;margin:2px;}
+
+/* DESGLOSE TABLE (view) */
+.des-tbl{width:100%;border-collapse:collapse;font-size:13px;}
+.des-tbl th{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.4px;color:var(--muted);padding:6px 8px;text-align:left;border-bottom:1px solid var(--border);}
+.des-tbl td{padding:7px 8px;border-bottom:1px solid var(--border);}
+.des-tbl tr:last-child td{border-bottom:none;}
+.des-tbl .row-margen td{color:var(--muted);font-style:italic;font-size:12px;}
+.des-tots{border-top:2px solid var(--border);margin-top:4px;}
+.dt-row{display:flex;justify-content:space-between;padding:5px 8px;font-size:13px;}
+.dt-total{font-weight:600;font-size:15px;color:var(--terra);}
+
+/* EDIT TABLE */
+.edit-tbl{width:100%;border-collapse:collapse;font-size:12px;}
+.edit-tbl th{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.4px;color:var(--muted);padding:5px 6px;text-align:left;background:var(--light);border-bottom:1px solid var(--border);}
+.edit-tbl td{padding:4px 4px;border-bottom:1px solid var(--border);vertical-align:middle;}
+.edit-tbl tr:last-child td{border-bottom:none;}
+.ei{width:100%;padding:5px 7px;border:1px solid var(--border);border-radius:5px;font-size:12px;font-family:'DM Sans',sans-serif;background:#fff;}
+.ei:focus{outline:none;border-color:var(--accent);}
+.en{width:72px;text-align:right;}
+.esb{text-align:right;font-weight:500;white-space:nowrap;padding-right:8px!important;font-size:12px;}
+.del-btn{background:none;border:1px solid #ddd;border-radius:5px;padding:3px 7px;font-size:11px;cursor:pointer;color:var(--danger);white-space:nowrap;}
+.del-btn:hover{background:#fce8e8;}
+.edit-tots{background:var(--light);border-radius:8px;padding:12px 14px;margin-top:12px;}
+.et-row{display:flex;justify-content:space-between;font-size:13px;padding:3px 0;}
+.et-total{font-weight:600;font-size:15px;color:var(--terra);border-top:1px solid var(--border);margin-top:6px;padding-top:6px;}
+
+/* HISTORIAL */
+.hist-row{display:flex;gap:14px;padding:5px 0;border-bottom:1px solid var(--border);font-size:12px;align-items:baseline;}
+.hist-row:last-child{border-bottom:none;}
+.hist-fecha{color:var(--muted);white-space:nowrap;min-width:80px;}
+.hist-estado{font-weight:500;min-width:100px;}
+.hist-nota{color:var(--muted);font-style:italic;}
+
+/* TOAST */
+#toast{position:fixed;bottom:24px;right:24px;padding:11px 20px;border-radius:9px;color:#fff;font-size:13px;font-weight:500;opacity:0;transform:translateY(8px);pointer-events:none;transition:opacity .25s,transform .25s;z-index:9999;max-width:320px;line-height:1.4;}
+#toast.show{opacity:1;transform:translateY(0);}
+#toast.ok  {background:#3a6648;}
+#toast.warn{background:#7a4e0a;}
+#toast.err {background:#963030;}
+
+@media(max-width:900px){
+  .stat-grid4{grid-template-columns:1fr 1fr;}
+  .cfg-cols{grid-template-columns:1fr;}
+  .sidebar{display:none;}
+  .admin-main{padding:20px 16px;}
+  .cfg-grid{grid-template-columns:1fr;}
+}
+</style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div class="login-screen" id="login-screen">
+  <div class="login-card">
+    <h2>Panel de administración</h2>
+    <p class="login-sub">Anatoliy Reformas S.L.</p>
+    <div class="login-hint">Usuario: <strong>admin@anatoliyreformas.es</strong><br>Contraseña: <strong>admin1234</strong></div>
+    <div class="lfield"><label>Email</label><input type="email" id="l-email" value="admin@anatoliyreformas.es" onkeydown="if(event.key==='Enter')doLogin()"></div>
+    <div class="lfield"><label>Contraseña</label><input type="password" id="l-pass" value="admin1234" onkeydown="if(event.key==='Enter')doLogin()"></div>
+    <button class="btn-login" onclick="doLogin()">Entrar al panel</button>
+    <p class="login-err" id="login-err"></p>
+  </div>
+</div>
+
+<!-- ADMIN PANEL -->
+<div class="admin-shell" id="admin-panel" style="display:none">
+  <aside class="sidebar">
+    <div class="sb-head">
+      <div class="sb-biz">Anatoliy Reformas</div>
+      <div class="sb-plan">Plan básico · conectado</div>
+    </div>
+    <nav class="sb-nav">
+      <button class="sb-btn active" onclick="showAdmin('dashboard',this)"><span class="sb-icon">▦</span> Resumen</button>
+      <button class="sb-btn" onclick="showAdmin('catalogo',this)"><span class="sb-icon">⊞</span> Catálogo precios</button>
+      <button class="sb-btn" onclick="showAdmin('presupuestos',this)"><span class="sb-icon">📋</span> Presupuestos</button>
+      <button class="sb-btn" onclick="showAdmin('configuracion',this)"><span class="sb-icon">⚙</span> Configuración</button>
+    </nav>
+    <div class="sb-foot">
+      <div class="sb-email" id="sb-email-disp">admin@anatoliyreformas.es</div>
+      <button class="sb-logout" onclick="doLogout()">Cerrar sesión</button>
+    </div>
+  </aside>
+
+  <main class="admin-main">
+
+    <!-- DASHBOARD -->
+    <div class="apage active" id="ap-dashboard">
+      <div class="apage-head">
+        <div><div class="apage-title">Resumen</div><div class="apage-sub" id="fecha-hoy"></div></div>
+      </div>
+      <div class="stat-grid4" id="dash-stats"></div>
+      <div class="table-wrap">
+        <div class="table-toolbar"><div style="font-weight:500;font-size:14px">Últimos presupuestos</div></div>
+        <table><thead><tr><th>Cliente</th><th>Reforma</th><th>Total</th><th>Estado</th><th>Fecha</th><th>Acciones</th></tr></thead>
+        <tbody id="dash-tbody"></tbody></table>
+      </div>
+    </div>
+
+    <!-- CATÁLOGO -->
+    <div class="apage" id="ap-catalogo">
+      <div class="apage-head">
+        <div><div class="apage-title">Catálogo de precios</div><div class="apage-sub">Scraping Obramart · última ejecución hoy 06:00</div></div>
+        <button class="abtn-run" id="btn-run" onclick="runScraper()"><span id="run-icon">↻</span> Actualizar precios</button>
+      </div>
+      <div class="table-wrap">
+        <div class="table-toolbar" id="cat-toolbar"></div>
+        <table><thead><tr><th>Producto</th><th>Categ.</th><th>Precio scrapeado</th><th>Precio manual</th><th>Historial 5d</th><th>Stock</th><th>Visible</th></tr></thead>
+        <tbody id="tbody-cat"></tbody></table>
+      </div>
+    </div>
+
+    <!-- PRESUPUESTOS -->
+    <div class="apage" id="ap-presupuestos">
+      <div class="apage-head">
+        <div><div class="apage-title">Presupuestos</div><div class="apage-sub">Generados desde el configurador web</div></div>
+        <select id="filtro-estado" onchange="renderQuotes()" style="padding:8px 12px;border:1px solid var(--border);border-radius:8px;font-size:13px;background:#fff">
+          <option value="">Todos los estados</option>
+          <option value="pendiente_revision">Pendientes</option>
+          <option value="enviado">Enviados</option>
+          <option value="aprobado">Aprobados</option>
+          <option value="rechazado">Rechazados</option>
+          <option value="caducado">Caducados</option>
+        </select>
+      </div>
+      <div class="table-wrap">
+        <table><thead><tr><th>Cliente</th><th>Reforma</th><th>Total</th><th>Estado</th><th>Válido hasta</th><th>Acciones</th></tr></thead>
+        <tbody id="tbody-quotes"></tbody></table>
+      </div>
+    </div>
+
+    <!-- CONFIGURACIÓN -->
+    <div class="apage" id="ap-configuracion">
+      <div class="apage-head"><div class="apage-title">Configuración del negocio</div></div>
+      <div class="cfg-cols">
+        <div>
+          <!-- Empresa -->
+          <div class="cfg-card">
+            <h3><span>🏢</span> Datos de empresa</h3>
+            <div class="cfg-grid">
+              <div class="cfg-field"><label class="cfg-label">Nombre empresa</label><input class="cfg-input" id="cfg-emp-nombre" value="Anatoliy Reformas S.L."></div>
+              <div class="cfg-field"><label class="cfg-label">CIF</label><input class="cfg-input" id="cfg-emp-cif" value="B-12345678"></div>
+              <div class="cfg-field full"><label class="cfg-label">Dirección</label><input class="cfg-input" id="cfg-emp-dir" value="Calle Mayor, 42, 1º Izq."></div>
+              <div class="cfg-field"><label class="cfg-label">Ciudad</label><input class="cfg-input" id="cfg-emp-ciudad" value="Madrid"></div>
+              <div class="cfg-field"><label class="cfg-label">Código postal</label><input class="cfg-input" id="cfg-emp-cp" value="28013"></div>
+              <div class="cfg-field"><label class="cfg-label">Teléfono</label><input class="cfg-input" id="cfg-emp-tel" value="+34 600 000 000"></div>
+              <div class="cfg-field"><label class="cfg-label">Email</label><input class="cfg-input" id="cfg-emp-email" value="info@anatoliyreformas.es"></div>
+              <div class="cfg-field full"><label class="cfg-label">Web</label><input class="cfg-input" id="cfg-emp-web" value="https://anatoliyreformas.es"></div>
+            </div>
+            <div class="cfg-save-row"><button class="abtn abtn-primary" onclick="guardarCfgSec('empresa')">Guardar</button><span class="cfg-saved" id="saved-empresa">✓ Guardado</span></div>
+          </div>
+
+          <!-- Cálculo -->
+          <div class="cfg-card">
+            <h3><span>🧮</span> Parámetros de cálculo</h3>
+            <div class="cfg-grid">
+              <div class="cfg-field"><label class="cfg-label">Modo de margen</label>
+                <select class="cfg-input" id="cfg-margen-tipo">
+                  <option value="porcentaje_total" selected>% sobre el total</option>
+                  <option value="porcentaje_materiales">% sobre materiales</option>
+                  <option value="precio_hora">Precio por hora</option>
+                </select>
+              </div>
+              <div class="cfg-field"><label class="cfg-label">Valor del margen (%)</label><input class="cfg-input" type="number" id="cfg-margen-val" value="22" step="0.5" min="0"></div>
+              <div class="cfg-field"><label class="cfg-label">IVA (%)</label><input class="cfg-input" type="number" id="cfg-iva" value="21"></div>
+              <div class="cfg-field"><label class="cfg-label">Presupuesto mínimo (€)</label><input class="cfg-input" type="number" id="cfg-minimo" value="500"></div>
+              <div class="cfg-field"><label class="cfg-label">Validez (días)</label><input class="cfg-input" type="number" id="cfg-validez" value="30"></div>
+              <div class="cfg-field"><label class="cfg-label">Desplazamiento (€)</label><input class="cfg-input" type="number" id="cfg-desplaz" value="80"></div>
+            </div>
+            <div class="cfg-save-row"><button class="abtn abtn-primary" onclick="guardarCfgSec('calculo')">Guardar</button><span class="cfg-saved" id="saved-calculo">✓ Guardado</span></div>
+          </div>
+
+          <!-- Facturación -->
+          <div class="cfg-card">
+            <h3><span>🧾</span> Facturación e IVA</h3>
+            <div class="cfg-grid">
+              <div class="cfg-field"><label class="cfg-label">Tipo de IVA</label>
+                <select class="cfg-input" id="cfg-tipo-iva">
+                  <option value="general" selected>General (21%)</option>
+                  <option value="reducido">Reducido (10%)</option>
+                  <option value="superreducido">Superreducido (4%)</option>
+                </select>
+              </div>
+              <div class="cfg-field"><label class="cfg-label">Forma de pago por defecto</label>
+                <select class="cfg-input" id="cfg-forma-pago">
+                  <option value="50_50" selected>50% inicio · 50% fin</option>
+                  <option value="40_40_20">40% · 40% · 20%</option>
+                  <option value="30_fin">30% inicio · 70% fin</option>
+                  <option value="100_fin">100% al finalizar</option>
+                </select>
+              </div>
+              <div class="cfg-field"><label class="cfg-label">Días de pago (plazo)</label><input class="cfg-input" type="number" id="cfg-dias-pago" value="30"></div>
+              <div class="cfg-field"><label class="cfg-label">Desglosar IVA en PDF</label>
+                <select class="cfg-input" id="cfg-desglosar-iva">
+                  <option value="si" selected>Sí</option>
+                  <option value="no">No (precio IVA incluido)</option>
+                </select>
+              </div>
+              <div class="cfg-field full"><label class="cfg-label">Pie de factura</label><textarea class="cfg-input" id="cfg-pie-factura">Presupuesto orientativo no vinculante. El precio final se confirmará tras visita técnica.</textarea></div>
+            </div>
+            <div class="cfg-save-row"><button class="abtn abtn-primary" onclick="guardarCfgSec('facturacion')">Guardar</button><span class="cfg-saved" id="saved-facturacion">✓ Guardado</span></div>
+          </div>
+
+          <!-- Garantías -->
+          <div class="cfg-card">
+            <h3><span>🛡️</span> Garantías y condiciones</h3>
+            <div class="cfg-grid">
+              <div class="cfg-field"><label class="cfg-label">Garantía mano de obra (meses)</label><input class="cfg-input" type="number" id="cfg-gar-mo" value="12"></div>
+              <div class="cfg-field"><label class="cfg-label">Garantía materiales (meses)</label><input class="cfg-input" type="number" id="cfg-gar-mat" value="24"></div>
+              <div class="cfg-field full"><label class="cfg-label">Condiciones generales</label>
+                <textarea class="cfg-input" id="cfg-condiciones" rows="4">Presupuesto orientativo no vinculante. Precio final sujeto a visita técnica. La garantía cubre la mano de obra y materiales suministrados por Anatoliy Reformas S.L. No incluye daños por uso inadecuado.</textarea>
+              </div>
+            </div>
+            <div class="cfg-save-row"><button class="abtn abtn-primary" onclick="guardarCfgSec('garantias')">Guardar</button><span class="cfg-saved" id="saved-garantias">✓ Guardado</span></div>
+          </div>
+        </div>
+
+        <div>
+          <!-- Comunicación -->
+          <div class="cfg-card">
+            <h3><span>📧</span> Comunicación con clientes</h3>
+            <div class="cfg-grid">
+              <div class="cfg-field full"><label class="cfg-label">Email de envío (remitente)</label><input class="cfg-input" id="cfg-email-from" value="noreply@anatoliyreformas.es"></div>
+              <div class="cfg-field full"><label class="cfg-label">Asunto del presupuesto</label><input class="cfg-input" id="cfg-asunto" value="Tu presupuesto #{ref} de Anatoliy Reformas"></div>
+              <div class="cfg-field"><label class="cfg-label">Días hasta recordatorio</label><input class="cfg-input" type="number" id="cfg-dias-recordatorio" value="7"></div>
+              <div class="cfg-field"><label class="cfg-label">Días hasta caducidad</label><input class="cfg-input" type="number" id="cfg-dias-caducidad" value="30"></div>
+              <div class="cfg-section-head" style="grid-column:1/-1;margin-top:4px">Envío automático</div>
+              <div class="cfg-field full">
+                <div class="cfg-toggle-row" onclick="toggleAutoEnvio()">
+                  <div class="vis-wrap">
+                    <div class="vis-track" id="auto-track"><div class="vis-knob"></div></div>
+                    <span style="font-size:13px;color:var(--muted)" id="auto-label">Revisión previa activada (recomendado)</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="cfg-save-row"><button class="abtn abtn-primary" onclick="guardarCfgSec('comunicacion')">Guardar</button><span class="cfg-saved" id="saved-comunicacion">✓ Guardado</span></div>
+          </div>
+
+          <!-- Disponibilidad -->
+          <div class="cfg-card">
+            <h3><span>📅</span> Disponibilidad</h3>
+            <div class="cfg-grid">
+              <div class="cfg-field"><label class="cfg-label">Hora inicio</label><input class="cfg-input" type="time" id="cfg-hora-ini" value="08:00"></div>
+              <div class="cfg-field"><label class="cfg-label">Hora fin</label><input class="cfg-input" type="time" id="cfg-hora-fin" value="18:00"></div>
+              <div class="cfg-field"><label class="cfg-label">Tiempo de respuesta (horas)</label><input class="cfg-input" type="number" id="cfg-resp-horas" value="24" min="1"></div>
+              <div class="cfg-field"><label class="cfg-label">Antelación visita (días)</label><input class="cfg-input" type="number" id="cfg-visita-dias" value="3" min="1"></div>
+              <div class="cfg-field full">
+                <label class="cfg-label">Días laborables</label>
+                <div class="cfg-check-row" style="margin-top:6px">
+                  <label class="cfg-check"><input type="checkbox" checked> Lun</label>
+                  <label class="cfg-check"><input type="checkbox" checked> Mar</label>
+                  <label class="cfg-check"><input type="checkbox" checked> Mié</label>
+                  <label class="cfg-check"><input type="checkbox" checked> Jue</label>
+                  <label class="cfg-check"><input type="checkbox" checked> Vie</label>
+                  <label class="cfg-check"><input type="checkbox"> Sáb</label>
+                  <label class="cfg-check"><input type="checkbox"> Dom</label>
+                </div>
+              </div>
+              <div class="cfg-field full"><label class="cfg-label">Períodos de vacaciones / cierre</label><textarea class="cfg-input" id="cfg-vacaciones" placeholder="Ej: 15 agosto — 31 agosto, 24 dic — 2 ene"></textarea></div>
+            </div>
+            <div class="cfg-save-row"><button class="abtn abtn-primary" onclick="guardarCfgSec('disponibilidad')">Guardar</button><span class="cfg-saved" id="saved-disponibilidad">✓ Guardado</span></div>
+          </div>
+
+          <!-- Zona de trabajo -->
+          <div class="cfg-card">
+            <h3><span>📍</span> Zona de trabajo</h3>
+            <div class="cfg-grid">
+              <div class="cfg-field"><label class="cfg-label">Radio de cobertura (km)</label><input class="cfg-input" type="number" id="cfg-radio-km" value="40"></div>
+              <div class="cfg-field"><label class="cfg-label">Recargo por distancia (%)</label><input class="cfg-input" type="number" id="cfg-recargo-dist" value="5" step="0.5"></div>
+              <div class="cfg-field full"><label class="cfg-label">Municipios cubiertos</label>
+                <textarea class="cfg-input" id="cfg-municipios">Madrid, Alcobendas, Pozuelo de Alarcón, Las Rozas, Majadahonda, Boadilla del Monte, Móstoles, Leganés, Getafe, Alcalá de Henares</textarea>
+              </div>
+            </div>
+            <div class="cfg-save-row"><button class="abtn abtn-primary" onclick="guardarCfgSec('zona')">Guardar</button><span class="cfg-saved" id="saved-zona">✓ Guardado</span></div>
+          </div>
+
+          <!-- Proveedores -->
+          <div class="cfg-card">
+            <h3><span>🏭</span> Proveedores</h3>
+            <div class="cfg-grid">
+              <div class="cfg-field full">
+                <label class="cfg-label">Proveedores activos para scraping</label>
+                <div class="cfg-check-row" style="margin-top:6px">
+                  <label class="cfg-check"><input type="checkbox" checked> Obramart</label>
+                  <label class="cfg-check"><input type="checkbox" checked> Leroy Merlin</label>
+                  <label class="cfg-check"><input type="checkbox" checked> Bricomart</label>
+                  <label class="cfg-check"><input type="checkbox"> Bauhaus</label>
+                  <label class="cfg-check"><input type="checkbox"> AKI</label>
+                </div>
+              </div>
+              <div class="cfg-field"><label class="cfg-label">Intervalo scraping (horas)</label><input class="cfg-input" type="number" id="cfg-scraping-h" value="24" min="1"></div>
+              <div class="cfg-field"><label class="cfg-label">Umbral alerta variación (%)</label><input class="cfg-input" type="number" id="cfg-umbral-alerta" value="5" step="0.5"></div>
+              <div class="cfg-field full"><label class="cfg-label">URL API Obramart</label><input class="cfg-input" id="cfg-url-obramart" value="https://api-reformas-production.up.railway.app"></div>
+              <div class="cfg-field full"><label class="cfg-label">URL motor de cálculo</label><input class="cfg-input" id="cfg-url-motor" value="https://web-production-50094.up.railway.app"></div>
+            </div>
+            <div class="cfg-save-row"><button class="abtn abtn-primary" onclick="guardarCfgSec('proveedores')">Guardar</button><span class="cfg-saved" id="saved-proveedores">✓ Guardado</span></div>
+          </div>
+
+          <!-- Notificaciones -->
+          <div class="cfg-card">
+            <h3><span>🔔</span> Notificaciones</h3>
+            <div class="cfg-grid">
+              <div class="cfg-field full"><label class="cfg-label">Email para alertas del sistema</label><input class="cfg-input" id="cfg-email-alertas" value="admin@anatoliyreformas.es"></div>
+              <div class="cfg-field"><label class="cfg-label">Alerta ppto. pendiente (días)</label><input class="cfg-input" type="number" id="cfg-alerta-pte" value="3"></div>
+              <div class="cfg-field"><label class="cfg-label">Alerta subida de precio (%)</label><input class="cfg-input" type="number" id="cfg-alerta-precio" value="5" step="0.5"></div>
+              <div class="cfg-field full">
+                <label class="cfg-label">Tipos de notificación</label>
+                <div class="cfg-check-row" style="margin-top:6px">
+                  <label class="cfg-check"><input type="checkbox" checked> Email</label>
+                  <label class="cfg-check"><input type="checkbox"> WhatsApp</label>
+                  <label class="cfg-check"><input type="checkbox" checked> Panel (in-app)</label>
+                </div>
+              </div>
+            </div>
+            <div class="cfg-save-row"><button class="abtn abtn-primary" onclick="guardarCfgSec('notificaciones')">Guardar</button><span class="cfg-saved" id="saved-notificaciones">✓ Guardado</span></div>
+          </div>
+
+          <!-- Seguridad -->
+          <div class="cfg-card">
+            <h3><span>🔐</span> Acceso y seguridad</h3>
+            <div class="cfg-grid">
+              <div class="cfg-field full"><label class="cfg-label">Email de administrador</label><input class="cfg-input" id="cfg-admin-email" value="admin@anatoliyreformas.es"></div>
+              <div class="cfg-field"><label class="cfg-label">Nueva contraseña</label><input class="cfg-input" type="password" id="cfg-pwd-new" placeholder="Nueva contraseña"></div>
+              <div class="cfg-field"><label class="cfg-label">Confirmar contraseña</label><input class="cfg-input" type="password" id="cfg-pwd-confirm" placeholder="Repite la contraseña"></div>
+              <div class="cfg-field"><label class="cfg-label">Sesión expira (minutos)</label><input class="cfg-input" type="number" id="cfg-session-min" value="120" min="15"></div>
+              <div class="cfg-field"><label class="cfg-label">Intentos máx. de login</label><input class="cfg-input" type="number" id="cfg-login-intentos" value="5" min="3"></div>
+            </div>
+            <div class="cfg-save-row"><button class="abtn abtn-primary" onclick="guardarCfgSec('seguridad')">Guardar</button><span class="cfg-saved" id="saved-seguridad">✓ Guardado</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<!-- MODAL -->
+<div class="modal-bg" id="modal-bg" onclick="if(event.target===this)closeModal()">
+  <div class="the-modal" id="the-modal"></div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+'use strict';
+
+// ── CONFIG ──────────────────────────────────────────────────────
+const CFG = { LOGIN_EMAIL:'admin@anatoliyreformas.es', LOGIN_PASS:'admin1234' };
+const MOTOR = { margen_tipo:'porcentaje_total', margen_valor:22, iva:21, minimo:500, validez:30, desplazamiento:80 };
+function r(v){ return Math.round(v*100)/100; }
+function escH(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function hoyStr(){ return new Date().toLocaleDateString('es-ES'); }
+function fmtEur(v){ return r(v).toLocaleString('es-ES',{minimumFractionDigits:2})+'€'; }
+
+// ── PRODUCTOS ────────────────────────────────────────────────────
+let PRODUCTOS = [
+  {id:'p1', cat:'suelo',      nombre:'Azulejo porcelánico Travertino Beige 60×60',   marca:'Aparici',   precio:18.90, unidad:'m²', proveedor:'Obramart',      img:'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=400&q=80', stock:true, visible:true, hist:[17.70,17.70,18.10,18.50,18.90], alerta:true  },
+  {id:'p2', cat:'suelo',      nombre:'Parquet laminado Roble Natural AC5 8mm',        marca:'Kronotex',  precio:16.50, unidad:'m²', proveedor:'Obramart',      img:'https://images.unsplash.com/photo-1541123437800-1bb1317badc2?w=400&q=80', stock:true, visible:true, hist:[16.50,16.50,16.50,16.50,16.50], alerta:false },
+  {id:'p3', cat:'suelo',      nombre:'Gres porcelánico Cemento Gris 80×80',           marca:'Vives',     precio:24.30, unidad:'m²', proveedor:'Obramart',      img:'https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?w=400&q=80', stock:true, visible:true, hist:[24.30,24.30,24.00,24.00,24.30], alerta:false },
+  {id:'p4', cat:'pintura',    nombre:'Pintura plástica blanca mate 15L',              marca:'Titanlux',  precio:32.50, unidad:'l',  proveedor:'Obramart',      img:'https://images.unsplash.com/photo-1589939705384-5185137a7f0f?w=400&q=80', stock:true, visible:true, hist:[30.00,30.00,31.20,31.20,32.50], alerta:false },
+  {id:'p5', cat:'pintura',    nombre:'Esmalte satinado blanco paredes 4L',            marca:'Valentine', precio:18.90, unidad:'l',  proveedor:'Obramart',      img:'https://images.unsplash.com/photo-1562259929-b4e1fd3aef09?w=400&q=80', stock:true, visible:true, hist:[18.90,18.90,18.90,18.90,18.90], alerta:false },
+  {id:'p6', cat:'tabiqueria', nombre:'Placa Pladur N 15mm 120×260 cm',               marca:'Pladur',    precio:11.20, unidad:'m²', proveedor:'Obramart',      img:'https://images.unsplash.com/photo-1504307651254-35680f356dfd?w=400&q=80', stock:true, visible:true, hist:[11.00,11.00,11.00,11.20,11.20], alerta:false },
+  {id:'p7', cat:'tabiqueria', nombre:'Placa Pladur WA antihumedad 15mm',             marca:'Pladur',    precio:14.80, unidad:'m²', proveedor:'Obramart',      img:'https://images.unsplash.com/photo-1497366216548-37526070297c?w=400&q=80', stock:false,visible:true, hist:[14.80,14.80,14.80,14.80,14.80], alerta:false },
+  {id:'p8', cat:'sanitario',  nombre:'Inodoro suspendido Rimless doble descarga',    marca:'Roca',      precio:189.00,unidad:'ud', proveedor:'Leroy Merlin',  img:'https://images.unsplash.com/photo-1552321554-5fefe8c9ef14?w=400&q=80', stock:true, visible:true, hist:[185,185,185,189,189],           alerta:false },
+  {id:'p9', cat:'sanitario',  nombre:'Lavabo sobre encimera 60cm ovalado blanco',    marca:'Villeroy',  precio:145.00,unidad:'ud', proveedor:'Leroy Merlin',  img:'https://images.unsplash.com/photo-1584622650111-993a426fbf0a?w=400&q=80', stock:true, visible:true, hist:[145,145,148,148,145],           alerta:false },
+  {id:'p10',cat:'mueble',     nombre:'Mueble lavabo 80cm suspendido con cajones',    marca:'Camargue',  precio:385.00,unidad:'ud', proveedor:'Leroy Merlin',  img:'https://images.unsplash.com/photo-1558618047-3c8c76ca7d13?w=400&q=80', stock:true, visible:true, hist:[380,385,385,385,385],           alerta:false },
+  {id:'p11',cat:'fontaneria', nombre:'Grifo monomando baño cromado caudal regulable',marca:'Grohe',     precio:89.00, unidad:'ud', proveedor:'Leroy Merlin',  img:'https://images.unsplash.com/photo-1552321554-5fefe8c9ef14?w=400&q=80', stock:true, visible:true, hist:[89,89,89,89,89],                alerta:false },
+  {id:'p12',cat:'caldera',    nombre:'Caldera de condensación gas natural 24kW',     marca:'Baxi',      precio:1290.0,unidad:'ud', proveedor:'Bricomart',     img:'https://images.unsplash.com/photo-1581094794329-c8112a89af12?w=400&q=80', stock:true, visible:true, hist:[1250,1260,1270,1280,1290],      alerta:false },
+  {id:'p13',cat:'calefaccion',nombre:'Radiador acero tubular 600mm 6 elementos',     marca:'Zehnder',   precio:145.00,unidad:'ud', proveedor:'Bricomart',     img:'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=400&q=80', stock:true, visible:true, hist:[145,145,145,145,145],           alerta:false },
+  {id:'p14',cat:'suelo',      nombre:'Tarima flotante AC4 8mm Roble Natural',        marca:'Quickstep', precio:22.50, unidad:'m²', proveedor:'Leroy Merlin',  img:'https://images.unsplash.com/photo-1541123437800-1bb1317badc2?w=400&q=80', stock:true, visible:true, hist:[22.50,22.50,22.50,22.50,22.50],alerta:false },
+];
+
+// ── QUOTES ───────────────────────────────────────────────────────
+let QUOTES = [
+  {
+    id:'q1', ref:'REF-240520',
+    cliente:{ nombre:'María García', email:'maria.garcia@gmail.com', tel:'612 345 678', notas:'Piso en Chamberí, vivo en él durante la obra. Prefiero trabajar por tramos para no tener que desalojar.' },
+    tipo:'Reforma integral · 5 estancias', inmueble:{ tipo:'Piso', plantas:1 },
+    estado:'pendiente_revision', creado_at:'2026-05-20', caduca_at:'2026-06-19', calidad:'Media',
+    matIds:['p1','p2','p3','p6','p8','p9','p10','p11','p12','p13'],
+    config_espacios:[
+      { id:'salon_1',     label:'Salón',        m2:20, trabajos:['Demolición y vaciado','Redistribución tabiques (Pladur N)','Cambiar suelo','Pintura paredes y techo','Falso techo','Radiadores'], mat:'Parquet Roble Natural 20m² · Pladur N 10m²', notas:'Abrir paso con cocina (1 tabique)' },
+      { id:'cocina_1',    label:'Cocina',       m2:12, trabajos:['Cambiar suelo','Alicatar','Pintura paredes y techo','Instalar caldera'], mat:'Azulejo Travertino Beige 28m² · Gres Cemento Gris suelo 12m² · Caldera Baxi 24kW', notas:'' },
+      { id:'bano_1',      label:'Baño 1',       m2:9,  trabajos:['Demolición','Alicatar','Cambiar suelo','Fontanería','Sanitarios','Montaje mueble de baño'], mat:'Azulejo Travertino Beige 20m² · Gres Cemento Gris suelo 9m² · Inodoro+Lavabo+Mueble+Grifo', notas:'Cambiar bañera por plato de ducha' },
+      { id:'aseo_1',      label:'Aseo',         m2:4,  trabajos:['Demolición','Alicatar','Cambiar suelo','Fontanería','Sanitarios'], mat:'Azulejo Travertino Beige 9m² · Gres Cemento Gris suelo 4m² · Inodoro+Grifo', notas:'' },
+      { id:'habitacion_1',label:'Habitación 1', m2:14, trabajos:['Cambiar suelo','Pintura paredes y techo','Radiadores'], mat:'Parquet Roble Natural 14m²', notas:'' },
+      { id:'habitacion_2',label:'Habitación 2', m2:12, trabajos:['Cambiar suelo','Pintura paredes y techo'], mat:'Parquet Roble Natural 12m²', notas:'' },
+    ],
+    extras:['Vivienda habitada durante obra','Limpieza final de obra'],
+    desglose:[
+      {id:'d1_1',  concepto:'M.O. Demolición y vaciado — salón, cocina, baño, aseo',      tipo:'mo',     cantidad:1,  precio_ud:1800,    subtotal:1800   },
+      {id:'d1_2',  concepto:'M.O. Redistribución tabiques Pladur N — salón (1 tabique)',  tipo:'mo',     cantidad:10, precio_ud:65,      subtotal:650    },
+      {id:'d1_3',  concepto:'M.O. Solado — salón+hab1+hab2+cocina (58m²)',                tipo:'mo',     cantidad:58, precio_ud:22,      subtotal:1276   },
+      {id:'d1_4',  concepto:'M.O. Solado húmedos — baño+aseo (13m²)',                     tipo:'mo',     cantidad:13, precio_ud:35,      subtotal:455    },
+      {id:'d1_5',  concepto:'M.O. Alicatado — baño+aseo+cocina (57m²)',                   tipo:'mo',     cantidad:57, precio_ud:28,      subtotal:1596   },
+      {id:'d1_6',  concepto:'M.O. Pintura paredes y techo — 5 estancias',                 tipo:'mo',     cantidad:1,  precio_ud:2200,    subtotal:2200   },
+      {id:'d1_7',  concepto:'M.O. Fontanería e instalaciones — baño+aseo',                tipo:'mo',     cantidad:1,  precio_ud:1100,    subtotal:1100   },
+      {id:'d1_8',  concepto:'M.O. Instalación caldera condensación — cocina',             tipo:'mo',     cantidad:1,  precio_ud:380,     subtotal:380    },
+      {id:'d1_9',  concepto:'M.O. Falso techo + radiadores — 3 estancias',                tipo:'mo',     cantidad:1,  precio_ud:1450,    subtotal:1450   },
+      {id:'d1_10', concepto:'Mat. Azulejo Travertino Beige 60×60 (baño+aseo+cocina)',     tipo:'mat',    cantidad:57, precio_ud:18.90,   subtotal:1077.30},
+      {id:'d1_11', concepto:'Mat. Parquet Roble Natural AC5 (salón+hab1+hab2, 46m²)',     tipo:'mat',    cantidad:46, precio_ud:16.50,   subtotal:759    },
+      {id:'d1_12', concepto:'Mat. Gres Cemento Gris 80×80 — suelos húmedos (13m²)',       tipo:'mat',    cantidad:13, precio_ud:24.30,   subtotal:315.90 },
+      {id:'d1_13', concepto:'Mat. Sanitarios — 2 inodoros, 1 lavabo, mueble 80cm, 2 grifos',tipo:'mat', cantidad:1,  precio_ud:1308,    subtotal:1308   },
+      {id:'d1_14', concepto:'Mat. Caldera condensación Baxi 24kW',                        tipo:'mat',    cantidad:1,  precio_ud:1290,    subtotal:1290   },
+      {id:'d1_15', concepto:'Mat. Placa Pladur N 15mm — tabique (10m²)',                  tipo:'mat',    cantidad:10, precio_ud:11.20,   subtotal:112    },
+      {id:'d1_16', concepto:'Extra: Vivienda habitada durante obra',                      tipo:'extra',  cantidad:1,  precio_ud:950,     subtotal:950    },
+      {id:'d1_17', concepto:'Extra: Limpieza final de obra',                              tipo:'extra',  cantidad:1,  precio_ud:280,     subtotal:280    },
+      {id:'d1_18', concepto:'Desplazamiento y gestión',                                   tipo:'extra',  cantidad:1,  precio_ud:80,      subtotal:80     },
+      {id:'d1_19', concepto:'Margen profesional (22%)',                                   tipo:'margen', cantidad:1,  precio_ud:3800.98, subtotal:3800.98},
+    ],
+    iva:4426.42, total:25504.60, comentarios_admin:'',
+    historial:[
+      {estado:'borrador',            fecha:'2026-05-20', nota:'Presupuesto generado desde configurador web'},
+      {estado:'pendiente_revision',  fecha:'2026-05-20', nota:'Enviado al panel de administración'},
+    ]
+  },
+  {
+    id:'q2', ref:'REF-240521',
+    cliente:{ nombre:'Carlos Bermejo', email:'carlos.bermejo@outlook.com', tel:'654 987 321', notas:'Chalet adosado en Las Rozas. La reforma es solo en planta baja.' },
+    tipo:'Reforma baño + aseo', inmueble:{ tipo:'Chalet adosado', plantas:2 },
+    estado:'pendiente_revision', creado_at:'2026-05-21', caduca_at:'2026-06-20', calidad:'Media',
+    matIds:['p1','p3','p8','p9','p10','p11'],
+    config_espacios:[
+      { id:'bano_1', label:'Baño principal', m2:9,  trabajos:['Demolición','Alicatar','Cambiar suelo','Fontanería','Sanitarios','Montaje mueble de baño'], mat:'Azulejo Travertino Beige 24m² · Gres Cemento Gris suelo 9m² · Inodoro+Lavabo+Mueble+Grifo', notas:'Sustitución completa' },
+      { id:'aseo_1', label:'Aseo planta baja', m2:5, trabajos:['Demolición','Alicatar','Cambiar suelo','Fontanería','Sanitarios'], mat:'Azulejo Travertino Beige 12m² · Gres Cemento Gris suelo 5m² · Inodoro+Grifo', notas:'Aseo de visitas' },
+    ],
+    extras:[],
+    desglose:[
+      {id:'d2_1', concepto:'M.O. Demolición — baño + aseo',                      tipo:'mo',     cantidad:1,  precio_ud:680,  subtotal:680  },
+      {id:'d2_2', concepto:'M.O. Alicatado — baño+aseo paredes (36m²)',          tipo:'mo',     cantidad:36, precio_ud:28,   subtotal:1008 },
+      {id:'d2_3', concepto:'M.O. Solado húmedos — baño+aseo suelo (14m²)',       tipo:'mo',     cantidad:14, precio_ud:35,   subtotal:490  },
+      {id:'d2_4', concepto:'M.O. Fontanería e instalaciones',                    tipo:'mo',     cantidad:1,  precio_ud:780,  subtotal:780  },
+      {id:'d2_5', concepto:'M.O. Sanitarios — baño + aseo',                      tipo:'mo',     cantidad:1,  precio_ud:320,  subtotal:320  },
+      {id:'d2_6', concepto:'M.O. Montaje mueble de baño',                        tipo:'mo',     cantidad:1,  precio_ud:130,  subtotal:130  },
+      {id:'d2_7', concepto:'Mat. Azulejo Travertino Beige 60×60 (36m²)',          tipo:'mat',    cantidad:36, precio_ud:18.90,subtotal:680.40},
+      {id:'d2_8', concepto:'Mat. Gres Cemento Gris 80×80 — suelo (14m²)',         tipo:'mat',    cantidad:14, precio_ud:24.30,subtotal:340.20},
+      {id:'d2_9', concepto:'Mat. Inodoro suspendido Rimless × 2',                 tipo:'mat',    cantidad:2,  precio_ud:189,  subtotal:378  },
+      {id:'d2_10',concepto:'Mat. Lavabo sobre encimera 60cm × 1',                 tipo:'mat',    cantidad:1,  precio_ud:145,  subtotal:145  },
+      {id:'d2_11',concepto:'Mat. Mueble lavabo 80cm suspendido × 1',              tipo:'mat',    cantidad:1,  precio_ud:385,  subtotal:385  },
+      {id:'d2_12',concepto:'Mat. Grifo monomando cromado × 2',                    tipo:'mat',    cantidad:2,  precio_ud:89,   subtotal:178  },
+      {id:'d2_13',concepto:'Desplazamiento y gestión',                            tipo:'extra',  cantidad:1,  precio_ud:80,   subtotal:80   },
+      {id:'d2_14',concepto:'Margen profesional (22%)',                            tipo:'margen', cantidad:1,  precio_ud:1230.81,subtotal:1230.81},
+    ],
+    iva:1433.34, total:8258.75, comentarios_admin:'Cliente ha pedido presupuesto desglosado por baño y aseo por separado. Pendiente confirmar.',
+    historial:[
+      {estado:'borrador',           fecha:'2026-05-21', nota:'Generado desde configurador'},
+      {estado:'pendiente_revision', fecha:'2026-05-21', nota:''},
+    ]
+  },
+  {
+    id:'q3', ref:'REF-240515',
+    cliente:{ nombre:'Ana Folguera', email:'ana.folguera@gmail.com', tel:'699 112 233', notas:'Piso en alquiler, reforma antes de nuevos inquilinos.' },
+    tipo:'Reforma cocina + salón', inmueble:{ tipo:'Piso', plantas:1 },
+    estado:'enviado', creado_at:'2026-05-15', caduca_at:'2026-06-14', calidad:'Básica',
+    matIds:['p1','p3','p12','p14'],
+    config_espacios:[
+      { id:'cocina_1', label:'Cocina', m2:15, trabajos:['Demolición parcial','Alicatar','Cambiar suelo','Pintura','Instalar caldera'], mat:'Azulejo Travertino Beige 28m² · Gres Cemento Gris suelo 15m² · Caldera Baxi 24kW', notas:'Mantener distribución actual' },
+      { id:'salon_1',  label:'Salón',  m2:22, trabajos:['Cambiar suelo','Pintura paredes y techo','Ventanas × 2'], mat:'Tarima flotante Roble Natural 22m²', notas:'2 ventanas oscilo-batientes, marco PVC' },
+    ],
+    extras:['Limpieza final de obra'],
+    desglose:[
+      {id:'d3_1', concepto:'M.O. Demolición parcial cocina',              tipo:'mo',    cantidad:1,  precio_ud:620,  subtotal:620  },
+      {id:'d3_2', concepto:'M.O. Alicatado cocina paredes (28m²)',        tipo:'mo',    cantidad:28, precio_ud:28,   subtotal:784  },
+      {id:'d3_3', concepto:'M.O. Solado cocina+salón (37m²)',             tipo:'mo',    cantidad:37, precio_ud:22,   subtotal:814  },
+      {id:'d3_4', concepto:'M.O. Pintura cocina + salón',                 tipo:'mo',    cantidad:1,  precio_ud:950,  subtotal:950  },
+      {id:'d3_5', concepto:'M.O. Instalación caldera condensación',       tipo:'mo',    cantidad:1,  precio_ud:380,  subtotal:380  },
+      {id:'d3_6', concepto:'M.O. Sustitución ventanas × 2',              tipo:'mo',    cantidad:2,  precio_ud:220,  subtotal:440  },
+      {id:'d3_7', concepto:'Mat. Azulejo Travertino Beige (28m²)',        tipo:'mat',   cantidad:28, precio_ud:18.90,subtotal:529.20},
+      {id:'d3_8', concepto:'Mat. Tarima flotante Quickstep salón (22m²)', tipo:'mat',   cantidad:22, precio_ud:22.50,subtotal:495  },
+      {id:'d3_9', concepto:'Mat. Gres Cemento Gris suelo cocina (15m²)', tipo:'mat',   cantidad:15, precio_ud:24.30,subtotal:364.50},
+      {id:'d3_10',concepto:'Mat. Caldera condensación Baxi 24kW',        tipo:'mat',   cantidad:1,  precio_ud:1290, subtotal:1290 },
+      {id:'d3_11',concepto:'Extra: Limpieza final de obra',               tipo:'extra', cantidad:1,  precio_ud:240,  subtotal:240  },
+      {id:'d3_12',concepto:'Desplazamiento y gestión',                    tipo:'extra', cantidad:1,  precio_ud:80,   subtotal:80   },
+      {id:'d3_13',concepto:'Margen profesional (22%)',                    tipo:'margen',cantidad:1,  precio_ud:1537.07,subtotal:1537.07},
+    ],
+    iva:1789.99, total:10313.76, comentarios_admin:'Aprobado y enviado al cliente el 2026-05-16. Aceptación pendiente.',
+    historial:[
+      {estado:'borrador',           fecha:'2026-05-15', nota:'Generado desde configurador'},
+      {estado:'pendiente_revision', fecha:'2026-05-15', nota:''},
+      {estado:'enviado',            fecha:'2026-05-16', nota:'Aprobado y enviado por email'},
+    ]
+  },
+  {
+    id:'q4', ref:'REF-240508',
+    cliente:{ nombre:'Pedro Navarro', email:'pedro.navarro@empresa.es', tel:'617 001 122', notas:'' },
+    tipo:'Suelo + pintura habitaciones', inmueble:{ tipo:'Piso', plantas:1 },
+    estado:'aprobado', creado_at:'2026-05-08', caduca_at:'2026-06-07', calidad:'Media',
+    matIds:['p2','p13'],
+    config_espacios:[
+      { id:'habitacion_1', label:'Habitación 1', m2:12, trabajos:['Cambiar suelo','Pintura paredes y techo','Radiadores'], mat:'Parquet Roble Natural 12m² · Radiador Zehnder × 1', notas:'' },
+      { id:'habitacion_2', label:'Habitación 2', m2:10, trabajos:['Cambiar suelo','Pintura paredes y techo','Radiadores'], mat:'Parquet Roble Natural 10m² · Radiador Zehnder × 1', notas:'' },
+      { id:'salon_1',      label:'Salón',        m2:18, trabajos:['Cambiar suelo','Pintura paredes y techo'], mat:'Parquet Roble Natural 18m²', notas:'' },
+    ],
+    extras:[],
+    desglose:[
+      {id:'d4_1', concepto:'M.O. Solado — hab1+hab2+salón (40m²)',   tipo:'mo',    cantidad:40, precio_ud:22,   subtotal:880 },
+      {id:'d4_2', concepto:'M.O. Pintura 3 estancias',               tipo:'mo',    cantidad:1,  precio_ud:1050, subtotal:1050},
+      {id:'d4_3', concepto:'M.O. Instalación radiadores × 2',        tipo:'mo',    cantidad:2,  precio_ud:88,   subtotal:176 },
+      {id:'d4_4', concepto:'Mat. Parquet Roble Natural AC5 (40m²)',   tipo:'mat',   cantidad:40, precio_ud:16.50,subtotal:660 },
+      {id:'d4_5', concepto:'Mat. Radiador acero tubular 600mm × 2',   tipo:'mat',   cantidad:2,  precio_ud:145,  subtotal:290 },
+      {id:'d4_6', concepto:'Desplazamiento y gestión',                tipo:'extra', cantidad:1,  precio_ud:80,   subtotal:80  },
+      {id:'d4_7', concepto:'Margen profesional (22%)',                tipo:'margen',cantidad:1,  precio_ud:689.92,subtotal:689.92},
+    ],
+    iva:803.44, total:4629.36, comentarios_admin:'Cliente confirmó el presupuesto. Inicio de obra: 2026-06-02.',
+    historial:[
+      {estado:'borrador',           fecha:'2026-05-08', nota:'Generado desde configurador'},
+      {estado:'pendiente_revision', fecha:'2026-05-08', nota:''},
+      {estado:'enviado',            fecha:'2026-05-09', nota:'Enviado por email'},
+      {estado:'aprobado',           fecha:'2026-05-12', nota:'Cliente firmó aceptación'},
+    ]
+  },
+  {
+    id:'q5', ref:'REF-240401',
+    cliente:{ nombre:'Lucía Morán', email:'lucia.moran@hotmail.com', tel:'600 888 777', notas:'Chalet en Boadilla. Reforma de terraza y baño principal.' },
+    tipo:'Terraza + baño principal', inmueble:{ tipo:'Chalet', plantas:1 },
+    estado:'caducado', creado_at:'2026-04-01', caduca_at:'2026-05-01', calidad:'Premium',
+    matIds:['p1','p3','p8','p9','p11'],
+    config_espacios:[
+      { id:'bano_1',    label:'Baño principal', m2:10, trabajos:['Demolición','Alicatar','Cambiar suelo','Fontanería','Sanitarios'], mat:'Azulejo Travertino Beige 20m² · Gres Cemento Gris suelo 10m² · Inodoro+Lavabo+Grifo', notas:'Plato de ducha 90×90 walk-in' },
+      { id:'terraza_1', label:'Terraza',         m2:25, trabajos:['Demolición terraza','Solado exterior','Equipamiento terraza'], mat:'Gres Cemento Gris exterior (25m²)', notas:'Aviso: precio estimado. Confirmar en visita técnica.' },
+    ],
+    extras:[],
+    desglose:[
+      {id:'d5_1', concepto:'M.O. Demolición baño principal',               tipo:'mo',    cantidad:1,  precio_ud:520,  subtotal:520  },
+      {id:'d5_2', concepto:'M.O. Alicatado baño paredes (20m²)',           tipo:'mo',    cantidad:20, precio_ud:28,   subtotal:560  },
+      {id:'d5_3', concepto:'M.O. Solado baño (10m²)',                      tipo:'mo',    cantidad:10, precio_ud:35,   subtotal:350  },
+      {id:'d5_4', concepto:'M.O. Fontanería baño',                         tipo:'mo',    cantidad:1,  precio_ud:680,  subtotal:680  },
+      {id:'d5_5', concepto:'M.O. Sanitarios e instalación',                tipo:'mo',    cantidad:1,  precio_ud:280,  subtotal:280  },
+      {id:'d5_6', concepto:'M.O. Terraza — demolición + solado + acabados',tipo:'mo',    cantidad:25, precio_ud:50,   subtotal:1250 },
+      {id:'d5_7', concepto:'Mat. Azulejo Travertino Beige baño (20m²)',    tipo:'mat',   cantidad:20, precio_ud:18.90,subtotal:378  },
+      {id:'d5_8', concepto:'Mat. Gres Cemento Gris suelo baño (10m²)',     tipo:'mat',   cantidad:10, precio_ud:24.30,subtotal:243  },
+      {id:'d5_9', concepto:'Mat. Gres Cemento Gris exterior terraza (25m²)',tipo:'mat',  cantidad:25, precio_ud:24.30,subtotal:607.50},
+      {id:'d5_10',concepto:'Mat. Inodoro suspendido Rimless × 1',          tipo:'mat',   cantidad:1,  precio_ud:189,  subtotal:189  },
+      {id:'d5_11',concepto:'Mat. Lavabo sobre encimera 60cm × 1',          tipo:'mat',   cantidad:1,  precio_ud:145,  subtotal:145  },
+      {id:'d5_12',concepto:'Mat. Grifo monomando cromado × 1',             tipo:'mat',   cantidad:1,  precio_ud:89,   subtotal:89   },
+      {id:'d5_13',concepto:'Desplazamiento y gestión',                     tipo:'extra', cantidad:1,  precio_ud:80,   subtotal:80   },
+      {id:'d5_14',concepto:'Margen profesional (22%)',                     tipo:'margen',cantidad:1,  precio_ud:1181.73,subtotal:1181.73},
+    ],
+    iva:1376.18, total:7929.41, comentarios_admin:'Presupuesto caducado. Cliente no respondió. Contactar para renovar.',
+    historial:[
+      {estado:'borrador',           fecha:'2026-04-01', nota:'Generado desde configurador'},
+      {estado:'pendiente_revision', fecha:'2026-04-01', nota:''},
+      {estado:'enviado',            fecha:'2026-04-02', nota:'Enviado por email'},
+      {estado:'caducado',           fecha:'2026-05-01', nota:'Sin respuesta del cliente'},
+    ]
+  },
+];
+
+// ── STATE ─────────────────────────────────────────────────────────
+let catFiltros  = { cat:'todos', proveedor:'todos', cliente:'todos' };
+let modalQId    = null;
+let modalMode   = 'view';
+let editingQ    = null;
+let autoEnvio   = false;
+
+// ── AUTH ──────────────────────────────────────────────────────────
+function doLogin() {
+  const email = document.getElementById('l-email').value.trim();
+  const pass  = document.getElementById('l-pass').value;
+  if (email === CFG.LOGIN_EMAIL && pass === CFG.LOGIN_PASS) {
+    document.getElementById('login-screen').style.display = 'none';
+    document.getElementById('admin-panel').style.display  = 'flex';
+    document.getElementById('sb-email-disp').textContent  = email;
+    document.getElementById('fecha-hoy').textContent =
+      new Date().toLocaleDateString('es-ES',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
+    renderDashboard();
+    buildCatToolbar();
+    renderCatalogo();
+    renderQuotes();
+  } else {
+    document.getElementById('login-err').textContent = 'Email o contraseña incorrectos';
+  }
+}
+function doLogout() {
+  document.getElementById('admin-panel').style.display  = 'none';
+  document.getElementById('login-screen').style.display = 'flex';
+  document.getElementById('login-err').textContent = '';
+}
+
+// ── NAVIGATION ────────────────────────────────────────────────────
+function showAdmin(name, btn) {
+  document.querySelectorAll('.apage').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.sb-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('ap-' + name).classList.add('active');
+  if (btn) btn.classList.add('active');
+  if (name === 'catalogo')     { buildCatToolbar(); renderCatalogo(); }
+  if (name === 'presupuestos') renderQuotes();
+  if (name === 'dashboard')    renderDashboard();
+}
+
+// ── DASHBOARD ─────────────────────────────────────────────────────
+function renderDashboard() {
+  const total    = QUOTES.length;
+  const pte      = QUOTES.filter(q => q.estado === 'pendiente_revision').length;
+  const aprobSum = QUOTES.filter(q => q.estado === 'aprobado' || q.estado === 'enviado')
+                         .reduce((a, q) => a + q.total, 0);
+  const alertas  = PRODUCTOS.filter(p => p.alerta).length;
+
+  document.getElementById('dash-stats').innerHTML = `
+    <div class="astat"><div class="astat-lbl">Presupuestos totales</div><div class="astat-val">${total}</div><div class="astat-sub">Todos los estados</div></div>
+    <div class="astat"><div class="astat-lbl">Pendientes revisión</div><div class="astat-val" style="color:var(--terra)">${pte}</div><div class="astat-sub">Requieren aprobación</div></div>
+    <div class="astat"><div class="astat-lbl">Facturación aprobada</div><div class="astat-val" style="color:var(--ok);font-size:20px">${fmtEur(aprobSum)}</div><div class="astat-sub">Enviados + aprobados</div></div>
+    <div class="astat"><div class="astat-lbl">Alertas de precio</div><div class="astat-val" style="color:var(--danger)" id="num-alertas">${alertas}</div><div class="astat-sub">Variación &gt;5%</div></div>`;
+
+  const bc = { pendiente_revision:'b-warn', enviado:'b-ok', aprobado:'b-info', caducado:'b-mute', rechazado:'b-err' };
+  const et = { pendiente_revision:'Pendiente', enviado:'Enviado', aprobado:'Aprobado', caducado:'Caducado', rechazado:'Rechazado' };
+  const rows = QUOTES.slice(0,5).map(q => `
+    <tr>
+      <td><strong>${q.cliente.nombre}</strong><br><span style="font-size:11px;color:var(--muted)">${q.cliente.email}</span></td>
+      <td>${q.tipo}</td>
+      <td><strong>${fmtEur(q.total)}</strong></td>
+      <td><span class="badge ${bc[q.estado]||'b-mute'}">${et[q.estado]||q.estado}</span></td>
+      <td style="font-size:12px;color:var(--muted)">${q.creado_at}</td>
+      <td style="display:flex;gap:6px;flex-wrap:wrap">
+        <button class="abtn abtn-ghost" onclick="openModal('${q.id}')">Ver</button>
+        ${q.estado==='pendiente_revision'?`<button class="abtn abtn-ok" onclick="openModal('${q.id}')">Revisar</button>`:''}
+      </td>
+    </tr>`).join('');
+  document.getElementById('dash-tbody').innerHTML = rows || '<tr><td colspan="6" style="text-align:center;color:var(--muted);padding:28px">Sin presupuestos</td></tr>';
+}
+
+// ── CATALOG ───────────────────────────────────────────────────────
+function buildCatToolbar() {
+  const proveedores = [...new Set(PRODUCTOS.map(p => p.proveedor))];
+  const clientes    = QUOTES.map(q => q.cliente.nombre);
+
+  document.getElementById('cat-toolbar').innerHTML = `
+    <div class="filter-group">
+      <span class="filter-label">Categoría</span>
+      <div class="fpills" id="pills-cat">
+        <button class="fpill active" onclick="setCatFiltro('cat','todos',this)">Todos</button>
+        <button class="fpill" onclick="setCatFiltro('cat','suelo',this)">Suelos</button>
+        <button class="fpill" onclick="setCatFiltro('cat','pintura',this)">Pinturas</button>
+        <button class="fpill" onclick="setCatFiltro('cat','tabiqueria',this)">Tabiquería</button>
+        <button class="fpill" onclick="setCatFiltro('cat','sanitario',this)">Sanitarios</button>
+        <button class="fpill" onclick="setCatFiltro('cat','mueble',this)">Muebles</button>
+        <button class="fpill" onclick="setCatFiltro('cat','fontaneria',this)">Fontanería</button>
+        <button class="fpill" onclick="setCatFiltro('cat','caldera',this)">Calderas</button>
+        <button class="fpill" onclick="setCatFiltro('cat','calefaccion',this)">Calefacción</button>
+        <button class="fpill" onclick="setCatFiltro('cat','alertas',this)">⚠ Alertas</button>
+      </div>
+    </div>
+    <div class="filter-group">
+      <span class="filter-label">Proveedor</span>
+      <div class="fpills" id="pills-prov">
+        <button class="fpill active" onclick="setCatFiltro('proveedor','todos',this)">Todos</button>
+        ${proveedores.map(p => `<button class="fpill" onclick="setCatFiltro('proveedor','${escH(p)}',this)">${p}</button>`).join('')}
+      </div>
+    </div>
+    <div class="filter-group">
+      <span class="filter-label">Cliente</span>
+      <div class="fpills" id="pills-cli">
+        <button class="fpill active" onclick="setCatFiltro('cliente','todos',this)">Todos</button>
+        ${clientes.map(c => `<button class="fpill" onclick="setCatFiltro('cliente','${escH(c)}',this)">${c}</button>`).join('')}
+      </div>
+    </div>
+    <div style="font-size:12px;color:var(--muted);padding-top:4px">Precio manual tiene prioridad · <span id="cat-count"></span></div>`;
+}
+
+function setCatFiltro(campo, val, btn) {
+  catFiltros[campo] = val;
+  btn.closest('.fpills').querySelectorAll('.fpill').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  renderCatalogo();
+}
+
+function getClientProdIds(nombre) {
+  const ids = new Set();
+  QUOTES.filter(q => q.cliente.nombre === nombre).forEach(q => {
+    (q.matIds || []).forEach(id => ids.add(id));
+  });
+  return ids;
+}
+
+function renderCatalogo() {
+  let lista = PRODUCTOS.slice();
+  if (catFiltros.cat === 'alertas') {
+    lista = lista.filter(p => p.alerta);
+  } else if (catFiltros.cat !== 'todos') {
+    lista = lista.filter(p => p.cat === catFiltros.cat);
+  }
+  if (catFiltros.proveedor !== 'todos') {
+    lista = lista.filter(p => p.proveedor === catFiltros.proveedor);
+  }
+  if (catFiltros.cliente !== 'todos') {
+    const ids = getClientProdIds(catFiltros.cliente);
+    lista = lista.filter(p => ids.has(p.id));
+  }
+  const countEl = document.getElementById('cat-count');
+  if (countEl) countEl.textContent = lista.length + ' producto' + (lista.length!==1?'s':'');
+
+  document.getElementById('tbody-cat').innerHTML = lista.map(p => {
+    const maxH = Math.max(...p.hist);
+    const spark = p.hist.map((v, i) => {
+      const h   = Math.round((v / maxH) * 20);
+      const cls = i === p.hist.length-1 ? (p.alerta ? 'alert' : 'hi') : '';
+      return `<div class="spark-bar ${cls}" style="height:${h}px"></div>`;
+    }).join('');
+    return `<tr style="${p.alerta?'background:#fffaf4':''}">
+      <td><div class="td-prod">
+        <img class="thumb" src="${p.img}" alt="" loading="lazy">
+        <div>
+          <div class="td-name">${p.nombre}</div>
+          <div class="td-meta">${p.marca} · ${p.proveedor}${p.alerta?' &nbsp;<span class="badge b-warn">⚠ variación</span>':''}</div>
+        </div></div></td>
+      <td><span class="badge b-mute">${p.cat}</span></td>
+      <td><div style="font-weight:600">${p.precio.toFixed(2)} €/${p.unidad}</div>${p.alerta?'<div style="font-size:11px;color:var(--danger)">↑ vs semana pasada</div>':''}</td>
+      <td><div class="price-cell">
+        <input class="price-inp" type="number" step="0.01" placeholder="${p.precio.toFixed(2)}" id="pm-${p.id}" oninput="this.classList.add('price-changed')">
+        <button class="abtn abtn-ghost" style="font-size:11px;padding:3px 8px" onclick="guardarPrecio('${p.id}')">✓</button>
+      </div></td>
+      <td><div class="spark">${spark}</div></td>
+      <td><span class="badge ${p.stock?'b-ok':'b-err'}">${p.stock?'Stock':'Agotado'}</span></td>
+      <td><div class="vis-wrap" onclick="toggleVisible('${p.id}')">
+        <div class="vis-track ${p.visible?'on':''}" id="vt-${p.id}"><div class="vis-knob"></div></div>
+        <span style="font-size:11px;color:var(--muted)">${p.visible?'Sí':'No'}</span>
+      </div></td>
+    </tr>`;
+  }).join('') || '<tr><td colspan="7" style="text-align:center;color:var(--muted);padding:32px">Sin productos con estos filtros</td></tr>';
+}
+
+function guardarPrecio(id) {
+  const val = parseFloat(document.getElementById('pm-'+id)?.value);
+  if (isNaN(val)||val<=0) { toast('Introduce un precio válido','err'); return; }
+  const p = PRODUCTOS.find(x => x.id===id);
+  if (!p) return;
+  p.precio = val; p.hist.push(val);
+  document.getElementById('pm-'+id)?.classList.remove('price-changed');
+  toast(`"${p.nombre}" actualizado a ${val.toFixed(2)}€`);
+  renderCatalogo();
+}
+function toggleVisible(id) {
+  const p = PRODUCTOS.find(x => x.id===id);
+  if (!p) return;
+  p.visible = !p.visible;
+  toast(p.visible ? 'Producto visible al cliente' : 'Producto oculto');
+  renderCatalogo();
+}
+function runScraper() {
+  const btn=document.getElementById('btn-run'), icon=document.getElementById('run-icon');
+  btn.classList.add('running');
+  let deg=0;
+  const spin=setInterval(()=>{deg+=30;icon.style.transform=`rotate(${deg}deg)`;},100);
+  setTimeout(()=>{
+    clearInterval(spin); icon.style.transform=''; btn.classList.remove('running');
+    const az=PRODUCTOS.find(p=>p.id==='p1');
+    if(az){az.precio=r(az.precio*1.063);az.hist.push(az.precio);az.alerta=true;}
+    document.getElementById('num-alertas').textContent=PRODUCTOS.filter(p=>p.alerta).length;
+    renderCatalogo(); renderDashboard();
+    toast('Scraping completado · 1 alerta: azulejo +6.3%','warn');
+  },2800);
+}
+
+// ── QUOTES LIST ───────────────────────────────────────────────────
+function renderQuotes() {
+  const filtro = document.getElementById('filtro-estado')?.value||'';
+  const lista  = filtro ? QUOTES.filter(q=>q.estado===filtro) : QUOTES;
+  const bc = { pendiente_revision:'b-warn', enviado:'b-ok', aprobado:'b-info', caducado:'b-mute', rechazado:'b-err' };
+  const et = { pendiente_revision:'Pendiente revisión', enviado:'Enviado', aprobado:'Aprobado', caducado:'Caducado', rechazado:'Rechazado' };
+
+  document.getElementById('tbody-quotes').innerHTML = lista.length ? lista.map(q => `
+    <tr>
+      <td><strong>${q.cliente.nombre}</strong><br><span style="font-size:11px;color:var(--muted)">${q.cliente.email}</span></td>
+      <td>${q.tipo}</td>
+      <td><strong>${fmtEur(q.total)}</strong></td>
+      <td><span class="badge ${bc[q.estado]||'b-mute'}">${et[q.estado]||q.estado}</span></td>
+      <td style="font-size:12px;color:var(--muted)">${q.caduca_at}</td>
+      <td style="display:flex;gap:6px;flex-wrap:wrap">
+        <button class="abtn abtn-ghost" onclick="openModal('${q.id}')">Ver</button>
+        <button class="abtn abtn-primary" onclick="openModalEdit('${q.id}')">Editar</button>
+        ${q.estado==='pendiente_revision'?`<button class="abtn abtn-ok" onclick="modalQId='${q.id}';aprobarQuote()">Aprobar</button><button class="abtn abtn-danger" onclick="modalQId='${q.id}';rechazarQuote()">Rechazar</button>`:''}
+      </td>
+    </tr>`).join('')
+    : '<tr><td colspan="6" style="text-align:center;color:var(--muted);padding:36px">Sin presupuestos</td></tr>';
+}
+
+// ── MODAL CORE ────────────────────────────────────────────────────
+function openModal(id) {
+  modalQId=id; modalMode='view'; editingQ=null;
+  _renderModal();
+  document.getElementById('modal-bg').classList.add('open');
+}
+function openModalEdit(id) {
+  modalQId=id; modalMode='view'; editingQ=null;
+  _renderModal();
+  document.getElementById('modal-bg').classList.add('open');
+  // Auto-switch to edit
+  switchToEditMode();
+}
+function closeModal() {
+  document.getElementById('modal-bg').classList.remove('open');
+  editingQ=null; modalMode='view';
+}
+function _renderModal() {
+  document.getElementById('the-modal').innerHTML =
+    modalMode==='view' ? _buildView() : _buildEdit();
+}
+function switchToEditMode() {
+  const q=QUOTES.find(q=>q.id===modalQId);
+  editingQ=JSON.parse(JSON.stringify(q));
+  modalMode='edit';
+  _renderModal();
+}
+function cancelarEdicion() { editingQ=null; modalMode='view'; _renderModal(); }
+
+// ── MODAL VIEW ────────────────────────────────────────────────────
+function _buildView() {
+  const q=QUOTES.find(q=>q.id===modalQId);
+  if(!q) return '<div style="padding:40px;text-align:center;color:var(--muted)">Presupuesto no encontrado</div>';
+  const bc={pendiente_revision:'b-warn',enviado:'b-ok',aprobado:'b-info',caducado:'b-mute',rechazado:'b-err'};
+  const et={pendiente_revision:'Pendiente revisión',enviado:'Enviado',aprobado:'Aprobado',caducado:'Caducado',rechazado:'Rechazado'};
+
+  let ftBtns=`<button class="abtn abtn-primary" onclick="switchToEditMode()">✎ Editar presupuesto</button>`;
+  if(q.estado==='pendiente_revision') {
+    ftBtns+=` <button class="abtn abtn-ok" onclick="aprobarQuote()">✓ Aprobar y enviar</button>`;
+    ftBtns+=` <button class="abtn abtn-danger" onclick="rechazarQuote()">✕ Rechazar</button>`;
+  }
+  if(q.estado==='caducado') {
+    ftBtns+=` <button class="abtn abtn-warn" onclick="renovarQuote()">↻ Renovar presupuesto</button>`;
+  }
+  ftBtns+=` <button class="abtn abtn-ghost" onclick="closeModal()">Cerrar</button>`;
+
+  return `
+    <div class="modal-head">
+      <div>
+        <h3>${q.ref} · ${q.tipo}</h3>
+        <div class="mh-sub">${q.inmueble.tipo} · ${q.inmueble.plantas} planta${q.inmueble.plantas!==1?'s':''} · Calidad ${q.calidad}</div>
+      </div>
+      <span class="badge ${bc[q.estado]||'b-mute'}">${et[q.estado]||q.estado}</span>
+    </div>
+    <div class="modal-scroll">
+      <div class="ms">
+        <div class="ms-title">Datos del cliente</div>
+        <div class="mi-grid">
+          <div class="mi-item"><span class="mi-lbl">Nombre</span><span class="mi-val">${q.cliente.nombre}</span></div>
+          <div class="mi-item"><span class="mi-lbl">Email</span><span class="mi-val">${q.cliente.email}</span></div>
+          <div class="mi-item"><span class="mi-lbl">Teléfono</span><span class="mi-val">${q.cliente.tel||'—'}</span></div>
+          <div class="mi-item"><span class="mi-lbl">Válido hasta</span><span class="mi-val">${q.caduca_at}</span></div>
+        </div>
+        ${q.cliente.notas?`<div class="mi-nota">"${q.cliente.notas}"</div>`:''}
+      </div>
+
+      <div class="ms">
+        <div class="ms-title">Espacios configurados</div>
+        ${(q.config_espacios||[]).map(e=>`
+          <div class="me-card">
+            <div class="me-head">
+              <span class="me-nombre">${e.label}</span>
+              <span class="me-m2">${e.m2} m²</span>
+            </div>
+            <div class="me-trajs">${e.trabajos.join(' · ')}</div>
+            ${e.mat?`<div class="me-mat">📦 ${e.mat}</div>`:''}
+            ${e.notas?`<div class="me-nota">💬 ${e.notas}</div>`:''}
+          </div>`).join('')}
+      </div>
+
+      ${q.extras&&q.extras.length?`
+      <div class="ms">
+        <div class="ms-title">Extras incluidos</div>
+        <div>${q.extras.map(e=>`<span class="extra-tag">${e}</span>`).join('')}</div>
+      </div>`:''}
+
+      <div class="ms">
+        <div class="ms-title">Desglose económico</div>
+        <div style="overflow-x:auto">
+          <table class="des-tbl">
+            <thead><tr><th>Concepto</th><th style="text-align:right">Cant.</th><th style="text-align:right">P. ud.</th><th style="text-align:right">Subtotal</th></tr></thead>
+            <tbody>
+              ${q.desglose.map(d=>`
+                <tr class="${d.tipo==='margen'?'row-margen':''}">
+                  <td>${d.concepto}</td>
+                  <td style="text-align:right;color:var(--muted)">${d.cantidad}</td>
+                  <td style="text-align:right;color:var(--muted)">${r(d.precio_ud).toFixed(2)}€</td>
+                  <td style="text-align:right;font-weight:500">${fmtEur(d.subtotal)}</td>
+                </tr>`).join('')}
+            </tbody>
+          </table>
+        </div>
+        <div class="des-tots">
+          <div class="dt-row"><span style="color:var(--muted)">IVA (${MOTOR.iva}%)</span><span>${fmtEur(q.iva)}</span></div>
+          <div class="dt-row dt-total"><span>Total orientativo</span><span>${fmtEur(q.total)}</span></div>
+        </div>
+      </div>
+
+      <div class="ms">
+        <div class="ms-title">Notas del administrador</div>
+        <textarea class="cfg-input" rows="3" id="modal-comment-inp" style="width:100%" placeholder="Observaciones internas (no se envían al cliente)…">${escH(q.comentarios_admin||'')}</textarea>
+        <button class="abtn abtn-ghost" style="margin-top:8px;font-size:12px" onclick="guardarComentario()">Guardar nota</button>
+      </div>
+
+      ${q.historial&&q.historial.length?`
+      <div class="ms">
+        <div class="ms-title">Historial de estados</div>
+        ${q.historial.map(h=>`
+          <div class="hist-row">
+            <span class="hist-fecha">${h.fecha}</span>
+            <span class="hist-estado">${h.estado}</span>
+            ${h.nota?`<span class="hist-nota">${h.nota}</span>`:''}
+          </div>`).join('')}
+      </div>`:''}
+    </div>
+    <div class="modal-ft">${ftBtns}</div>`;
+}
+
+// ── MODAL EDIT ────────────────────────────────────────────────────
+function _editRow(d) {
+  return `<tr id="er-${d.id}">
+    <td><input class="ei" value="${escH(d.concepto)}" oninput="eLn('${d.id}','concepto',this.value)" style="min-width:200px"></td>
+    <td><input class="ei en" type="number" min="0" step="0.01" value="${d.cantidad}" oninput="eLn('${d.id}','cantidad',this.value)"></td>
+    <td><input class="ei en" type="number" min="0" step="0.01" value="${d.precio_ud}" oninput="eLn('${d.id}','precio_ud',this.value)"></td>
+    <td class="esb" id="esb-${d.id}">${r(d.subtotal).toFixed(2)}€</td>
+    <td><button class="del-btn" onclick="deLn('${d.id}')">✕</button></td>
+  </tr>`;
+}
+
+function _buildEdit() {
+  const q=editingQ;
+  const sum=r(q.desglose.filter(d=>d.tipo!=='margen').reduce((a,d)=>a+d.subtotal,0));
+  const mrg=r(sum*MOTOR.margen_valor/100);
+
+  return `
+    <div class="modal-head">
+      <div>
+        <h3>Editar · ${q.ref}</h3>
+        <div class="mh-sub">${q.tipo} · ${q.cliente.nombre}</div>
+      </div>
+      <span style="font-size:12px;color:var(--muted)">Modo edición</span>
+    </div>
+    <div class="modal-scroll">
+      <div class="ms">
+        <div class="ms-title">Líneas del presupuesto</div>
+        <div style="overflow-x:auto">
+          <table class="edit-tbl">
+            <thead><tr><th style="min-width:200px">Concepto</th><th>Cant.</th><th>P. ud. (€)</th><th>Subtotal</th><th></th></tr></thead>
+            <tbody id="etbody">${q.desglose.map(d=>_editRow(d)).join('')}</tbody>
+          </table>
+        </div>
+        <button class="abtn abtn-ghost" onclick="addLn()" style="margin-top:10px;font-size:13px">+ Añadir línea</button>
+      </div>
+
+      <div class="ms">
+        <div class="ms-title">Totales</div>
+        <div class="edit-tots">
+          <div class="et-row"><span>Suma neta (sin margen)</span><span id="et-sum">${sum.toFixed(2)}€</span></div>
+          <div class="et-row"><span>Margen profesional (${MOTOR.margen_valor}%)</span><span id="et-mrg">${mrg.toFixed(2)}€</span></div>
+          <div class="et-row"><span>Base imponible</span><span id="et-base">${r(sum+mrg).toFixed(2)}€</span></div>
+          <div class="et-row"><span>IVA (${MOTOR.iva}%)</span><span id="et-iva">${r(q.iva).toFixed(2)}€</span></div>
+          <div class="et-row et-total"><span>Total</span><span id="et-tot">${r(q.total).toFixed(2)}€</span></div>
+        </div>
+        <button class="abtn abtn-ghost" onclick="recalcTot()" style="font-size:12px;margin-top:10px">↻ Recalcular margen + IVA + total</button>
+      </div>
+
+      <div class="ms">
+        <div class="ms-title">Notas del administrador</div>
+        <textarea class="cfg-input" rows="3" id="edit-comment" style="width:100%" placeholder="Observaciones internas…">${escH(q.comentarios_admin||'')}</textarea>
+      </div>
+    </div>
+    <div class="modal-ft">
+      <button class="abtn abtn-primary" onclick="guardarEd()">💾 Guardar cambios</button>
+      ${q.estado==='pendiente_revision'?`<button class="abtn abtn-ok" onclick="guardarEd();aprobarQuote()">✓ Guardar y aprobar</button>`:''}
+      <button class="abtn abtn-ghost" onclick="cancelarEdicion()">Cancelar</button>
+    </div>`;
+}
+
+// ── EDIT FUNCTIONS ────────────────────────────────────────────────
+function eLn(id, field, val) {
+  const d=editingQ.desglose.find(d=>d.id===id);
+  if(!d) return;
+  if(field==='concepto'){ d.concepto=val; return; }
+  d[field]=parseFloat(val)||0;
+  d.subtotal=r(d.cantidad*d.precio_ud);
+  const el=document.getElementById('esb-'+id);
+  if(el) el.textContent=d.subtotal.toFixed(2)+'€';
+  _updEditSum();
+}
+function _updEditSum() {
+  const sum=r(editingQ.desglose.filter(d=>d.tipo!=='margen').reduce((a,d)=>a+d.subtotal,0));
+  const mrg=r(sum*MOTOR.margen_valor/100);
+  const base=r(sum+mrg);
+  const s=document.getElementById('et-sum');   if(s) s.textContent=sum.toFixed(2)+'€';
+  const m=document.getElementById('et-mrg');   if(m) m.textContent=mrg.toFixed(2)+'€';
+  const b=document.getElementById('et-base');  if(b) b.textContent=base.toFixed(2)+'€';
+}
+function deLn(id) {
+  editingQ.desglose=editingQ.desglose.filter(d=>d.id!==id);
+  const tb=document.getElementById('etbody');
+  if(tb) tb.innerHTML=editingQ.desglose.map(d=>_editRow(d)).join('');
+  _updEditSum();
+}
+function addLn() {
+  const newId='n'+Date.now();
+  const newLine={id:newId,concepto:'',tipo:'extra',cantidad:1,precio_ud:0,subtotal:0};
+  editingQ.desglose.push(newLine);
+  const tb=document.getElementById('etbody');
+  if(tb){
+    tb.insertAdjacentHTML('beforeend',_editRow(newLine));
+    const lastRow=document.getElementById('er-'+newId);
+    lastRow?.querySelector('.ei')?.focus();
+  }
+}
+function recalcTot() {
+  const sum=r(editingQ.desglose.filter(d=>d.tipo!=='margen').reduce((a,d)=>a+d.subtotal,0));
+  const mrgVal=r(sum*MOTOR.margen_valor/100);
+  let mLine=editingQ.desglose.find(d=>d.tipo==='margen');
+  if(mLine){
+    mLine.concepto=`Margen profesional (${MOTOR.margen_valor}%)`;
+    mLine.precio_ud=mrgVal; mLine.subtotal=mrgVal;
+    const el=document.getElementById('esb-'+mLine.id);
+    if(el) el.textContent=mrgVal.toFixed(2)+'€';
+    const inp=document.querySelector(`#er-${mLine.id} .en:last-of-type`);
+    if(inp) inp.value=mrgVal;
+  } else {
+    const newId='mrg_'+Date.now();
+    const mNew={id:newId,concepto:`Margen profesional (${MOTOR.margen_valor}%)`,tipo:'margen',cantidad:1,precio_ud:mrgVal,subtotal:mrgVal};
+    editingQ.desglose.push(mNew);
+    const tb=document.getElementById('etbody');
+    if(tb) tb.insertAdjacentHTML('beforeend',_editRow(mNew));
+  }
+  const base=r(sum+mrgVal);
+  editingQ.iva  =r(base*MOTOR.iva/100);
+  editingQ.total=r(base+editingQ.iva);
+  const s=document.getElementById('et-sum');  if(s) s.textContent=sum.toFixed(2)+'€';
+  const m=document.getElementById('et-mrg');  if(m) m.textContent=mrgVal.toFixed(2)+'€';
+  const b=document.getElementById('et-base'); if(b) b.textContent=base.toFixed(2)+'€';
+  const iv=document.getElementById('et-iva'); if(iv) iv.textContent=editingQ.iva.toFixed(2)+'€';
+  const t=document.getElementById('et-tot');  if(t) t.textContent=editingQ.total.toFixed(2)+'€';
+  toast('Totales recalculados');
+}
+function guardarEd() {
+  const cEl=document.getElementById('edit-comment');
+  if(cEl) editingQ.comentarios_admin=cEl.value;
+  const idx=QUOTES.findIndex(q=>q.id===editingQ.id);
+  if(idx!==-1){
+    editingQ.historial=editingQ.historial||[];
+    editingQ.historial.push({estado:'editado',fecha:hoyStr(),nota:'Modificado por administrador'});
+    QUOTES[idx]=editingQ;
+  }
+  editingQ=null; modalMode='view';
+  _renderModal();
+  renderQuotes(); renderDashboard();
+  toast('Cambios guardados correctamente');
+}
+function guardarComentario() {
+  const q=QUOTES.find(q=>q.id===modalQId);
+  if(!q) return;
+  const el=document.getElementById('modal-comment-inp');
+  if(el){ q.comentarios_admin=el.value; toast('Nota guardada'); }
+}
+
+// ── APPROVE / REJECT ──────────────────────────────────────────────
+function aprobarQuote() {
+  if(!confirm('¿Marcar como aprobado y enviar al cliente por email?')) return;
+  const q=QUOTES.find(q=>q.id===modalQId);
+  if(!q) return;
+  q.estado='enviado';
+  q.historial=q.historial||[];
+  q.historial.push({estado:'enviado',fecha:hoyStr(),nota:'Aprobado y enviado por administrador'});
+  toast('Presupuesto enviado a '+q.cliente.email);
+  modalMode='view'; _renderModal();
+  renderQuotes(); renderDashboard();
+}
+function rechazarQuote() {
+  const motivo=window.prompt('Motivo del rechazo (se guardará en el historial):') ?? '';
+  if(motivo===null) return;
+  const q=QUOTES.find(q=>q.id===modalQId);
+  if(!q) return;
+  q.estado='rechazado';
+  q.historial=q.historial||[];
+  q.historial.push({estado:'rechazado',fecha:hoyStr(),nota:motivo||'Rechazado por administrador'});
+  toast('Presupuesto rechazado','warn');
+  modalMode='view'; _renderModal();
+  renderQuotes(); renderDashboard();
+}
+function renovarQuote() {
+  const q=QUOTES.find(q=>q.id===modalQId);
+  if(!q) return;
+  const dias=MOTOR.validez||30;
+  const nueva=new Date(); nueva.setDate(nueva.getDate()+dias);
+  q.caduca_at=nueva.toLocaleDateString('es-ES');
+  q.estado='pendiente_revision';
+  q.historial=q.historial||[];
+  q.historial.push({estado:'pendiente_revision',fecha:hoyStr(),nota:`Presupuesto renovado +${dias} días`});
+  toast('Presupuesto renovado hasta '+q.caduca_at);
+  _renderModal(); renderQuotes(); renderDashboard();
+}
+
+// ── CONFIG ────────────────────────────────────────────────────────
+function guardarCfgSec(sec) {
+  if(sec==='calculo'){
+    MOTOR.margen_tipo  =document.getElementById('cfg-margen-tipo')?.value||MOTOR.margen_tipo;
+    MOTOR.margen_valor =parseFloat(document.getElementById('cfg-margen-val')?.value)||MOTOR.margen_valor;
+    MOTOR.iva          =parseFloat(document.getElementById('cfg-iva')?.value)||MOTOR.iva;
+    MOTOR.minimo       =parseFloat(document.getElementById('cfg-minimo')?.value)||MOTOR.minimo;
+    MOTOR.validez      =parseInt(document.getElementById('cfg-validez')?.value)||MOTOR.validez;
+    MOTOR.desplazamiento=parseFloat(document.getElementById('cfg-desplaz')?.value)||MOTOR.desplazamiento;
+  }
+  if(sec==='seguridad'){
+    const p1=document.getElementById('cfg-pwd-new')?.value;
+    const p2=document.getElementById('cfg-pwd-confirm')?.value;
+    if(p1&&p1!==p2){ toast('Las contraseñas no coinciden','err'); return; }
+    if(p1) CFG.LOGIN_PASS=p1;
+  }
+  const saved=document.getElementById('saved-'+sec);
+  if(saved){ saved.style.display='inline'; setTimeout(()=>saved.style.display='none',2500); }
+  toast(`Sección "${sec}" guardada`);
+}
+function toggleAutoEnvio() {
+  autoEnvio=!autoEnvio;
+  document.getElementById('auto-track')?.classList.toggle('on',autoEnvio);
+  const lbl=document.getElementById('auto-label');
+  if(lbl) lbl.textContent=autoEnvio?'Envío automático al cliente':'Revisión previa activada (recomendado)';
+}
+
+// ── TOAST ─────────────────────────────────────────────────────────
+function toast(msg, tipo) {
+  tipo=tipo||'ok';
+  const el=document.getElementById('toast');
+  el.textContent=msg; el.className='show '+tipo;
+  clearTimeout(el._t);
+  el._t=setTimeout(()=>{el.className='';},3500);
+}
+
+// ── INIT ──────────────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', () => {
+  document.getElementById('fecha-hoy').textContent =
+    new Date().toLocaleDateString('es-ES',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
+});
+</script>
+</body>
+</html>
