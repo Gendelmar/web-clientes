@@ -541,6 +541,7 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
 .dv-ok{color:var(--ok);font-weight:700}.dv-no{color:var(--amber)}
 .ag-ev.reserva{background:#fff8e1;border-left:3px dashed var(--amber)}
 .chip-conf{display:inline-block;margin-left:4px;font-size:11px;padding:2px 8px;border-radius:10px;background:#fff1d6;color:#8a5a00;font-weight:600}
+input[type=search]{padding:7px 10px;border:1px solid var(--border);border-radius:8px;font-family:inherit;font-size:13px;min-width:200px;background:#fff}
 @media(max-width:820px){.msg-layout{grid-template-columns:1fr}.msg-layout.con-hilo .conv-list{display:none}.msg-layout:not(.con-hilo) .conv-hilo{display:none}.volver-lista{display:inline-flex}.bub{max-width:92%}.conv-list{max-height:none}}
 @media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 </style>
@@ -2921,6 +2922,172 @@ function __testsImpl(){
   a('DB: scorePrioridad corre sin error en todos', (()=>{try{DB.casos.forEach(c=>scorePrioridad(c,DB.cfg,hoy()));return true;}catch(e){return false;}})());
   a('DB: evaluarRelojes corre sin error en todos', (()=>{try{DB.casos.forEach(c=>evaluarRelojes(c,DB.cfg,hoy()));return true;}catch(e){return false;}})());
 
+
+  // ═════════ PROTOTIPO V2 · bloques A y B (R-01…R-15) ═════════
+  {
+  const cl = o => JSON.parse(JSON.stringify(o));
+  const C = id => DB.casos.find(c => c.id === id);
+  // R-03 horquilla ±5 % configurable; solo la V1 es un rango
+  a('R-03 horquillaPct por defecto 5 y configurable', horquillaPct(null) === 5 && horquillaPct({ horquillaV1Pct:8 }) === 8 && DB.cfg.horquillaV1Pct === 5);
+  const hqA5 = calcularHorquilla(12345.67, null, 5);
+  a('R-03 apéndice A.5: 12.345,67 → lo 11.728,39 · hi 12.962,95', hqA5.lo === 11728.39 && hqA5.hi === 12962.95);
+  const v1t = { id:'V1', tipo:'estimacion', totales:{ total:12345.67, lo:hqA5.lo, hi:hqA5.hi } };
+  a('R-03 V1 se muestra como rango redondeado hacia fuera (11.728 – 12.963)', rangoVersion(v1t).exacto === false && rangoVersion(v1t).lo === 11728 && rangoVersion(v1t).hi === 12963);
+  a('R-03 V2 en adelante: importe exacto, sin rango', rangoVersion({ id:'V2', tipo:'revisada', totales:{ total:12345.67, lo:1, hi:2 } }).exacto === true && rangoVersion({ id:'V3', tipo:'propuesta', totales:{ total:900 } }).hi === 900);
+  a('R-03 la V2 se etiqueta «Estimación revisada · sujeta a visita»', etiquetaVersion({ id:'V2', tipo:'revisada' }, { visita:{ estado:'confirmada' } }) === 'Estimación revisada · sujeta a visita');
+  const cfgH = cl(DB.cfg); cfgH.horquillaV1Pct = 10; const dbH = { casos:[{ versiones:[{ id:'V1', tipo:'estimacion', estado:'vigente', totales:{ total:10000, lo:9500, hi:10500 } }] }], cfg:cfgH };
+  a('R-03 cambiar la horquilla recalcula las V1 (10 % → 9.000–11.000)', recalcularHorquillas(dbH) === 1 && dbH.casos[0].versiones[0].totales.lo === 9000 && dbH.casos[0].versiones[0].totales.hi === 11000);
+  a('R-03 las V1 de ejemplo llevan ±5 %', DB.casos.every(c => { const v = c.versiones.find(x => esVersionConRango(x)); return !v || Math.abs((v.totales.hi - v.totales.total) / v.totales.total - 0.05) < 0.001; }));
+  const cAcc = cl(C('REF-0016')); cAcc.versiones[0].totales.hi = 3000; a('R-03 acción «sin visita» usa el hi de la V1 (≤ importe máximo)', accionSugerida(cAcc, DB.cfg).id !== undefined && rangoVersion(cAcc.versiones[0]).hi === 3000);
+
+  // R-08 · documentos (apéndice B)
+  a('R-08 DNI válido 12345678Z; letra errónea rechazada', validarDNI('12345678Z') && !validarDNI('12345678A') && !validarDNI('1234567Z'));
+  a('R-08 NIE válido X1234567L (Y y Z también) y letra errónea rechazada', validarNIE('X1234567L') && !validarNIE('X1234567A') && validarNIE('Y' + '1234567' + LETRAS_DNI[(1 * 10000000 + 1234567) % 23]) && validarNIE('Z' + '1234567' + LETRAS_DNI[(2 * 10000000 + 1234567) % 23]));
+  a('R-08 CIF válido B12345674 (dígito); P1234567D (letra); control erróneo rechazado', validarCIF('B12345674') && validarCIF('P1234567D') && !validarCIF('B12345675') && !validarCIF('P12345674') && !validarCIF('A1234567'));
+  a('R-08 se normalizan mayúsculas, espacios y guiones', validarDNI('12345678-z') && validarDNI(' 12 345 678 Z ') && validarCIF('b-12345674'));
+  a('R-08 validarNIF según tipo (particular DNI/NIE, empresa CIF)', validarNIF('particular', 'X1234567L') && validarNIF('empresa', 'B12345674') && !validarNIF('empresa', '12345678Z'));
+  a('R-01/R-08 código postal: 5 dígitos con provincia 01–52', cpValido('28001') && cpValido('01001') && cpValido('52999') && !cpValido('00123') && !cpValido('53001') && !cpValido('2800') && !cpValido('abcde'));
+  a('R-08 comparar nombres sin tildes ni mayúsculas', compararNombres('José Pérez Ñandú', ' jose  PEREZ ñandu') && !compararNombres('Jose Perez', 'Jose Gomez') && nombreCompletoValido('Ana López') && !nombreCompletoValido('Ana'));
+
+  // R-04 · datos de la vivienda
+  const c4 = C('REF-0004'), c6 = C('REF-0006'), c5 = C('REF-0005');
+  const e4 = evaluarDatosVivienda(c4, DB.cfg), e6 = evaluarDatosVivienda(c6, DB.cfg);
+  a('R-04 REF-0004 (inquilino sin permiso) incompleto: pide el permiso del propietario', !e4.completos && e4.faltan.some(f => f.id === 'permiso') && e4.total === 5);
+  a('R-04 REF-0006 completo con indicador 5 de 5', e6.completos && e6.hechos === 5);
+  a('R-04 datos de ejemplo: ≥3 casos completos y ≥3 incompletos', DB.casos.filter(c => evaluarDatosVivienda(c, DB.cfg).completos).length >= 3 && DB.casos.filter(c => !evaluarDatosVivienda(c, DB.cfg).completos).length >= 3);
+  a('R-04 discrepancia: vivirá en la casa y el configurador no tenía «obra habitada»', e6.discrepancias.length === 1 && e6.discrepancias[0].id === 'habitada');
+  const c4b = cl(c4);
+  a('R-04 la fecha de inicio no puede ser anterior a hoy', aplicarDatosVivienda(c4b, { inicio:rel(-1) }, DB.cfg).ok === false && aplicarDatosVivienda(c4b, { anioConstruccion:1700 }, DB.cfg).ok === false && aplicarDatosVivienda(c4b, { ubicacion:{ cp:'99999' } }, DB.cfg).ok === false);
+  const rs4 = aplicarDatosVivienda(c4b, { permisoPropietario:true, inicio:rel(10), habitada:'no', ubicacion:{ piso:'2º', puerta:'A' } }, DB.cfg);
+  a('R-04 completar los datos actualiza la vivienda (antigüedad, propietario, inicio, dirección)', rs4.ok && rs4.evaluacion.completos && c4b.vivienda.fechaInicioDeseada === rel(10) && c4b.vivienda.propietario === false && c4b.vivienda.antiguedad === 'desconocida' && /Calle Real 8/.test(direccionDe(c4b)) && c4b.datosVivienda.completos === true);
+  a('R-04 campos obligatorios configurables (cfg.viviendaObligatorios)', evaluarDatosVivienda(c5, Object.assign({}, DB.cfg, { viviendaObligatorios:['ubicacion'] })).total === 1);
+  a('R-04 casos nuevos de ejemplo llevan datosVivienda inicializado', DB.casos.every(c => c.datosVivienda && typeof c.datosVivienda.completos === 'boolean'));
+
+  // R-08 · facturación
+  const fOk = nuevoFiscal({ nombre:'Laura Martín Gil', nif:'12345678Z', domicilio:{ calle:'C/ Alcalá', numero:'245', cp:'28027', localidad:'Madrid' }, usoVivienda:'si' });
+  a('R-08 facturación de particular completa', evaluarFiscal(fOk, c6).ok === true);
+  a('R-08 falta de nombre completo, DNI inválido o sin declaración se detectan', ['nombre','nif','usoVivienda'].every(k => { const f = cl(fOk); if (k === 'nombre') f.nombre = 'Laura'; else if (k === 'nif') f.nif = '12345678A'; else f.usoVivienda = null; return evaluarFiscal(f, c6).faltan.some(x => x.id === k); }));
+  a('R-08 empresa: razón social y CIF', evaluarFiscal(nuevoFiscal({ tipo:'empresa', razonSocial:'Obras SL', cif:'B12345674', domicilio:fOk.domicilio, usoVivienda:'no' }), c6).ok && !evaluarFiscal(nuevoFiscal({ tipo:'empresa', razonSocial:'Obras SL', cif:'B12345670', domicilio:fOk.domicilio, usoVivienda:'no' }), c6).ok);
+  a('R-08 «misma dirección de la obra» copia la ubicación exacta', evaluarFiscal(nuevoFiscal({ nombre:'Ana Pérez', nif:'12345678Z', mismaDireccion:true, usoVivienda:'si' }), c6).ok && aplicarFiscal(cl(c6), { nombre:'Ana Pérez', nif:'12345678z', mismaDireccion:true, usoVivienda:'si' }).domicilio.calle === 'Calle Mayor');
+  a('R-09 proforma exige facturación completa (A9)', requisitos('generar_proforma', C('REF-0010'), {}).ok === false && requisitos('generar_proforma', C('REF-0009'), {}).ok === true);
+  a('R-08 los casos de ejemplo con facturación la traen completa y con NIF válido', ['REF-0008','REF-0009','REF-0011','REF-0012'].every(i => C(i).fiscal.completos === true && validarNIF(C(i).fiscal.tipo, C(i).fiscal.nif || C(i).fiscal.cif)));
+
+  // R-07 · reserva de visita
+  const cR = cl(c5); cR.estado = 'visita_confirmada'; cR.visita.estado = 'confirmada'; cR.visita.elegida = cR.visita.franjasOfrecidas[0]; const t0 = ahoraMs();
+  a('R-07 la visita se cobra al confirmar por defecto y reserva 48 h', DB.cfg.visita.cobroCuando === 'al_confirmar' && reservaHoras(DB.cfg) === 48 && visitaRequierePago(cR, DB.cfg) === true);
+  iniciarReservaVisita(cR, DB.cfg, t0);
+  a('R-07 reserva: cobro pendiente_pago con caducidad a las 48 h', cR.visita.cobro.estado === 'pendiente_pago' && cR.visita.cobro.reservaExpiraAt === t0 + 48 * MS_HORA && estadoReserva(cR, t0).activa && !estadoReserva(cR, t0).vencida && visitaReservadaSinPago(cR));
+  a('R-07 se recuerda al llegar a la mitad y se libera al vencer', !estadoReserva(cR, t0 + 10 * MS_HORA).recordar && estadoReserva(cR, t0 + 25 * MS_HORA).recordar && estadoReserva(cR, t0 + 49 * MS_HORA).vencida);
+  a('R-07 reserva configurable (reservaPagoHoras)', reservaHoras({ visita:{ reservaPagoHoras:6 } }) === 6 && (iniciarReservaVisita(cl(cR), { visita:{ reservaPagoHoras:6 }, zonaTramos:DB.cfg.zonaTramos }, t0), true));
+  const cL = cl(cR); liberarReserva(cL, 'prueba');
+  a('R-07 liberar la reserva devuelve a visita_propuesta sin descartar nada', cL.estado === 'visita_propuesta' && cL.visita.elegida === null && cL.visita.estado === 'propuesta' && cL.visita.cobro.estado === 'pendiente' && cL.eventos.some(e => /Hueco liberado/.test(e.texto)) && cL.visita.franjasOfrecidas.length === 3);
+  a('R-07 «política no cobra / se cobra en la visita»: se omite el pago', visitaRequierePago(cR, Object.assign({}, DB.cfg, { visita:Object.assign({}, DB.cfg.visita, { cobroCuando:'en_visita' }) })) === false && visitaRequierePago(cR, Object.assign({}, DB.cfg, { visita:Object.assign({}, DB.cfg.visita, { cobra:false }) })) === false);
+  const cRel = cl(cR); cRel.visita.cobro.reservaExpiraAt = ahoraMs() - 1000;
+  a('R-07 evaluarRelojes pide liberar la reserva vencida', evaluarRelojes(cRel, DB.cfg, hoy()).some(x => x.accion === 'liberar_reserva'));
+  const dbAg = { casos:[cR], cfg:DB.cfg };
+  a('R-07 la franja reservada sigue ocupando la agenda hasta que se libera', visitasOcupadas([cR]).length === 1 && visitasOcupadas([cL]).length === 0 && dbAg.casos.length === 1);
+
+  // R-11 · avisos de pago y justificantes
+  const dbP = { casos:[cl(c5)], cobros:[], avisosPago:[], cfg:cl(DB.cfg), notificaciones:[] }; const cP = dbP.casos[0]; cP.visita.cobro = { importe:60, estado:'justificante_enviado' };
+  const av1 = crearAvisoPago(dbP, cP, { tipo:'visita', importe:60, medio:'transferencia', adjuntoId:'ADJ-X' }), av2 = crearAvisoPago(dbP, cP, { tipo:'plan', importe:500, medio:'transferencia', tramo:'Señal' });
+  a('R-11 los avisos nuevos quedan «pendiente» en la cola', avisosPendientes(dbP).length === 2 && avisosPendientes(dbP, cP.id).length === 2 && av1.estado === 'pendiente');
+  a('R-11/A3 transferencia sin justificante no se confirma (salvo nota «sin justificante»)', requisitos('confirmar_cobro', cP, { aviso:av2, cfg:dbP.cfg }).ok === false && requisitos('confirmar_cobro', cP, { aviso:av2, cfg:dbP.cfg, datos:{ sinJustificante:true, nota:'Recibido en mano' } }).ok === true && requisitos('confirmar_cobro', cP, { aviso:av2, cfg:dbP.cfg, datos:{ sinJustificante:true } }).ok === false);
+  const mov1 = confirmarAvisoPago(dbP, cP, av1, {});
+  a('R-11 confirmar crea el movimiento con el justificante y deja el cobro de la visita «cobrada»', mov1.justificanteId === 'ADJ-X' && mov1.tipo === 'visita' && dbP.cobros.length === 1 && av1.estado === 'confirmado' && cP.visita.cobro.estado === 'cobrada' && mov1.descontable === true);
+  a('R-11 un aviso confirmado no se puede confirmar dos veces (acción repetida)', (() => { try { confirmarAvisoPago(dbP, cP, av1, {}); return false; } catch (e) { return true; } })());
+  const mov2 = confirmarAvisoPago(dbP, cP, av2, { importe:480, nota:'Pagó 20 € menos', sinJustificante:true });
+  a('R-11 importe editable con nota y marca «sin justificante»', mov2.importe === 480 && mov2.sinJustificante === true && /20 € menos/.test(mov2.nota));
+  const av3 = crearAvisoPago(dbP, cP, { tipo:'plan', importe:100, medio:'efectivo' });
+  a('R-11 efectivo se confirma sin justificante', requisitos('confirmar_cobro', cP, { aviso:av3, cfg:dbP.cfg }).ok === true && justificanteObligatorio(dbP.cfg, 'efectivo') === false && justificanteObligatorio(dbP.cfg, 'bizum') === true);
+  const av4 = crearAvisoPago(dbP, cP, { tipo:'plan', importe:90, medio:'bizum', adjuntoId:'ADJ-Y' });
+  a('R-11 rechazar exige motivo y deja el aviso rechazado', (() => { try { rechazarAvisoPago(dbP, cP, av4, ' '); return false; } catch (e) { return true; } })() && rechazarAvisoPago(dbP, cP, av4, 'No se lee').estado === 'rechazado' && av4.motivo === 'No se lee' && avisosPendientes(dbP).length === 1);
+  a('R-11 datos de ejemplo: 2 avisos pendientes (imagen y PDF), 1 rechazado y movimientos con y sin justificante', DB.avisosPago.filter(x => x.estado === 'pendiente').length === 2 && DB.avisosPago.filter(x => x.estado === 'rechazado').length === 1 && adjuntosDemo().find(x => x.id === 'ADJ-D1').tipo === 'image/svg+xml' && adjuntosDemo().find(x => x.id === 'ADJ-D2').tipo === 'application/pdf' && DB.cobros.some(m => m.justificanteId) && DB.cobros.some(m => m.sinJustificante));
+  a('R-13 adjuntos de ejemplo: marcadores SVG y PDF simulado generados en código', /^data:image\/svg\+xml/.test(svgMarcador('x', 10)) && /^data:application\/pdf;base64,/.test(pdfSimulado('Justificante')) && atob(pdfSimulado('Justificante').split(',')[1]).startsWith('%PDF-1.4'));
+  a('R-13 los justificantes de los datos de ejemplo están en el servicio de adjuntos y no en los datos', DB.avisosPago.every(x => !x.data && !x.adjunto) && DB.cobros.every(m => !m.data) && typeof Adj.url === 'function');
+
+  // R-10 · mensajes y notificaciones
+  const legacy = { id:'T-MIG', eventos:[{ fecha:rel(-3), tipo:'mensaje', texto:'Pedida info', autor:'reformista' }, { fecha:rel(-1), tipo:'mensaje', texto:'Aquí van las fotos', autor:'cliente' }, { fecha:rel(-1), tipo:'transicion', texto:'x', autor:'sistema' }] };
+  migrarMensajes(legacy); const nMig = legacy.mensajes.length; migrarMensajes(legacy);
+  a('R-10 migración: los eventos «mensaje» pasan a caso.mensajes[] (idempotente)', nMig === 2 && legacy.mensajes.length === 2 && legacy.mensajes[1].autor === 'cliente' && legacy.mensajes[0].autor === 'reformista' && legacy.eventos[0].msgId === 'M1' && legacy.mensajes.every(m => m.leido.adm && m.leido.cli && Array.isArray(m.adjuntos) && m.tipo === 'mensaje'));
+  const cM = { id:'T-MSG', eventos:[], mensajes:[] };
+  const m1 = escribirMensaje(cM, { autor:'cliente', texto:'Hola', adjuntos:['ADJ-1'], tipo:'aviso_pago' }), m2 = escribirMensaje(cM, { autor:'reformista', texto:'Respondo' });
+  a('R-10 escribirMensaje: autor, tipo, adjuntos y lectura por lado', m1.leido.cli === true && m1.leido.adm === false && m2.leido.adm === true && m2.leido.cli === false && m1.adjuntos[0] === 'ADJ-1' && m1.tipo === 'aviso_pago' && cM.eventos.length === 2);
+  a('R-10 no leídos de cada lado y marcar como leído al abrir', mensajesNoLeidos(cM, 'adm') === 1 && mensajesNoLeidos(cM, 'cli') === 1 && marcarMensajesLeidos(cM, 'adm') === 1 && mensajesNoLeidos(cM, 'adm') === 0 && mensajesNoLeidos(cM, 'cli') === 1);
+  const ntDb = { casos:[cM], notificaciones:[] }; notificar(ntDb, 'T-MSG', 'justificante', 'x', { clave:'k1' }); notificar(ntDb, 'T-MSG', 'justificante', 'x', { clave:'k1' });
+  a('R-10 las notificaciones con la misma clave no se duplican y se pueden resolver', ntDb.notificaciones.length === 1 && resolverNotificacion(ntDb, ntDb.notificaciones[0].id).resuelta === true);
+  const convs = conversaciones(DB);
+  a('R-10 conversaciones por caso con último mensaje, orden y contador de no leídos (≥4 hilos, de ambos lados)', convs.length >= 4 && convs.some(x => x.noLeidos > 0) && DB.casos.some(c => mensajesNoLeidos(c, 'cli') > 0) && convs[0].ultimo.fecha >= convs[convs.length - 1].ultimo.fecha && convs.some(x => x.avisoPago));
+  a('R-10 los eventos de mensajes antiguos de los datos de ejemplo quedaron migrados', C('REF-0003').mensajes.some(m => m.autor === 'cliente' && /medidas/.test(m.texto)) && DB.casos.every(c => Array.isArray(c.mensajes)));
+  const cRelj = cl(C('REF-0004')); const dbN = { casos:[cRelj], notificaciones:[] }; sincronizarNotificaciones(dbN, DB.cfg, hoy());
+  a('R-10 las notificaciones de reloj se derivan de evaluarRelojes y se resuelven solas', dbN.notificaciones.some(n => n.tipo === 'recordatorio' && !n.resuelta) && (cRelj.estado = 'en_triaje', sincronizarNotificaciones(dbN, DB.cfg, hoy()), dbN.notificaciones.every(n => n.resuelta)));
+  const ct = contadoresMensajes(DB);
+  a('R-10 contadores: no leídos + notificaciones abiertas + cobros por confirmar', ct.noLeidos > 0 && ct.notif > 0 && ct.cobros === 2 && ct.total === ct.noLeidos + ct.notif && DB.notificaciones.length >= 8);
+  a('R-10 las plantillas nuevas del apéndice D existen y se rellenan', ['completa_datos','pagar_visita','justificante_rechazado','recordar_datos','cambio_resuelto','incidencia_obra','reclamar_conformidad'].every(k => PLANTILLAS_MSG[k]) && /\{\{enlace\}\}/.test(PLANTILLAS_MSG.completa_datos) && !/\{\{/.test(fillTpl(PLANTILLAS_MSG.completa_datos, varsDe(c6))) && /Hola María/.test(fillTpl(PLANTILLAS_MSG.recordar_datos, varsDe(C('REF-0001'), { concepto:'x', enlace:'e' }))));
+
+  // R-14 · el cierre solo lo hace el cliente
+  const cC = cl(C('REF-0011')); cC.obra.remates.forEach(r => r.estado = 'resuelto'); cC.obra.cierre.terminadaAt = rel(-20);
+  a('R-14 el reformista no puede transitar a «cerrada» (ni registrar conformidad) aunque todo esté resuelto', (() => { try { transitar(cl(cC), 'cerrada', { autor:'reformista' }); return false; } catch (e) { return /cliente/.test(e.message); } })() && requisitos('cerrar_obra', cC, {}).ok === false && puedeCerrarObra(cC, DB.cfg, 'plazo').ok === false);
+  a('R-14 pasado el plazo solo se reclama la conformidad (nunca cierra)', evaluarRelojes(cC, DB.cfg, hoy()).some(x => x.tipo === 'reclamar_conformidad') && !evaluarRelojes(cC, DB.cfg, hoy()).some(x => x.accion === 'cerrar_por_plazo') && pendienteConformidad(cC) && /Entregada, pendiente de conformidad del cliente/.test(chipConformidad(cC)));
+  const dbCierre = { cfg:DB.cfg, cobros:DB.cobros }; a('G12 conformidad: exige fase remates, sin remates abiertos, checklist y firma', requisitos('conformidad', C('REF-0011'), dbCierre).faltan.some(f => f.id === 'remates') && requisitos('conformidad', cC, { datos:{ checklistCompleto:true, firma:true } }).ok === true && requisitos('conformidad', cC, { datos:{ checklistCompleto:false, firma:true } }).faltan.some(f => f.id === 'checklist') && requisitos('conformidad', cC, { datos:{ checklistCompleto:true } }).faltan.some(f => f.id === 'firma') && requisitos('conformidad', C('REF-0009'), {}).ok === false);
+  registrarConformidadCliente(cC, DB.cfg, { nombre:'Isabel Torres' });
+  a('R-14 la única vía: registrarConformidadCliente (conformidad expresa y cierre por el cliente)', cC.estado === 'cerrada' && cC.obra.cierre.conformidad.tipo === 'expresa' && cC.eventos.slice(-2).some(e => e.autor === 'cliente'));
+  a('R-14 el saldo pendiente se avisa pero no bloquea (G12)', requisitos('conformidad', cl(C('REF-0011')), { datos:{ checklistCompleto:true, firma:true } }).avisos.every(x => /saldo/i.test(x)));
+  a('R-14 el escenario de ejemplo «en remates sin conformidad» existe', C('REF-0011').estado === 'en_remates' && !C('REF-0011').obra.cierre.conformidad);
+
+  // R-02 · detalle de cada trabajo
+  const det = detallesDeTrabajo('redistribucion_tabiques', { cantUd:{ redistribucion_tabiques:2 }, tabiquesConfig:[{ accion:'ambas', material:'pladur' }], demolicionEstado:'habitada' });
+  a('R-02 detallesDeTrabajo recoge cantUd y tabiquesConfig del trabajo (no los de otros)', det.cantUd === 2 && det.tabiquesConfig.length === 1 && !det.ventanasConfig && detallesDeTrabajo('cambiar_ventana', { ventanasConfig:[{ tipo:'pvc' }] }).ventanasConfig.length === 1 && detallesDeTrabajo('pintar_paredes', { pinturaConMuebles:true }).pinturaConMuebles === true && detallesDeTrabajo('demolicion_completa', { demolicionEstados:['habitada'] }).demolicionEstados[0] === 'habitada');
+
+  // R-15 · motor de dependencias: cada fila de las matrices 5.2 y 5.3
+  const dbReq = { casos:DB.casos, clientes:DB.clientes, cobros:DB.cobros, avisosPago:DB.avisosPago, proformas:DB.proformas }; const rq = (ac, c, d, extra) => requisitos(ac, c, Object.assign({ db:dbReq, cfg:DB.cfg, cobros:DB.cobros }, extra || {}, d === undefined ? {} : { datos:d }));
+  const cG1 = cl(c5), cG1ok = cl(c5); fusionarDatosVivienda(cG1ok, { ubicacion:{ calle:'C', numero:'1', piso:'1', puerta:'A', cp:'28015', localidad:'Madrid' }, regimen:'propietario', anioDesconocido:true, inicioSinFecha:true, habitada:'no' }, DB.cfg);
+  a('G1 elegir franja: bloqueado sin datos de la vivienda (con lista de faltas) y permitido con ellos', rq('elegir_franja', cG1).ok === false && rq('elegir_franja', cG1).faltan.length === 4 && rq('elegir_franja', cG1).faltan.every(f => f.accion === 'completar_vivienda') && rq('elegir_franja', cG1ok).ok === true && rq('elegir_franja', C('REF-0006')).ok === false);
+  const cG2 = cl(cG1ok); cG2.estado = 'visita_confirmada'; cG2.visita.estado = 'confirmada'; cG2.visita.elegida = cG2.visita.franjasOfrecidas[0]; iniciarReservaVisita(cG2, DB.cfg, ahoraMs());
+  a('G2 confirmar visita: exige justificante antes de «He pagado» (y reserva pendiente)', rq('confirmar_visita', cG2, {}).faltan.some(f => f.id === 'justificante') && rq('confirmar_visita', cG2, { adjuntoId:'A' }).ok === true && rq('confirmar_visita', C('REF-0006'), { adjuntoId:'A' }).faltan.some(f => f.id === 'reserva'));
+  const cG3 = cl(C('REF-0006')); a('G3 reprogramar: visita confirmada; si queda menos de 24 h exige aceptar la retención', rq('reprogramar', c5, {}).ok === false && rq('reprogramar', cG3, { franja:{ fecha:rel(2), franja:'00:00-01:00' } }).faltan.some(f => f.id === 'franja') && rq('reprogramar', cG3, {}).faltan.some(f => f.id === 'retencion') && rq('reprogramar', cG3, { aceptaRetencion:true }).faltan.every(f => f.id !== 'retencion'));
+  a('G4 «ninguna fecha me va bien»: solo en visita_propuesta y con texto', rq('otra_fecha', c5, { texto:'martes tarde' }).ok === true && rq('otra_fecha', c5, { texto:'' }).ok === false && rq('otra_fecha', C('REF-0006'), { texto:'x' }).ok === false);
+  const c7 = C('REF-0007');
+  a('G5 pedir cambios / rechazar: texto o motivo y solo sobre la versión vigente', rq('pedir_cambios', c7, { texto:'quitar radiador', versionId:'V3' }).ok === true && rq('pedir_cambios', c7, { texto:'x', versionId:'V2' }).faltan.some(f => f.id === 'version') && rq('pedir_cambios', c7, { texto:'' }).ok === false && rq('rechazar', c7, { motivo:'' }).ok === false && rq('rechazar', c7, { motivo:'caro' }).ok === true && rq('pedir_cambios', c5, { texto:'x' }).ok === false);
+  const c7ok = cl(c7); fusionarDatosVivienda(c7ok, {}, DB.cfg); c7ok.fiscal = cl(fOk); const dAc = { condiciones:true, planRevisado:true, avisosLeidos:true, codigo:CODIGO_ACEPTACION };
+  a('G6 aceptar: vivienda completa, inquilino con permiso, facturación con NIF válido, casillas y código', rq('aceptar', c7ok, dAc).ok === true && rq('aceptar', c7, dAc).faltan.some(f => f.accion === 'completar_fiscal') && rq('aceptar', c7ok, Object.assign({}, dAc, { condiciones:false })).faltan.some(f => f.id === 'condiciones') && rq('aceptar', c7ok, Object.assign({}, dAc, { planRevisado:false })).faltan.some(f => f.id === 'planRevisado') && rq('aceptar', c7ok, Object.assign({}, dAc, { codigo:'111111' })).faltan.some(f => f.id === 'codigo'));
+  a('G6 aceptar: bloquea con inquilino sin permiso, versión caducada o con avisos de la visita sin leer', rq('aceptar', (() => { const x = cl(c7ok); x.datosVivienda.regimen = 'inquilino'; x.datosVivienda.permisoPropietario = false; return x; })(), dAc).faltan.some(f => f.id === 'permiso') && rq('aceptar', (() => { const x = cl(c7ok); x.versiones[2].enviadaAt = rel(-40); return x; })(), dAc).faltan.some(f => f.id === 'caducada') && rq('aceptar', (() => { const x = cl(c7ok); x.versiones[2].avisosVisita = ['Humedades']; return x; })(), Object.assign({}, dAc, { avisosLeidos:false })).faltan.some(f => f.id === 'avisosLeidos') && rq('aceptar', C('REF-0008'), dAc).ok === false);
+  const c9 = C('REF-0009');
+  a('G7 avisar de un pago: presupuesto aceptado, importe > 0, fecha no futura y justificante (salvo efectivo); avisa si supera lo pendiente', rq('avisar_pago', c9, { importe:100, medio:'transferencia', fecha:hoy(), adjuntoId:'A' }).ok === true && rq('avisar_pago', c9, { importe:0, medio:'transferencia', fecha:hoy(), adjuntoId:'A' }).faltan.some(f => f.id === 'importe') && rq('avisar_pago', c9, { importe:100, medio:'transferencia', fecha:rel(1), adjuntoId:'A' }).faltan.some(f => f.id === 'fecha') && rq('avisar_pago', c9, { importe:100, medio:'bizum', fecha:hoy() }).faltan.some(f => f.id === 'justificante') && rq('avisar_pago', c9, { importe:100, medio:'efectivo', fecha:hoy() }).ok === true && rq('avisar_pago', c9, { importe:999999, medio:'efectivo', fecha:hoy() }).avisos.length === 1 && rq('avisar_pago', c5, { importe:100, medio:'efectivo', fecha:hoy() }).ok === false);
+  a('G7 aviso duplicado igual pendiente se bloquea (acción repetida)', rq('avisar_pago', C('REF-0009'), { importe:2000, medio:'transferencia', fecha:rel(0), adjuntoId:'Z' }).faltan.some(f => f.id === 'duplicado'));
+  a('G8 pedir un cambio en obra: obra en curso y ≥ 10 caracteres', rq('solicitud_obra', c9, { texto:'Un enchufe más en cocina' }).ok === true && rq('solicitud_obra', c9, { texto:'corto' }).ok === false && rq('solicitud_obra', c5, { texto:'Un enchufe más en cocina' }).ok === false);
+  a('G9 «no estoy de acuerdo»: cambio pendiente y comentario no vacío', rq('desacuerdo', c9, { id:'C2', comentario:'caro' }).ok === true && rq('desacuerdo', c9, { id:'C2', comentario:' ' }).ok === false && rq('desacuerdo', c9, { id:'C1', comentario:'caro' }).ok === false);
+  const c9f = cl(c9); c9f.fiscal = cl(fOk); c9f.fiscal.nombre = 'Carmen Ruiz Prieto';
+  a('G10 firmar adenda: adenda por firmar, casilla y nombre = nombre de facturación (sin tildes ni mayúsculas)', rq('firmar_adenda', c9f, { id:'A2', acepto:true, nombre:'carmen RUIZ prieto' }).ok === true && rq('firmar_adenda', c9f, { id:'A2', acepto:false, nombre:'Carmen Ruiz Prieto' }).faltan.some(f => f.id === 'acepto') && rq('firmar_adenda', c9f, { id:'A2', acepto:true, nombre:'Otra Persona' }).faltan.some(f => f.id === 'nombre') && rq('firmar_adenda', c9f, { id:'A1', acepto:true, nombre:'Carmen Ruiz Prieto' }).ok === false);
+  const c9d = cl(c9f); c9d.obra.cambios.find(x => x.id === 'C2').estado = 'en_desacuerdo';
+  a('G10 firmar adenda: no con cambios en duda dentro de ella', rq('firmar_adenda', c9d, { id:'A2', acepto:true, nombre:'Carmen Ruiz Prieto' }).faltan.some(f => f.id === 'duda'));
+  a('G11 listar un remate: obra terminada o en remates y texto', rq('listar_remate', C('REF-0011'), { texto:'Rozadura' }).ok === true && rq('listar_remate', C('REF-0011'), { texto:'' }).ok === false && rq('listar_remate', c9, { texto:'x' }).ok === false);
+  a('G13 valorar: solo con la obra cerrada', rq('valorar', C('REF-0012'), {}).ok === true && rq('valorar', c9, {}).ok === false);
+  a('G14 mensaje: texto o adjunto', rq('mensaje', c9, { texto:'hola' }).ok && rq('mensaje', c9, { texto:'', adjuntos:['A'] }).ok && !rq('mensaje', c9, { texto:' ', adjuntos:[] }).ok);
+  a('G15 descargar documentos: solo los que existan (acta si cerrada, proforma si generada)', rq('descargar', C('REF-0012'), { doc:'acta' }).ok && !rq('descargar', c9, { doc:'acta' }).ok && rq('descargar', c9, { doc:'proforma' }).ok && !rq('descargar', c5, { doc:'proforma' }).ok);
+  a('G16 subir fotos extra de la vivienda: solo antes de aceptar', rq('subir_fotos', c5, {}).ok && !rq('subir_fotos', c9, {}).ok);
+  a('G17 fecha deseada de inicio: no anterior a hoy (o sin fecha)', rq('fecha_inicio', c5, { inicio:rel(3) }).ok && !rq('fecha_inicio', c5, { inicio:rel(-3) }).ok && rq('fecha_inicio', c5, { inicio:rel(-3), inicioSinFecha:true }).ok);
+  const tramos9 = planCobros(c9, DB.cfg, DB.cobros);
+  a('G18 pagar el tramo siguiente: solo tramos «debidos» del plan', rq('pagar_tramo', c9, { tramo:{ estado:'debido' } }).ok && !rq('pagar_tramo', c9, { tramo:{ estado:'pendiente' } }).ok && tramos9.length === 3);
+  const vOk = { lineas:[{ id:'L', subtotal:100 }], totales:{ total:100 }, ivaPct:21 };
+  a('A1 enviar V2/V3: línea, total > 0, IVA definido; V3 solo con la visita realizada', requisitos('enviar_version', c7, { version:vOk }).ok && !requisitos('enviar_version', c7, { version:{ lineas:[], totales:{ total:0 }, ivaPct:21 } }).ok && !requisitos('enviar_version', c7, { version:{ lineas:[{}], totales:{ total:5 } } }).ok && requisitos('enviar_version', Object.assign(cl(c7), { estado:'en_visita' }), { version:vOk }).faltan.some(f => f.id === 'visita') && requisitos('enviar_version', (() => { const x = cl(c7); x.estado = 'en_visita'; x.visita.estado = 'realizada'; return x; })(), { version:vOk }).ok);
+  const libres = franjasLibres(DB.cfg, DB.casos, fechaMasDias(hoy(), 1), 14, 'REF-0001');
+  a('A2 proponer visita: entre 1 y 3 franjas libres y contacto del cliente', rq('proponer_visita', C('REF-0001'), undefined, { franjas:libres.slice(0, 2) }).ok && !rq('proponer_visita', C('REF-0001'), undefined, { franjas:[] }).ok && !rq('proponer_visita', C('REF-0001'), undefined, { franjas:libres.slice(0, 4) }).ok && !rq('proponer_visita', C('REF-0001'), undefined, { franjas:[{ fecha:rel(1), franja:'03:00-04:00' }] }).ok);
+  a('A4 cobro manual: importe > 0 y aviso si supera el saldo', rq('cobro_manual', c9, undefined, { importe:100 }).ok && !rq('cobro_manual', c9, undefined, { importe:0 }).ok && rq('cobro_manual', c9, undefined, { importe:9999999 }).avisos.length === 1);
+  const cA5 = cl(C('REF-0008')); const dbA5 = { cobros:[] };
+  a('A5 iniciar obra: exige la señal confirmada (o «iniciar igualmente» con nota) y respeta exigirSenalParaIniciar', rq('iniciar_obra', cA5, undefined, { cobros:DB.cobros }).ok && requisitos('iniciar_obra', cA5, { cobros:[], cfg:DB.cfg, db:dbA5 }).faltan.some(f => f.id === 'senal') && requisitos('iniciar_obra', cA5, { cobros:[], cfg:DB.cfg, db:dbA5, datos:{ iniciarIgualmente:true, nota:'Cliente de confianza' } }).ok && !requisitos('iniciar_obra', cA5, { cobros:[], cfg:DB.cfg, db:dbA5, datos:{ iniciarIgualmente:true } }).ok && requisitos('iniciar_obra', cA5, { cobros:[], cfg:Object.assign({}, DB.cfg, { exigirSenalParaIniciar:false }), db:dbA5 }).ok && !rq('iniciar_obra', c9, undefined).ok);
+  a('A6 generar adenda: al menos un cambio registrado y sin cambios en duda', rq('generar_adenda', c9, undefined).ok && !rq('generar_adenda', C('REF-0008'), undefined).ok && !rq('generar_adenda', c9, undefined, { cambios:[{ id:'C9', estado:'en_desacuerdo' }] }).ok);
+  const cA7 = cl(C('REF-0011')); cA7.estado = 'en_obra'; cA7.obra.hitos[0].estado = 'pendiente';
+  a('A7 terminar obra: sin cambios sin consolidar; con hitos sin hacer pide confirmación expresa', rq('terminar_obra', cA7, undefined).faltan.some(f => f.id === 'hitos') && rq('terminar_obra', cA7, { confirmaHitos:true }).ok && !rq('terminar_obra', c9, { confirmaHitos:true }).ok);
+  a('A8 cerrar la obra: no existe para el reformista', rq('cerrar_obra', C('REF-0011'), undefined).ok === false);
+  a('A10 cerrar la visita: total > 0 y aviso (no bloqueo) si hay estancias sin medir', rq('cerrar_visita', c7, undefined, { total:100, sinMedir:2 }).ok && rq('cerrar_visita', c7, undefined, { total:100, sinMedir:2 }).avisos.length === 1 && !rq('cerrar_visita', c7, undefined, { total:0 }).ok);
+  a('A11 resolver una duda: «mantener» exige nota, «retirar» motivo, «ajustar» importe', !rq('resolver_duda', c9, { opcion:'mantener', nota:'' }).ok && rq('resolver_duda', c9, { opcion:'mantener', nota:'Es el precio de mercado' }).ok && !rq('resolver_duda', c9, { opcion:'retirar', motivo:'' }).ok && rq('resolver_duda', c9, { opcion:'retirar', motivo:'Cortesía' }).ok && rq('resolver_duda', c9, { opcion:'ajustar', importe:0 }).ok && !rq('resolver_duda', c9, { opcion:'otra' }).ok);
+  const mapa = mapaRequisitosCliente(C('REF-0005'), { db:dbReq, cfg:DB.cfg, cobros:DB.cobros });
+  a('R-15 mapa de requisitos proyectado al cliente: una entrada por acción con sus faltas y botón «Completar ahora»', mapa.elegir_franja.ok === false && mapa.elegir_franja.faltan.length === 4 && mapa.elegir_franja.faltan[0].accion === 'completar_vivienda' && ['aceptar','conformidad','mensaje','otra_fecha'].every(k => k in mapa) && typeof textoFaltan(rq('elegir_franja', c5)) === 'string');
+  a('R-15 la simulación del cliente desde el admin pasa por requisitos (aceptar sin facturación se rechaza)', rq('aceptar', C('REF-0007'), dAc).ok === false);
+  a('R-13/R-35 Adj: servicio compartido con respaldo local (url/meta/put)', typeof Adj.put === 'function' && typeof Adj.meta === 'function');
+  a('R-15 versión del esquema de datos subida a 3.0', DB.meta.version === '3.0');
+  }
+
   const resumen = ok + '/' + tot + ' pruebas correctas' + (fails.length ? ' · ' + fails.length + ' fallos' : ' ✓');
   console.log('%c' + resumen, 'font-weight:bold;color:' + (fails.length?'#c62828':'#2e7d32'));
   return { ok, total: tot, fails };
@@ -3532,7 +3699,7 @@ function fichaResumen(c, prio){
     '<div class="inl-field"><label>Tipo de obra</label>' + selV('solicitud.tipoObra', c.solicitud.tipoObra, [['reforma_integral','Reforma integral'],['reforma_bano','Reforma de baño'],['reforma_cocina','Reforma de cocina'],['reforma_parcial','Reforma parcial']]) + '</div>' +
     '<div class="inl-field"><label>Calidad</label>' + selV('solicitud.calidad', c.solicitud.calidad, [['basica','Básica'],['media','Media'],['premium','Premium']]) + '</div>' +
     '<div class="kv"><span class="k">Espacios</span>' + (c.solicitud.espacios||[]).map(e=>escH((e.nombre||e.tipo)+' '+e.m2+'m²')).join(' · ') + '</div>' +
-    '<div class="kv"><span class="k">Fotos</span>' + ((c.solicitud.fotosCliente||[]).length||'sin') + ' fotos</div>' +
+    '<div class="kv"><span class="k">Fotos</span>' + ((c.solicitud.fotosCliente||[]).length||'sin') + ' fotos' + ((c.solicitud.fotosCliente||[]).some(i => Adj.meta(i)) ? '<div class="bub-adj">' + c.solicitud.fotosCliente.filter(i => Adj.meta(i)).map(i => adjChipHtml(i)).join('') + '</div>' : '') + '</div>' +
     (c.solicitud.notasCliente?'<div class="kv"><span class="k">Nota cliente</span><i>“' + escH(c.solicitud.notasCliente) + '”</i></div>':'') + '</div>';
   // Prioridad y calidad
   h += '<div class="section-card"><div class="section-card-title">Prioridad ' + prio.total + ' · Calidad ' + sc.total + ' · Incertidumbre ' + inc.nivel + '</div>' +
@@ -4339,6 +4506,7 @@ function obraCabecera(c){
     '<div class="kv"><span class="k">+ Cambios provisionales</span>' + fmtEur(tv.provisional) + '</div>' +
     '<div class="kv"><span class="k">Total vigente</span><b style="font-size:16px">' + fmtEur(tv.total) + '</b> <span style="color:' + (tv.desviacionPct > 0 ? 'var(--amber)' : 'var(--muted)') + '">(' + (tv.desviacionPct >= 0 ? '+' : '') + tv.desviacionPct + ' % vs aceptada)</span></div>' +
     '<div class="kv"><span class="k">Cobrado / saldo</span>' + fmtEur(eco.cobrado) + ' · <b style="color:' + (eco.saldo > 0.005 ? 'var(--danger)' : 'var(--ok)') + '">' + fmtEur(eco.saldo) + '</b> <span class="badge ' + (eco.estado==='cobrado'?'b-ok':eco.estado==='parcial'?'b-warn':'b-err') + '">' + eco.estado + '</span></div>' +
+    (() => { const js = cobrosDeCaso(c, DB.cobros).filter(m => m.estado !== 'anulado'); return js.length ? '<div class="kv"><span class="k">Justificantes</span><span class="bub-adj" style="margin:0">' + js.map(m => m.justificanteId ? adjChipHtml(m.justificanteId) : '<span class="badge b-mute" title="' + escH(m.concepto) + '">sin justificante</span>').join('') + '</span></div>' : ''; })() +
     (c.aceptacion ? '<div style="margin:8px 0"><button class="abtn abtn-ghost abtn-sm" onclick="listaCompraModal(\'' + c.id + '\')">Lista de compra</button> <button class="abtn abtn-ghost abtn-sm" onclick="materialesClienteModal(\'' + c.id + '\')">Materiales del cliente</button></div>' : '') +
     (c.estado === 'cerrada' && eco.saldo > 0.005 ? '<div class="mv-aviso" style="font-size:13px">Obra <b>cerrada</b> pero <b>no cobrada</b>: quedan ' + fmtEur(eco.saldo) + ' pendientes. Cerrada y cobrada son estados distintos.</div>' : '') + '</div>';
 }
@@ -5278,7 +5446,7 @@ function enlaceSec(c, sec){ return 'anatoliyreformas.es/c/' + c.enlace.token + (
 // ── Burbujas de contadores (barra lateral) ──
 function actualizarBurbujas(){
   try {
-    const ct = contadoresMensajes(DB); const n = ct.total;
+    sincronizarNotificaciones(DB, DB.cfg, hoy()); const ct = contadoresMensajes(DB); const n = ct.total;
     ['nbb-mensajes','mnb-mensajes'].forEach(id => { const e = document.getElementById(id); if (e){ e.textContent = n > 99 ? '99+' : n; e.style.display = n ? '' : 'none'; e.setAttribute('aria-label', ct.noLeidos + ' mensajes sin leer y ' + ct.notif + ' notificaciones'); } });
   } catch(e){}
 }

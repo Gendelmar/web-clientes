@@ -60,6 +60,7 @@ Proto.adjuntos = (function () {
     meta: id => (mem.get(id) || {}).meta || null,
     del: id => { mem.delete(id); return tx('readwrite', st => st.delete(id)); },
     lista: casoId => [...mem.values()].filter(r => !casoId || r.meta.casoId === casoId).map(r => Object.assign({ id: r.id }, r.meta)).sort((a, b) => String(a.fecha).localeCompare(String(b.fecha))),
+    setMeta: (id, patch) => { const r = mem.get(id); if (r) { Object.assign(r.meta, patch); tx('readwrite', st => st.put(r)); } return !!r; },
     sembrar: lista => (lista || []).forEach(x => { if (!mem.has(x.id)) putSync(x.data, { nombre: x.nombre, tipo: x.tipo, casoId: x.casoId, origen: x.origen || 'demo' }, x.id); }),
     limpiar: () => { mem.clear(); return tx('readwrite', st => st.clear()); },
     modo: () => modo, listo: () => abierto
@@ -125,9 +126,10 @@ Proto.solicitud = function (payload, ref, calc) {
     recordatorios: [], enlace: { token: a.uid('tok') }, mensajes: [],
     eventos: [{ fecha: hoy, tipo: 'sistema', texto: 'Pedido recibido desde el configurador web', autor: 'sistema' }, { fecha: hoy, tipo: 'sistema', texto: 'Enviado al cliente el mensaje automático con su estimación y el enlace a su panel', autor: 'sistema' }],
     vivienda: { cp: inm.cp || '', tipo: inm.tipo || 'piso', m2: inm.superficie || m2tot, plantas: inm.numPlantasChalet || 1, antiguedad: 'desconocida', humedades: false, propietario: true, comunidad: 'no_aplica', topePresupuesto: null, fechaInicioDeseada: null },
-    solicitud: { calidad: payload.calidad || 'media', tipoObra: usados.filter(e => e.id !== 'gen').length >= 4 ? 'reforma_integral' : 'reforma_parcial', notasCliente: payload.notas || '', fotosCliente: [], urgencia: payload.urgencia, obraHabitada: !!payload.obraHabitada || (payload.extras || []).includes('obra_habitada'), espacios: usados, detalle }
+    solicitud: { calidad: payload.calidad || 'media', tipoObra: usados.filter(e => e.id !== 'gen').length >= 4 ? 'reforma_integral' : 'reforma_parcial', notasCliente: payload.notas || '', fotosCliente: (payload.adjuntosIds || []).slice(), urgencia: payload.urgencia, obraHabitada: !!payload.obraHabitada || (payload.extras || []).includes('obra_habitada'), espacios: usados, detalle }
   };
   caso.datosVivienda = a.nuevoDatosVivienda(caso);
+  (payload.adjuntosIds || []).forEach(i => Proto.adjuntos.setMeta(i, { casoId: ref }));
   db.casos.unshift(caso);
   a.notificar(db, ref, 'sistema', 'Nueva solicitud recibida desde el configurador (' + a.fmtImporteVersion(ver) + ')');
   Proto.ref = ref; Proto.adminNuevo = true; Proto.sigCaso = '';
@@ -367,15 +369,15 @@ const GUIA = {
   null: ['Rellena el configurador como cliente y envía la solicitud.', 'cfg', 'Ir al Configurador'],
   recibida: ['<b>Admin:</b> abre la nueva solicitud, revísala y pásala a triaje.', 'adm', 'Ir a Admin'],
   en_triaje: ['<b>Admin:</b> propón al cliente franjas para la visita técnica (o pídele más información).', 'adm', 'Ir a Admin'],
-  esperando_info: ['El caso espera información del cliente. <b>Cliente:</b> completa tus datos / responde.', 'cli', 'Ir a Cliente'],
-  visita_propuesta: ['<b>Cliente:</b> elige uno de los huecos propuestos para la visita (sección «Visita»).', 'cli', 'Ir a Cliente'],
-  visita_confirmada: ['<b>Lite:</b> haz la visita técnica estancia por estancia, ajusta los trabajos y envía la V3.', 'lite', 'Ir a Lite'],
+  esperando_info: ['El caso espera información del cliente. <b>Cliente:</b> completa los datos de tu vivienda / responde.', 'cli', 'Ir a Cliente'],
+  visita_propuesta: ['<b>Cliente:</b> completa los datos de tu vivienda (sección «Visita») y elige uno de los huecos propuestos.', 'cli', 'Ir a Cliente'],
+  visita_confirmada: ['<b>Cliente:</b> paga la visita y sube el justificante (el hueco está reservado) · <b>Admin:</b> confirma el cobro · <b>Lite:</b> haz la visita técnica y envía la V3.', 'lite', 'Ir a Lite'],
   en_visita: ['<b>Lite:</b> termina la revisión y envía (o guarda) la nueva versión del presupuesto.', 'lite', 'Ir a Lite'],
   propuesta_enviada: ['<b>Cliente:</b> revisa el presupuesto actualizado y acéptalo (o pide cambios).', 'cli', 'Ir a Cliente'],
-  aceptada: ['<b>Admin:</b> inicia la obra desde la ficha del caso.', 'adm', 'Ir a Admin'],
+  aceptada: ['<b>Cliente:</b> avisa del pago de la señal con su justificante · <b>Admin:</b> confírmala e inicia la obra desde la ficha del caso.', 'adm', 'Ir a Admin'],
   en_obra: ['<b>Admin:</b> marca hitos, registra cambios y cobros; <b>Cliente:</b> responde cambios y firma adendas. Cuando esté todo, termina la obra.', 'adm', 'Ir a Admin'],
   terminada: ['<b>Admin:</b> abre la fase de remates para que el cliente haga la revisión final.', 'adm', 'Ir a Admin'],
-  en_remates: ['<b>Cliente:</b> completa el checklist final y firma tu conformidad (Admin resuelve los remates que indique).', 'cli', 'Ir a Cliente'],
+  en_remates: ['<b>Cliente:</b> completa el checklist final y firma tu conformidad. <b>Admin:</b> resuelve los remates y, si hace falta, reclama la conformidad (solo el cliente puede cerrar la obra).', 'cli', 'Ir a Cliente'],
   cerrada: ['🎉 <b>Reforma completada.</b> Revisa el acta, los cobros y la valoración del cliente.', 'adm', 'Ver en Admin'],
   en_pausa: ['El caso está en pausa. <b>Admin:</b> reactívalo.', 'adm', 'Ir a Admin'],
   rechazada: ['El cliente rechazó la propuesta. <b>Admin:</b> renegocia o archiva.', 'adm', 'Ir a Admin'],
@@ -402,7 +404,7 @@ function refreshBadges() {
 Proto.tick = function (force) {
   if (!W('adm') || !W('adm').__P || !W('cli') || !W('lite')) return;
   const c = casoActivo();
-  try { const p = A().horquillaPct(DBA().cfg), wc = W('cfg'); if (wc && wc.CFG && wc.CFG.HORQUILLA_PCT !== p) wc.CFG.HORQUILLA_PCT = p; } catch (e) {}
+  try { const p = A().horquillaPct(DBA().cfg), wc = W('cfg'); if (wc && wc.eval('CFG.HORQUILLA_PCT') !== p) wc.eval('CFG.HORQUILLA_PCT=' + p); } catch (e) {}
   const sig = c ? hash(JSON.stringify(c) + JSON.stringify(DBA().cobros.filter(x => x.casoId === c.id)) + JSON.stringify((DBA().avisosPago || []).filter(x => x.casoId === c.id)) + AP().off()) : '';
   if (force || sig !== Proto.sigCaso) {
     Proto.sigCaso = sig;

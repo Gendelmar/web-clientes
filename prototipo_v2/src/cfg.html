@@ -3334,18 +3334,24 @@ function toggleRgpd() {
 
 function handleFiles(files) {
   const list = document.getElementById('file-list');
+  const esc = t => String(t).replace(/[&<>"']/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]));
+  S.adjuntosIds = S.adjuntosIds || {};
   Array.from(files).forEach(f => {
     if (S.adjuntos.includes(f.name)) return;
     S.adjuntos.push(f.name);
     const chip = document.createElement('div');
     chip.className = 'file-chip';
-    chip.innerHTML = '📎 ' + f.name + ' <button onclick="eliminarAdjunto(this,\'' + f.name.replace(/'/g,"\\'") + '\')">✕</button>';
+    chip.innerHTML = '📎 ' + esc(f.name) + ' <button type="button" aria-label="Quitar ' + esc(f.name) + '">✕</button>';
+    chip.querySelector('button').onclick = function () { eliminarAdjunto(this, f.name); };
     list.appendChild(chip);
+    // R-13: las fotos y documentos se guardan en el servicio compartido (IndexedDB); en la solicitud solo viajan sus identificadores
+    try { const A = window.parent && window.parent.Proto && window.parent.Proto.adjuntos; if (A && /^(image\/|application\/pdf)/.test(f.type)) A.put(f, { origen: 'configurador', nombre: f.name }).then(id => { S.adjuntosIds[f.name] = id; }).catch(e => toast(e.message, 'warn')); } catch (e) {}
   });
   document.getElementById('file-input').value = '';
 }
 function eliminarAdjunto(btn, nombre) {
   S.adjuntos = S.adjuntos.filter(n => n !== nombre);
+  try { const id = (S.adjuntosIds || {})[nombre]; if (id) { window.parent.Proto.adjuntos.del(id); delete S.adjuntosIds[nombre]; } } catch (e) {}
   btn.closest('.file-chip').remove();
 }
 
@@ -3786,8 +3792,9 @@ async function enviarSolicitud() {
     urgencia:          S.urgencia,
     notas:             S.notas,
     obraHabitada:      !!S.obraHabitada,
+    adjuntosIds:       Object.values(S.adjuntosIds || {}),
     elegiMateriales:   S.elegiMateriales || null,
-    materiales:        { porEspacio: JSON.parse(JSON.stringify(S.materialesPorEspacio || {})), compartidos: JSON.parse(JSON.stringify(S.matCompartidos || {})) },
+    materiales:        { seleccion: JSON.parse(JSON.stringify(S.materiales || [])), porEspacio: JSON.parse(JSON.stringify(S.materialesPorEspacio || {})), compartidos: JSON.parse(JSON.stringify(S.matCompartidos || {})) },
     resultado_calculo: {total:S.resultado?.total, base:S.resultado?.base, iva:S.resultado?.iva, margen:S.resultado?.margen, dias:S.resultado?.dias, horquilla:rangoHorquilla(S.resultado?.total || 0)},
     cliente:           S.cliente,
     rgpd_consent:      true,
@@ -3827,7 +3834,7 @@ function reiniciar() {
   S.calidad     = 'media'; S.materiales = [];
   S.materialesPorEspacio = {}; S.matCompartidos = {}; S.matShowN = {}; S.matEspacioIdx = 0;
   S.extras      = new Set();
-  S.urgencia    = 'sin_prisa'; S.notas = ''; S.adjuntos = []; S.resultado = null;
+  S.urgencia    = 'sin_prisa'; S.notas = ''; S.adjuntos = []; S.adjuntosIds = {}; S.resultado = null;
   S.maxPaso = 1; S.obraHabitada = false; S.elegiMateriales = null;
   S.cliente     = {nombre:'',email:'',tel:'',canal:'email',horario:'cualquiera',rgpd:false};
 
