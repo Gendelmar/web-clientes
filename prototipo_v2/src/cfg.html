@@ -245,6 +245,11 @@ textarea.field-inp { resize: vertical; min-height: 90px; }
 .urg-icon { font-size: 22px; flex-shrink: 0; }
 .urg-lbl  { font-weight: 500; font-size: 14px; }
 
+.field-err { display:none; color:#b3261e; font-size:12.5px; margin-top:5px; font-weight:500; }
+.field-err.on { display:block; }
+.field-inp.err { border-color:#b3261e !important; }
+.res-rango { font-size: clamp(30px, 8vw, 46px); line-height:1.1; }
+.res-rango .res-entre, .res-rango .res-y { font-size: .45em; color: var(--warm); font-family: inherit; letter-spacing:.5px; margin: 0 .35em; }
 /* ── RESULTADO ── */
 .res-hero {
   background: var(--deep); border-radius: 16px; padding: 28px 30px;
@@ -842,15 +847,19 @@ textarea.field-inp { resize: vertical; min-height: 90px; }
       <div class="opt-card" onclick="selTipo(this,'obra_nueva')"><div class="opt-check">✓</div><div class="opt-icon">🏗️</div><div class="opt-name">Obra nueva</div></div>
     </div>
 
+    <div class="field-err" id="err-tipo" role="alert"></div>
+
     <div class="field-row">
       <div>
-        <div class="field-lbl">Superficie total (orientativo)</div>
-        <input class="field-inp" type="number" id="sup-total" placeholder="ej: 80" min="10" max="5000">
-        <span style="font-size:12px;color:var(--muted);margin-top:4px;display:block">m² — puedes dejarlo vacío</span>
+        <div class="field-lbl">Superficie total (orientativo) *</div>
+        <input class="field-inp" type="number" id="sup-total" placeholder="ej: 80" min="10" max="5000" inputmode="decimal" aria-describedby="err-sup" oninput="limpiarErrInm('sup')">
+        <span style="font-size:12px;color:var(--muted);margin-top:4px;display:block">m² de la vivienda (entre 10 y 5.000)</span>
+        <div class="field-err" id="err-sup" role="alert"></div>
       </div>
       <div>
-        <div class="field-lbl">Código postal</div>
-        <input class="field-inp" type="text" id="cp" placeholder="ej: 28001" maxlength="5">
+        <div class="field-lbl">Código postal *</div>
+        <input class="field-inp" type="text" id="cp" placeholder="ej: 28001" maxlength="5" inputmode="numeric" autocomplete="postal-code" aria-describedby="err-cp" oninput="limpiarErrInm('cp')">
+        <div class="field-err" id="err-cp" role="alert"></div>
       </div>
     </div>
 
@@ -1066,7 +1075,7 @@ textarea.field-inp { resize: vertical; min-height: 90px; }
   <div class="panel" id="p-resultado">
     <div class="res-hero">
       <div class="res-tag">Estimación orientativa · IVA incluido</div>
-      <div class="res-total"><span class="res-cur">€</span><span id="res-num">—</span></div>
+      <div class="res-total res-rango"><span id="res-num">—</span></div>
       <div class="res-sub" id="res-base">—</div>
       <div class="res-tiempo" id="res-tiempo">—</div>
     </div>
@@ -1210,6 +1219,7 @@ const CFG = {
   DIAS_VALIDEZ: 30,
   MO_BASE:      15,          // € fijos por partida (movilización/setup)
   MO_FACTOR:    0.85,        // coef. proporcional sobre tarifa (< 1 suaviza crecimiento)
+  HORQUILLA_PCT: 5,          // R-03: la V1 se muestra como rango ±5 % (en el prototipo la fija el panel del reformista)
 };
 
 // ═══════════════════════════════════════════════════════════════
@@ -1523,6 +1533,33 @@ const TRABAJO_CAT_MAP = {
   pintar_paredes:"pintura", pintura_integral:"pintura", papel_pintado:"pintura",
 };
 
+// R-02 · Medida de la que depende la cantidad de cada trabajo (la usa el panel Lite para recalcular al medir).
+// Bases: m2_suelo, m2_techo, m2_pared, m2_pared_pintura, m2_pared_alicatado, ml_rodapie, ud, fijo (+ ml = metros lineales declarados por el cliente).
+const BASE_POR_TRABAJO = {
+  demolicion_completa:'m2_suelo', solo_revestimientos:'m2_pared', redistribucion_tabiques:'ud',
+  renovar_fontaneria:'ud', renovar_electricidad:'ud', suelo_radiante:'m2_suelo',
+  cambiar_baldosas:'m2_pared_alicatado', cambiar_suelo:'m2_suelo', pintar_paredes:'m2_pared_pintura', falso_techo:'m2_techo',
+  instalar_ducha:'ud', instalar_banera:'ud', instalar_inodoro:'ud', instalar_lavabo:'ud', instalar_mueble:'ud', instalar_espejo:'ud', radiador_toallero:'ud',
+  cambiar_puerta:'ud', cambiar_ventana:'ud', extractor_ventilacion:'ud', ac_pared:'ud', ac_split:'ud', ventilador_techo:'ud', radiadores:'ud',
+  alicatar_paredes:'m2_pared_alicatado', instalar_muebles:'ml', encimera:'ml', instalar_campana:'ud', instalar_fregadero:'ud', instalar_caldera:'ud',
+  tirar_pared:'ud', abrir_hueco:'ud', papel_pintado:'m2_pared_pintura', pulir_parquet:'m2_suelo', armario_empotrado:'ml', puntos_de_luz:'ud', montaje_muebles:'ud',
+  pintura_integral:'m2_pared_pintura', suelos_integral:'m2_suelo', electricidad_integral:'m2_suelo', fontaneria_integral:'m2_suelo', demolicion_integral:'m2_suelo',
+  limpiar_rejuntar:'m2_suelo', impermeabilizar:'m2_suelo', cerrar_terraza:'m2_suelo', pergola_toldo:'ud', cambiar_barandilla:'ml',
+};
+// Base de los materiales elegidos por el cliente (categoría de producto)
+const BASE_POR_MATERIAL = { azulejo:'m2_pared_alicatado', suelo:'m2_suelo', pintura:'m2_pared_pintura' };
+function baseTrabajo(tKey, unidad) {
+  if (unidad === 'ud') return 'ud';
+  if (unidad === 'ml') return 'ml';
+  return BASE_POR_TRABAJO[tKey] || (unidad === 'm2_pared' ? 'm2_pared' : (unidad === 'm2' ? 'm2_suelo' : 'fijo'));
+}
+// R-03 · Horquilla ±pct % (lo hacia abajo y hi hacia arriba, al euro, para mostrar)
+function rangoHorquilla(total, pct) {
+  const p = pct == null ? CFG.HORQUILLA_PCT : pct;
+  const lo = r(total * (1 - p / 100)), hi = r(total * (1 + p / 100));
+  return {lo, hi, loE: Math.floor(lo), hiE: Math.ceil(hi), pct: p};
+}
+const fmtEntero = v => Math.round(v).toLocaleString('es-ES');
 const CALIDAD_COEF   = {basica:0.80, media:1.0, premium:1.40};
 // Recargo por planta — aplica a partir de 1ª planta (sin ascensor agrava este coste)
 const PLANTA_RECARGO = {baja:0, '1_2':0.03, '3_4':0.06, mas5:0.09};
@@ -1659,15 +1696,45 @@ function getLabelConEmoji(id) {
 }
 
 // ── Paso 1 ─────────────────────────────────────────────────────
+// R-01 · Validación pura de los datos mínimos del inmueble (se prueba en __tests)
+function cpValido(cp) {
+  const c = String(cp == null ? '' : cp).trim();
+  if (!/^\d{5}$/.test(c)) return false;
+  const prov = parseInt(c.slice(0, 2), 10);
+  return prov >= 1 && prov <= 52;
+}
+function validarInmueble(inm) {
+  const e = {};
+  if (!inm || !['piso', 'chalet', 'local', 'obra_nueva'].includes(inm.tipo)) e.tipo = 'Elige el tipo de vivienda (piso, chalet…).';
+  const sup = Number(inm && inm.superficie);
+  if (!(sup > 0)) e.superficie = 'Indica los m² de la vivienda.';
+  else if (sup < 10 || sup > 5000) e.superficie = 'Indica una superficie entre 10 y 5.000 m².';
+  if (!inm || !inm.cp) e.cp = 'Indica el código postal.';
+  else if (!cpValido(inm.cp)) e.cp = 'El código postal debe tener 5 dígitos válidos (provincia 01 a 52).';
+  return { ok: Object.keys(e).length === 0, errores: e };
+}
+function limpiarErrInm(k) {
+  const el = document.getElementById(k === 'sup' ? 'sup-total' : k); if (el) el.classList.remove('err');
+  const m = document.getElementById('err-' + k); if (m) { m.textContent = ''; m.classList.remove('on'); }
+}
 function irPaso2() {
   S.inmueble.superficie = parseFloat(document.getElementById('sup-total').value) || null;
   S.inmueble.cp         = document.getElementById('cp').value.trim() || null;
+  const v = validarInmueble(S.inmueble);
+  const pon = (id, inp, msg) => { const m = document.getElementById(id); if (m) { m.textContent = msg || ''; m.classList.toggle('on', !!msg); } const i = inp && document.getElementById(inp); if (i) i.classList.toggle('err', !!msg); };
+  pon('err-tipo', null, v.errores.tipo); pon('err-sup', 'sup-total', v.errores.superficie); pon('err-cp', 'cp', v.errores.cp);
+  if (!v.ok) {
+    toast('Completa los datos de tu vivienda para continuar', 'warn');
+    const f = v.errores.tipo ? document.getElementById('grid-tipo') : document.getElementById(v.errores.superficie ? 'sup-total' : 'cp');
+    if (f) { f.scrollIntoView({behavior:'smooth', block:'center'}); if (f.focus && f.tagName === 'INPUT') f.focus(); }
+    return;
+  }
   goStep(2);
 }
 function selTipo(el, val) {
   document.querySelectorAll('#grid-tipo .opt-card').forEach(c => c.classList.remove('sel'));
   el.classList.add('sel');
-  S.inmueble.tipo = val;
+  S.inmueble.tipo = val; limpiarErrInm('tipo');
   document.getElementById('sec-planta-piso').style.display   = val === 'piso'   ? 'block' : 'none';
   document.getElementById('sec-chalet-plantas').style.display = val === 'chalet' ? 'block' : 'none';
   if (val !== 'piso') S.inmueble.planta = 'baja';
@@ -3337,7 +3404,7 @@ function calcularLocal() {
       const grupo = TRABAJO_GRUPOS[tKey] || 'Otros trabajos';
       if (!gruposMO[grupo]) gruposMO[grupo] = {total:0, items:[]};
       gruposMO[grupo].total = r(gruposMO[grupo].total + costoMo);
-      gruposMO[grupo].items.push({espLabel:espLbl, concepto:t.label, cant:r(cant), unidad:t.unidad==='ud'?'ud':(t.unidad==='ml'?'ml':'m²'), precio:t.mo, sub:costoMo});
+      gruposMO[grupo].items.push({espLabel:espLbl, espId, key:tKey, base:baseTrabajo(tKey, t.unidad), concepto:t.label, cant:r(cant), unidad:t.unidad==='ud'?'ud':(t.unidad==='ml'?'ml':'m²'), precio:t.mo, sub:costoMo});
 
       const catUser = TRABAJO_CAT_MAP[tKey];
       const tieneMatUsuario = catUser && getMatDict(espId)[catUser]?.prodId;
@@ -3355,7 +3422,7 @@ function calcularLocal() {
           const matGrupo = TRABAJO_GRUPOS[tKey] || 'Otros materiales';
           if (!gruposMat[matGrupo]) gruposMat[matGrupo] = {total:0, items:[]};
           gruposMat[matGrupo].total = r(gruposMat[matGrupo].total + costoMat);
-          gruposMat[matGrupo].items.push({espLabel:espLbl, concepto:t.label, cant:r(cant), unidad:t.unidad==='ud'?'ud':(t.unidad==='ml'?'ml':'m²'), precio:r(t.mat*calCoef), sub:costoMat});
+          gruposMat[matGrupo].items.push({espLabel:espLbl, espId, key:tKey, base:baseTrabajo(tKey, t.unidad), concepto:t.label, cant:r(cant), unidad:t.unidad==='ud'?'ud':(t.unidad==='ml'?'ml':'m²'), precio:r(t.mat*calCoef), sub:costoMat});
         }
       }
     });
@@ -3373,7 +3440,7 @@ function calcularLocal() {
       const matGrupoUsr = cat;
       if (!gruposMat[matGrupoUsr]) gruposMat[matGrupoUsr] = {total:0, items:[]};
       gruposMat[matGrupoUsr].total = r(gruposMat[matGrupoUsr].total + costoMat);
-      gruposMat[matGrupoUsr].items.push({espLabel:espLbl, concepto:prod.nombre, cant:r(cant), unidad:prod.unidad, precio:r(prod.precio*calCoef), sub:costoMat});
+      gruposMat[matGrupoUsr].items.push({espLabel:espLbl, espId, key:'mat_' + cat + '_' + prod.id, base:BASE_POR_MATERIAL[cat] || 'fijo', esMat:true, categoria:cat, prodId:prod.id, concepto:prod.nombre, cant:r(cant), unidad:prod.unidad, precio:r(prod.precio*calCoef), sub:costoMat});
     });
   });
 
@@ -3440,11 +3507,12 @@ function calcularYMostrar() {
   const res = calcularLocal();
   S.resultado = res;
 
-  document.getElementById('res-num').textContent    = res.total.toLocaleString('es-ES',{minimumFractionDigits:2});
+  const hq = rangoHorquilla(res.total); res.horquilla = hq;
+  document.getElementById('res-num').innerHTML      = '<span class="res-entre">Entre</span>' + fmtEntero(hq.loE) + ' €<span class="res-y">y</span>' + fmtEntero(hq.hiE) + ' €';
   document.getElementById('res-tiempo').textContent = '⏱ Tiempo estimado: ' + res.dias + ' días de trabajo';
   const calLabels = {basica:'Calidad básica',media:'Calidad media',premium:'Calidad premium'};
   document.getElementById('res-base').textContent   =
-    'Base ' + res.base.toLocaleString('es-ES',{minimumFractionDigits:2}) + '€ + IVA ' + res.iva.toLocaleString('es-ES',{minimumFractionDigits:2}) + '€ (' + CFG.IVA + '%) · ' + (calLabels[S.calidad] || '');
+    'IVA incluido · horquilla ±' + hq.pct + ' % sobre ' + res.total.toLocaleString('es-ES',{minimumFractionDigits:2}) + '€ calculados · ' + (calLabels[S.calidad] || '');
 
   const fmt = v => v.toLocaleString('es-ES',{minimumFractionDigits:2}) + '€';
   let htmlSum = '<div class="res-resumen">' +
@@ -3453,7 +3521,8 @@ function calcularYMostrar() {
     (res.totalExtras > 0 ? resFilaSum('Extras y condiciones especiales', fmt(res.totalExtras), 'sec-ext') : '') +
     '<div class="res-resumen-row no-expand"><span class="res-resumen-label">Margen profesional (' + CFG.MARGEN_VALOR + '%)</span><span class="res-resumen-val">' + fmt(res.margen) + '</span></div>' +
     '<div class="res-resumen-row no-expand"><span class="res-resumen-label">IVA (' + CFG.IVA + '%)</span><span class="res-resumen-val">' + fmt(res.iva) + '</span></div>' +
-    '<div class="res-resumen-row tot no-expand"><span class="res-resumen-label">TOTAL ESTIMADO</span><span class="res-resumen-val">' + fmt(res.total) + '</span></div>' +
+    '<div class="res-resumen-row tot no-expand"><span class="res-resumen-label">Estimación central</span><span class="res-resumen-val">' + fmt(res.total) + '</span></div>' +
+    '<div class="res-resumen-row no-expand"><span class="res-resumen-label">Horquilla ±' + hq.pct + ' % (IVA incluido)</span><span class="res-resumen-val">' + fmtEntero(hq.loE) + ' € – ' + fmtEntero(hq.hiE) + ' €</span></div>' +
     '</div>';
 
   // C22: "Mano de obra" / "Materiales" labels (full text, no abbreviations)
@@ -3708,12 +3777,18 @@ async function enviarSolicitud() {
       m2:       S.cfgEspacios[espId]?.m2 || 10,
       trabajos: S.cfgEspacios[espId]?.trabajos || [],
       notas:    S.cfgEspacios[espId]?.notas || '',
+      // R-02: detalle completo del espacio (cantUd, mlOvr, tabiquesConfig, ventanasConfig, demolicionEstado(s), plantaEspacio, pinturaConMuebles…)
+      cfg:      JSON.parse(JSON.stringify(S.cfgEspacios[espId] || {})),
+      materiales: JSON.parse(JSON.stringify(S.materialesPorEspacio[espId] || {})),
     })),
     calidad:           S.calidad,
     extras:            [...S.extras],
     urgencia:          S.urgencia,
     notas:             S.notas,
-    resultado_calculo: {total:S.resultado?.total, base:S.resultado?.base, iva:S.resultado?.iva, margen:S.resultado?.margen, dias:S.resultado?.dias},
+    obraHabitada:      !!S.obraHabitada,
+    elegiMateriales:   S.elegiMateriales || null,
+    materiales:        { porEspacio: JSON.parse(JSON.stringify(S.materialesPorEspacio || {})), compartidos: JSON.parse(JSON.stringify(S.matCompartidos || {})) },
+    resultado_calculo: {total:S.resultado?.total, base:S.resultado?.base, iva:S.resultado?.iva, margen:S.resultado?.margen, dias:S.resultado?.dias, horquilla:rangoHorquilla(S.resultado?.total || 0)},
     cliente:           S.cliente,
     rgpd_consent:      true,
   };
@@ -3733,7 +3808,7 @@ async function enviarSolicitud() {
     '<strong>Nombre:</strong> ' + nombre + '<br>' +
     '<strong>Email:</strong> ' + email + '<br>' +
     '<strong>Espacios:</strong> ' + S.espacios.map(getLabelEspacio).join(', ') + '<br>' +
-    '<strong>Total estimado:</strong> ' + resTotal + '€<br>' +
+    '<strong>Estimación:</strong> entre ' + fmtEntero(rangoHorquilla(S.resultado?.total || 0).loE) + ' € y ' + fmtEntero(rangoHorquilla(S.resultado?.total || 0).hiE) + ' € (IVA incluido)<br>' +
     '<strong>Referencia:</strong> ' + ref;
 
   try { if (window.parent && window.parent.Proto) window.parent.Proto.solicitud(payload, ref, S.resultado || calcularLocal()); } catch (e) { console.error('Prototipo: no se pudo enviar al admin', e); }

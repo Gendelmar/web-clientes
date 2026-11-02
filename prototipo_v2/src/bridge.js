@@ -14,6 +14,58 @@ const r2 = v => Math.round((Number(v) || 0) * 100) / 100;
 const ms = (fecha, h) => new Date(fecha + 'T' + (h || '12:00') + ':00').getTime();
 const hoyMs = () => ms(A().hoy());
 
+
+/* ---------- 0. Servicio compartido de adjuntos (R-13) ----------
+   Fotos y justificantes viven en IndexedDB (con respaldo en memoria); en los JSON solo viajan sus identificadores y metadatos.
+   Las cuatro apps lo usan con window.parent.Proto.adjuntos. */
+Proto.adjuntos = (function () {
+  const DBN = 'protoAdjuntosV2', ST = 'adj', MAX = 5 * 1024 * 1024, PERMITIDOS = /^(image\/(jpeg|png|webp|gif|svg\+xml|heic|heif)|application\/pdf)$/;
+  const mem = new Map(); let idb = null, modo = 'memoria', avisado = false, n = 0;
+  const abierto = new Promise(res => {
+    try {
+      if (!window.indexedDB) { res(false); return; }
+      const rq = indexedDB.open(DBN, 1);
+      rq.onupgradeneeded = () => { rq.result.createObjectStore(ST, { keyPath: 'id' }); };
+      rq.onsuccess = () => { idb = rq.result; modo = 'indexeddb'; res(true); };
+      rq.onerror = () => res(false); rq.onblocked = () => res(false);
+    } catch (e) { res(false); }
+  }).then(ok => { if (!ok && !avisado) { avisado = true; setTimeout(() => toast('Aviso: IndexedDB no está disponible; los adjuntos se guardan solo en memoria durante esta sesión.'), 0); } return ok; });
+  const tx = (modoTx, fn) => abierto.then(ok => ok && idb ? new Promise(res => { try { const t = idb.transaction(ST, modoTx); const rq = fn(t.objectStore(ST)); t.oncomplete = () => res(rq && rq.result !== undefined ? rq.result : true); t.onerror = () => res(null); t.onabort = () => res(null); } catch (e) { res(null); } }) : null);
+  function leer(file) { return new Promise((res, rej) => { const fr = new FileReader(); fr.onload = () => res(fr.result); fr.onerror = () => rej(new Error('No se pudo leer el archivo')); fr.readAsDataURL(file); }); }
+  function comprimir(file, max) {
+    max = max || 1600;
+    return new Promise((res, rej) => { const u = URL.createObjectURL(file), im = new Image();
+      im.onload = () => { const k = Math.min(1, max / Math.max(im.naturalWidth, im.naturalHeight)); const c = document.createElement('canvas'); c.width = Math.max(1, Math.round(im.naturalWidth * k)); c.height = Math.max(1, Math.round(im.naturalHeight * k)); c.getContext('2d').drawImage(im, 0, 0, c.width, c.height); URL.revokeObjectURL(u); res(c.toDataURL('image/jpeg', 0.8)); };
+      im.onerror = () => { URL.revokeObjectURL(u); rej(new Error('formato no legible')); }; im.src = u; });
+  }
+  function putSync(data, meta, idFijo) {
+    meta = meta || {}; const id = idFijo || ('ADJ-' + (++n) + Math.random().toString(36).slice(2, 6));
+    const m = { nombre: meta.nombre || 'archivo', tipo: meta.tipo || (/^data:([^;,]+)/.exec(data) || [])[1] || 'application/octet-stream', tam: meta.tam != null ? meta.tam : Math.round(String(data).length * 0.75), casoId: meta.casoId || null, origen: meta.origen || 'cliente', fecha: meta.fecha || new Date().toISOString() };
+    const rec = { id, meta: m, data }; mem.set(id, rec); tx('readwrite', st => st.put(rec)); return id;
+  }
+  async function put(src, meta) {
+    meta = Object.assign({}, meta);
+    if (typeof src === 'string') return putSync(src, meta);
+    const f = src; if (!f) throw new Error('No hay archivo');
+    const tipo = f.type || meta.tipo || '';
+    if (!PERMITIDOS.test(tipo)) throw new Error('Formato no admitido: sube una imagen (JPG, PNG, HEIC) o un PDF.');
+    if (f.size > (meta.maxBytes || MAX)) throw new Error('El archivo supera los 5 MB.');
+    let data; if (/^image\/(jpeg|png|webp|gif)$/.test(tipo)) { try { data = await comprimir(f, meta.maxPx || 1600); } catch (e) { data = await leer(f); } } else data = await leer(f);
+    return putSync(data, Object.assign({ nombre: f.name, tipo, tam: f.size }, meta));
+  }
+  return {
+    put, putSync, comprimir, MAX,
+    get: async id => mem.get(id) || (await tx('readonly', st => st.get(id))) || null,
+    url: id => (mem.get(id) || {}).data || null,
+    meta: id => (mem.get(id) || {}).meta || null,
+    del: id => { mem.delete(id); return tx('readwrite', st => st.delete(id)); },
+    lista: casoId => [...mem.values()].filter(r => !casoId || r.meta.casoId === casoId).map(r => Object.assign({ id: r.id }, r.meta)).sort((a, b) => String(a.fecha).localeCompare(String(b.fecha))),
+    sembrar: lista => (lista || []).forEach(x => { if (!mem.has(x.id)) putSync(x.data, { nombre: x.nombre, tipo: x.tipo, casoId: x.casoId, origen: x.origen || 'demo' }, x.id); }),
+    limpiar: () => { mem.clear(); return tx('readwrite', st => st.clear()); },
+    modo: () => modo, listo: () => abierto
+  };
+})();
+
 /* ---------- utilidades ---------- */
 function toast(m) {
   const t = $('#ptoast'); t.textContent = m; t.classList.add('on');
@@ -25,20 +77,21 @@ const TIPO_CLI = { bano: 'bano', cocina: 'cocina', salon: 'salon', hab: 'habitac
 const slug = s => String(s).toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '').slice(0, 40);
 
 /* ---------- 1. Configurador → Admin ---------- */
+/* R-02: cada línea conserva la key del trabajo del configurador, su base real (BASE_POR_TRABAJO de cfg) y el precio unitario */
 function lineasDesdeCalc(calc, espacios) {
   const id = Object.fromEntries(espacios.map(e => [e.nombre, e.id]));
   const mapa = new Map(); const A_ = A();
-  const add = (grupos, esMat) => Object.values(grupos || {}).forEach(g => (g.items || []).forEach(it => {
-    const esp = id[it.espLabel] || espacios[0].id; const k = esp + '|' + it.concepto;
+  const add = grupos => Object.values(grupos || {}).forEach(g => (g.items || []).forEach(it => {
+    const esp = it.espId || id[it.espLabel] || espacios[0].id; const key = it.key || ('cfg_' + slug(it.concepto)); const k = esp + '|' + key;
     let l = mapa.get(k);
-    if (!l) { l = { esp, concepto: it.concepto, unidad: it.unidad || 'ud', cant: it.cant || 1, sub: 0, mats: 0 }; mapa.set(k, l); }
+    if (!l) { l = { esp, key, concepto: it.concepto, unidad: it.unidad || 'ud', cant: it.cant || 1, base: it.base || 'fijo', esMat: !!it.esMat, prodId: it.prodId, sub: 0 }; mapa.set(k, l); }
     l.sub += it.sub || 0;
   }));
-  add(calc.gruposMO); add(calc.gruposMat, true);
+  add(calc.gruposMO); add(calc.gruposMat);
   const lineas = [];
   mapa.forEach(l => {
     const cant = l.cant || 1; const precio = r2(l.sub / cant);
-    lineas.push({ id: A_.uid('L'), key: 'cfg_' + slug(l.concepto), concepto: l.concepto, espacioId: l.esp, unidad: l.unidad, base: 'fijo', cantidad: cant, precio, subtotal: r2(precio * cant), tipo: 'mo', origen: 'calculo', bloqueada: false });
+    lineas.push({ id: A_.uid('L'), key: l.key, concepto: l.concepto, espacioId: l.esp, unidad: l.unidad, base: l.base, cantidad: cant, precio, subtotal: r2(precio * cant), tipo: l.esMat ? 'mat' : 'mo', origen: 'calculo', bloqueada: false });
   });
   (calc.desgloseExtras || []).forEach(x => lineas.push({ id: A_.uid('L'), key: 'cfg_extra_' + slug(x.concepto), concepto: x.concepto, espacioId: 'gen', unidad: 'ud', base: 'fijo', cantidad: 1, precio: r2(x.importe), subtotal: r2(x.importe), tipo: 'mo', origen: 'calculo', bloqueada: false }));
   return lineas;
@@ -46,28 +99,37 @@ function lineasDesdeCalc(calc, espacios) {
 
 Proto.solicitud = function (payload, ref, calc) {
   const a = A(), db = DBA(), hoy = a.hoy(), cl = payload.cliente || {}, inm = payload.inmueble || {};
+  if (!a.cpValido(inm.cp) || !(Number(inm.superficie) > 0) || !inm.tipo) { toast('⚠ La solicitud necesita tipo de vivienda, superficie y código postal válidos (R-01).'); return; }
   const cid = 'CL-P' + (db.clientes.length + 1);
   db.clientes.push({ id: cid, nombre: cl.nombre, email: cl.email, tel: cl.tel || '', canal: cl.canal || 'email', cp: inm.cp || '', zona: '', horario: cl.horario || 'cualquiera', rgpd: { aceptadoAt: hoy }, whatsappOk: cl.canal === 'whatsapp', notas: '' });
   const espacios = payload.espacios.map(e => ({ id: e.id, nombre: e.label, tipo: TIPO_ADM[e.tipo] || e.tipo, m2: e.m2, trabajos: [] }));
   espacios.push({ id: 'gen', nombre: 'General', tipo: 'general', m2: 0, trabajos: [] });
   const lineas = lineasDesdeCalc(calc, espacios);
-  espacios.forEach(e => e.trabajos = lineas.filter(l => l.espacioId === e.id).map(l => l.key));
+  const cfgDe = Object.fromEntries(payload.espacios.map(e => [e.id, e]));
+  espacios.forEach(e => {
+    const pe = cfgDe[e.id] || {}; const vistos = new Set(); e.trabajos = [];
+    lineas.filter(l => l.espacioId === e.id && l.tipo !== 'mat').forEach(l => { if (vistos.has(l.key)) return; vistos.add(l.key); e.trabajos.push({ key: l.key, label: l.concepto, base: l.base, detalles: a.detallesDeTrabajo(l.key, pe.cfg, pe.materiales) }); });
+  });
   const usados = espacios.filter(e => e.id !== 'gen' || e.trabajos.length);
-  const tot = a.calcularTotales(lineas, 21, 22, 500); const hq = a.calcularHorquilla(tot.total, 'media'); tot.lo = hq.lo; tot.hi = hq.hi;
+  const tot = a.calcularTotales(lineas, 21, 22, 500); const hq = a.calcularHorquilla(tot.total, null); tot.lo = hq.lo; tot.hi = hq.hi;
   const ver = { id: 'V1', tipo: 'estimacion', creadaAt: hoy, enviadaAt: hoy, ivaPct: 21, lineas, totales: tot, estado: 'vigente', cambiosRespectoAnterior: null };
   const m2tot = usados.reduce((s, e) => s + (e.m2 || 0), 0);
+  const detalle = { inmueble: JSON.parse(JSON.stringify(inm)), extras: (payload.extras || []).slice(), calidad: payload.calidad, urgencia: payload.urgencia, obraHabitada: !!payload.obraHabitada, elegiMateriales: payload.elegiMateriales || null, materiales: JSON.parse(JSON.stringify(payload.materiales || {})), notas: payload.notas || '',
+    espacios: Object.fromEntries(payload.espacios.map(e => [e.id, { cfg: JSON.parse(JSON.stringify(e.cfg || {})), materiales: JSON.parse(JSON.stringify(e.materiales || {})), notas: e.notas || '' }])), resultado: payload.resultado_calculo || null };
   const caso = {
-    id: ref, clienteId: cid, creadaAt: hoy, estado: 'recibida', estadoPrevio: null,
+    id: ref, clienteId: cid, creadoAt: hoy, creadaAt: hoy, estado: 'recibida', estadoPrevio: null,
     interno: { etiquetas: ['configurador'], nota: '', proximaAccion: 'Revisar la solicitud y pasarla a triaje', motivoDescarte: null },
     versiones: [ver], aceptacion: null,
     visita: { estado: 'pendiente', franjasOfrecidas: [], elegida: null, cobro: { estado: 'no_aplica' }, checks: {}, medidas: {}, fotos: [], notas: [] },
     obra: { inicio: null, hitos: [], cambios: [], adendas: [], fotos: [], solicitudesCambio: [], remates: [], cierre: null },
-    recordatorios: [], enlace: { token: a.uid('tok') },
+    recordatorios: [], enlace: { token: a.uid('tok') }, mensajes: [],
     eventos: [{ fecha: hoy, tipo: 'sistema', texto: 'Pedido recibido desde el configurador web', autor: 'sistema' }, { fecha: hoy, tipo: 'sistema', texto: 'Enviado al cliente el mensaje automático con su estimación y el enlace a su panel', autor: 'sistema' }],
-    vivienda: { cp: inm.cp || '', tipo: inm.tipo || 'piso', m2: inm.superficie || m2tot, plantas: 1, antiguedad: 'desconocida', humedades: false, propietario: true, comunidad: 'no_aplica', topePresupuesto: null, fechaInicioDeseada: null },
-    solicitud: { calidad: payload.calidad || 'media', tipoObra: usados.filter(e => e.id !== 'gen').length >= 4 ? 'reforma_integral' : 'reforma_parcial', notasCliente: payload.notas || '', fotosCliente: [], urgencia: payload.urgencia, espacios: usados }
+    vivienda: { cp: inm.cp || '', tipo: inm.tipo || 'piso', m2: inm.superficie || m2tot, plantas: inm.numPlantasChalet || 1, antiguedad: 'desconocida', humedades: false, propietario: true, comunidad: 'no_aplica', topePresupuesto: null, fechaInicioDeseada: null },
+    solicitud: { calidad: payload.calidad || 'media', tipoObra: usados.filter(e => e.id !== 'gen').length >= 4 ? 'reforma_integral' : 'reforma_parcial', notasCliente: payload.notas || '', fotosCliente: [], urgencia: payload.urgencia, obraHabitada: !!payload.obraHabitada || (payload.extras || []).includes('obra_habitada'), espacios: usados, detalle }
   };
+  caso.datosVivienda = a.nuevoDatosVivienda(caso);
   db.casos.unshift(caso);
+  a.notificar(db, ref, 'sistema', 'Nueva solicitud recibida desde el configurador (' + a.fmtImporteVersion(ver) + ')');
   Proto.ref = ref; Proto.adminNuevo = true; Proto.sigCaso = '';
   AP().refresh();
   Proto.tick(true);
@@ -98,16 +160,19 @@ function buildV(caso) {
   const cfg = db.cfg, emp = cfg.empresa || {};
   let estado = caso.estado; if (estado === 'en_pausa') estado = caso.estadoPrevio || 'recibida';
   const fase = FASE_CLI[estado] || 'recibida';
-  const vers = caso.versiones.filter(v => v.estado !== 'borrador').map(v => ({
-    id: v.id, tipo: v.tipo === 'propuesta' ? 'propuesta' : 'estimacion', fecha: ms(v.enviadaAt || v.creadaAt || a.hoy()),
-    estado: v.estado === 'vigente' ? 'vigente' : v.estado === 'aceptada' ? 'aceptada' : 'sustituida', est: estCliente(caso, v)
-  }));
+  const vers = caso.versiones.filter(v => v.estado !== 'borrador').map(v => {
+    const g = a.rangoVersion(v);
+    return { id: v.id, tipo: v.tipo === 'propuesta' ? 'propuesta' : 'estimacion', fecha: ms(v.enviadaAt || v.creadaAt || a.hoy()), total: v.totales.total, rango: g.exacto ? null : { lo: g.lo, hi: g.hi }, etiqueta: a.etiquetaVersion(v, caso), avisosVisita: (v.avisosVisita || v.avisos || []).slice(),
+      estado: v.estado === 'vigente' ? 'vigente' : v.estado === 'aceptada' ? 'aceptada' : 'sustituida', est: estCliente(caso, v) };
+  });
   const vi = caso.visita || {};
   const imp = (() => { try { return a.importeVisita(caso, cfg) || 60; } catch (e) { return 60; } })();
-  const visita = { estado: ({ propuesta: 'propuesta', confirmada: 'confirmada', realizada: 'realizada' })[vi.estado] || 'no', franjas: (vi.franjasOfrecidas || []).map(franjaCli), elegida: vi.elegida ? franjaCli(vi.elegida) : null, importe: imp };
+  const cb = vi.cobro || {};
+  const visita = { estado: ({ propuesta: 'propuesta', confirmada: 'confirmada', realizada: 'realizada' })[vi.estado] || 'no', franjas: (vi.franjasOfrecidas || []).map(franjaCli), elegida: vi.elegida ? franjaCli(vi.elegida) : null, importe: imp,
+    cobro: { estado: cb.estado || 'no_aplica', importe: cb.importe != null ? cb.importe : imp, reservaExpiraAt: cb.reservaExpiraAt || null, avisoPagoId: cb.avisoPagoId || null, requierePago: a.visitaRequierePago(caso, cfg), horas: a.reservaHoras(cfg), cuando: (cfg.visita || {}).cobroCuando || 'al_confirmar' } };
   if (fase === 'visita_propuesta' && !visita.franjas.length) visita.estado = 'no';
   const ac = caso.aceptacion;
-  const aceptacion = ac ? { versionId: ac.versionId, total: ac.importe, f: ms(ac.fecha), nombre: cl.nombre } : null;
+  const aceptacion = ac ? { versionId: ac.versionId, total: ac.importe, f: ms(ac.fecha), nombre: ac.nombre || cl.nombre } : null;
   const ob = caso.obra || {};
   const hitos = (ob.hitos || []).map(h => ({ id: h.id, nombre: h.nombre, dias: h.diasEstimados || 3, estado: h.estado === 'hecho' ? 'hecho' : h.estado === 'en_curso' ? 'en_curso' : 'pendiente', previsto: ms(h.fechaPrevista || a.hoy()), real: h.fechaReal ? ms(h.fechaReal) : null }));
   const cambios = (ob.cambios || []).map(c => ({ id: c.id, concepto: c.concepto, importe: c.importe, motivo: c.nota || c.tipo || 'Cambio en obra', bloquea: !!c.bloqueaObra, f: ms(c.fecha), comentario: c.comentarioCliente,
@@ -117,16 +182,26 @@ function buildV(caso) {
   const remates = (ob.remates || []).map(r => ({ id: r.id, texto: r.texto, estado: r.estado === 'abierto' ? 'abierto' : 'resuelto', foto: !!r.foto, autor: r.autor || 'reformista', itemId: r.itemId || null, localId: r.localId || null }));
   const cierre = ob.cierre ? { terminadaAt: ms(ob.cierre.terminadaAt || a.hoy()), conformidad: ob.cierre.conformidad ? { f: ms(ob.cierre.conformidad.fecha || a.hoy()) } : null } : (['terminada', 'en_remates', 'cerrada'].includes(caso.estado) ? { terminadaAt: hoyMs(), conformidad: null } : null);
   const plan = (cfg.planCobros || []).map(t => ({ label: t.label, pct: t.pct, cuando: String(t.cuando).startsWith('hito:') ? 'hito2' : t.cuando }));
-  const cobros = db.cobros.filter(c => c.casoId === caso.id && c.estado !== 'anulado').map(c => ({ id: c.id, f: ms(c.fecha), concepto: c.concepto, importe: c.importe, medio: c.metodo || c.medio || 'Transferencia', tipo: c.tipo === 'visita' ? 'visita' : 'plan' }));
-  const mensajes = (caso.eventos || []).map((e, i) => ({ e, i })).filter(x => x.e.tipo === 'mensaje' && x.e.autor === 'reformista').map(x => ({ f: ms(x.e.fecha) + x.i, t: x.e.texto }));
+  const cobros = db.cobros.filter(c => c.casoId === caso.id && c.estado !== 'anulado').map(c => ({ id: c.id, f: ms(c.fecha), concepto: c.concepto, importe: c.importe, medio: c.metodo || c.medio || 'Transferencia', tipo: c.tipo === 'visita' ? 'visita' : 'plan', justificanteId: c.justificanteId || null }));
+  const avisosPago = (db.avisosPago || []).filter(x => x.casoId === caso.id).map(x => ({ id: x.id, importe: x.importe, medio: x.medio, f: ms(x.fecha), tramo: x.tramo, tipo: x.tipo, adjuntoId: x.adjuntoId, estado: x.estado, motivo: x.motivo || '', concepto: x.concepto }));
+  const mensajes = (caso.mensajes || []).slice().sort((p, q) => String(p.fecha).localeCompare(String(q.fecha))).map(m => ({ id: m.id, f: Date.parse(m.fecha) || ms(String(m.fecha).slice(0, 10)), autor: m.autor, t: m.texto, adjuntos: (m.adjuntos || []).slice(), tipo: m.tipo, leido: !!(m.leido && m.leido.cli) }));
+  const dvEval = a.evaluarDatosVivienda(caso, cfg);
+  const dv = Object.assign(a.nuevoDatosVivienda(caso), caso.datosVivienda || {});
+  const fiscal = caso.fiscal ? Object.assign({}, caso.fiscal) : a.nuevoFiscal();
+  const fiscalEval = a.evaluarFiscal(fiscal, caso);
+  const rqCtx = { db, cfg, cobros: db.cobros };
   return {
     ref: caso.id, token: caso.enlace.token, dias: AP().off(), fase,
-    cliente: { nombre: cl.nombre, email: cl.email, tel: cl.tel, direccion: (cl.zona ? cl.zona + ' · ' : '') + (caso.vivienda.cp || '') },
-    reformista: { empresa: emp.nombre || 'Anatoliy Reformas', contacto: emp.contacto || 'Anatoliy', tel: emp.tel || '600 000 000', email: emp.email || 'hola@anatoliyreformas.es', iban: emp.iban || 'ES00 0000 0000 0000 0000 0000' },
-    versiones: vers, visita, aceptacion, plan, cobros, mensajes,
+    cliente: { nombre: cl.nombre, email: cl.email, tel: cl.tel, direccion: caso.vivienda.direccion || ((cl.zona ? cl.zona + ' · ' : '') + (caso.vivienda.cp || '')) },
+    reformista: { empresa: emp.nombre || 'Anatoliy Reformas', contacto: emp.contacto || 'Anatoliy', tel: emp.tel || '600 000 000', email: emp.email || 'hola@anatoliyreformas.es', iban: (cfg.cobros && cfg.cobros.iban) || emp.iban || 'ES00 0000 0000 0000 0000 0000', titular: (cfg.cobros && cfg.cobros.titular) || emp.nombre, bizum: (cfg.cobros && cfg.cobros.bizum) || emp.tel },
+    pago: { medios: MEDIOS_PAGO_CLI.filter(m => ((cfg.cobros || {}).medios || []).includes(m) || m === 'transferencia'), justificanteObligatorio: Object.fromEntries(['transferencia', 'bizum', 'efectivo'].map(m => [m, a.justificanteObligatorio(cfg, m)])) },
+    versiones: vers, visita, aceptacion, plan, cobros, avisosPago, mensajes, horquillaPct: a.horquillaPct(cfg),
+    datosVivienda: Object.assign({}, dv, { eval: dvEval }), fiscal, fiscalEval, tipoVivienda: caso.vivienda.tipo || 'piso', habitadaConfigurador: !!(caso.solicitud && caso.solicitud.obraHabitada),
+    requisitos: a.mapaRequisitosCliente(caso, rqCtx),
     obra: { inicio: ob.inicio ? ms(ob.inicio) : null, hitos, cambios, adendas, solicitudes, remates, cierre }
   };
 }
+const MEDIOS_PAGO_CLI = ['transferencia', 'bizum', 'efectivo'];
 Proto.proyectarCliente = function (force) {
   const c = casoActivo(); if (!c || !W('cli') || !W('cli').__P) return;
   try { W('cli').__P.aplicar(buildV(c), force); } catch (e) { console.error('proyectarCliente', e); }
@@ -174,14 +249,18 @@ Proto.lite = function (kind, d) {
       e.comentarios.forEach(t => c.visita.notas.push({ id: a.uid('n'), espacioId: e.id, texto: e.nombre + ': ' + t, fecha: hoy }));
       for (let i = 0; i < e.nFotos; i++) c.visita.fotos.push({ id: a.uid('foto'), url: 'foto-lite.jpg', espacioId: e.id, espacioNombre: e.nombre, etiqueta: 'Visita (Lite)', fecha: hoy });
     });
-    const tot = a.calcularTotales(lineas, d.ajustes.iva, d.ajustes.margen, 500); const hq = a.calcularHorquilla(tot.total, 'baja'); tot.lo = hq.lo; tot.hi = hq.hi;
+    const tot = a.calcularTotales(lineas, d.ajustes.iva, d.ajustes.margen, 500); const hq = a.calcularHorquilla(tot.total, null); tot.lo = hq.lo; tot.hi = hq.hi;
     const ver = { id: d.v3id, tipo: 'propuesta', creadaAt: hoy, enviadaAt: hoy, ivaPct: d.ajustes.iva, lineas, totales: tot, estado: 'borrador', cambiosRespectoAnterior: null, quitados };
+    // R-15 (A10 y A1): se revalida antes de aplicar nada; al cerrar la visita desde el lite se da por realizada
+    const cSim = Object.assign({}, c, { estado: 'en_visita', visita: Object.assign({}, c.visita, { estado: 'realizada' }) });
+    const rq10 = a.requisitos('cerrar_visita', c, { total: tot.total }), rq1 = a.requisitos('enviar_version', cSim, { version: ver });
+    if (!rq10.ok || !rq1.ok) { toast('⚠ No se puede enviar todavía. Te falta: ' + a.textoFaltan({ faltan: rq10.faltan.concat(rq1.faltan) }) + '.'); return; }
     if (c.estado === 'visita_confirmada' && a.puedeTransitar(c, 'en_visita')) a.transitar(c, 'en_visita', { autor: 'reformista', texto: 'Visita técnica realizada (panel Lite)' });
     c.visita.estado = 'realizada';
     // cobro de la visita (a cuenta del presupuesto) si no estaba cobrada
     try {
       const imp = a.importeVisita(c, DBA().cfg);
-      if (imp > 0 && !['cobrada', 'eximida'].includes(c.visita.cobro && c.visita.cobro.estado)) {
+      if (imp > 0 && !['cobrada', 'eximida', 'pendiente_pago', 'justificante_enviado'].includes(c.visita.cobro && c.visita.cobro.estado) && (DBA().cfg.visita.cobroCuando || 'en_visita') === 'en_visita') {
         c.visita.cobro = Object.assign({}, c.visita.cobro, { importe: imp, estado: 'cobrada', fecha: hoy });
         const vd = a.visitaDescuento(DBA().cfg);
         DBA().cobros.push({ id: a.uid('cob'), casoId: c.id, importe: imp, concepto: 'Visita técnica', fecha: hoy, estado: 'cobrado', metodo: 'efectivo', tipo: 'visita', descontable: vd.descontable, descontablePct: vd.pct });
@@ -198,41 +277,90 @@ Proto.lite = function (kind, d) {
 };
 
 /* ---------- 5. Cliente → Admin ---------- */
+/* Cada acción se REVALIDA aquí con requisitos() antes de aplicar nada (R-15): aunque la interfaz falle, el estado no se corrompe. */
+const ACCION_REQ = { elegirFranja: 'elegir_franja', pagarVisita: 'confirmar_visita', reprogramar: 'reprogramar', aceptar: 'aceptar', pedirCambios: 'pedir_cambios', rechazar: 'rechazar', solicitudObra: 'solicitud_obra', desacuerdo: 'desacuerdo', firmarAdenda: 'firmar_adenda', remate: 'listar_remate', conformidad: 'conformidad', valoracion: 'valorar', mensaje: 'mensaje', avisoPago: 'avisar_pago' };
+function datosReq(kind, c, d) {
+  switch (kind) {
+    case 'elegirFranja': return { franja: c.visita.franjasOfrecidas[d.idx] };
+    case 'pagarVisita': return { adjuntoId: d.adjuntoId, franja: c.visita.elegida };
+    case 'reprogramar': return { franja: c.visita.franjasOfrecidas[d.idx], aceptaRetencion: !!d.aceptaRetencion };
+    case 'aceptar': return { condiciones: !!d.condiciones, planRevisado: !!d.planRevisado, avisosLeidos: !!d.avisosLeidos, codigo: d.codigo };
+    case 'pedirCambios': return { texto: d.t };
+    case 'rechazar': return { motivo: d.motivo };
+    case 'solicitudObra': return { texto: d.texto };
+    case 'desacuerdo': return { id: d.id, comentario: d.comentario };
+    case 'firmarAdenda': return { id: d.id, acepto: d.acepto !== false, nombre: d.nombre };
+    case 'remate': return { texto: d.texto };
+    case 'conformidad': return { checklistCompleto: !!d.checklistCompleto, firma: !!d.firma };
+    case 'mensaje': return { texto: d.t, adjuntos: d.adjuntos || [] };
+    case 'avisoPago': return { importe: d.importe, medio: d.medio, fecha: d.fecha, adjuntoId: d.adjuntoId };
+    default: return {};
+  }
+}
 Proto.cli = function (kind, d) {
-  const c = casoActivo(); if (!c) return; const a = A(), hoy = a.hoy();
+  d = d || {};
+  const c = casoActivo(); if (!c) return; const a = A(), hoy = a.hoy(), db = DBA(), cfg = db.cfg;
   const ev = (texto, tipo) => c.eventos.push({ fecha: hoy, tipo: tipo || 'cliente', texto, autor: 'cliente' });
+  const nt = (tipo, texto, o) => a.notificar(db, c.id, tipo, texto, o);
+  const nCli = db.clientes.find(x => x.id === c.clienteId) || {};
+  const rechazar = rq => { toast('⚠ No se puede hacer todavía. Te falta: ' + a.textoFaltan(rq) + '.'); Proto.proyectarCliente(true); };
   try {
+    // datos previos que el panel envía junto a la acción
+    if (kind === 'aceptar' && d.fiscal) a.aplicarFiscal(c, d.fiscal);
+    const accion = ACCION_REQ[kind];
+    if (accion) {
+      const rq = a.requisitos(accion, c, { db, cfg, cobros: db.cobros, datos: datosReq(kind, c, d) });
+      if (!rq.ok) { rechazar(rq); return; }
+    }
     switch (kind) {
-      case 'elegirFranja': a.aplicarAccionCliente(c, 'elegir_franja', { franja: c.visita.franjasOfrecidas[d.idx] }); break;
+      case 'elegirFranja': a.aplicarAccionCliente(c, 'elegir_franja', { franja: c.visita.franjasOfrecidas[d.idx] }); nt('franja', 'El cliente ha elegido franja de visita: ' + a.fmtFechaCorta(c.visita.elegida.fecha) + ' ' + c.visita.elegida.franja + (c.visita.cobro && c.visita.cobro.estado === 'pendiente_pago' ? ' · hueco reservado a la espera del pago' : '')); break;
+      case 'pagarVisita': {
+        a.aplicarAccionCliente(c, 'pagar_visita', { adjuntoId: d.adjuntoId, medio: d.medio || 'transferencia', fecha: d.fecha || hoy });
+        const av = db.avisosPago.find(x => x.id === c.visita.cobro.avisoPagoId);
+        a.escribirMensaje(c, { autor: 'cliente', texto: 'He pagado la visita (' + a.fmtEur(av.importe) + ' por ' + av.medio + '). Adjunto el justificante.', tipo: 'aviso_pago', adjuntos: [d.adjuntoId], sinEvento: true });
+        nt('justificante', 'Justificante por confirmar: pago de la visita (' + a.fmtEur(av.importe) + ')', { clave: 'jf:' + av.id }); break; }
+      case 'avisoPago': {
+        a.aplicarAccionCliente(c, 'avisar_pago', { importe: d.importe, medio: d.medio, fecha: d.fecha, tramo: d.tramo, adjuntoId: d.adjuntoId, nota: d.nota });
+        const av = db.avisosPago[db.avisosPago.length - 1];
+        a.escribirMensaje(c, { autor: 'cliente', texto: 'He realizado un pago de ' + a.fmtEur(av.importe) + ' por ' + av.medio + ' (' + av.fecha + ')' + (av.tramo ? ' · ' + av.tramo : '') + '.' + (av.adjuntoId ? ' Adjunto el justificante.' : ''), tipo: 'aviso_pago', adjuntos: av.adjuntoId ? [av.adjuntoId] : [], sinEvento: true });
+        nt('justificante', 'Justificante por confirmar: ' + (av.tramo || 'pago') + ' (' + a.fmtEur(av.importe) + ')', { clave: 'jf:' + av.id }); break; }
       case 'reprogramar': a.aplicarAccionCliente(c, 'reprogramar', { franja: c.visita.franjasOfrecidas[d.idx] }); break;
-      case 'aceptar': a.aplicarAccionCliente(c, 'aceptar', {}); break;
-      case 'pedirCambios': a.aplicarAccionCliente(c, 'pedir_cambios', { texto: d.t }); break;
+      case 'aceptar': {
+        a.aplicarAccionCliente(c, 'aceptar', {}); if (c.aceptacion) { c.aceptacion.nombre = d.nombre || nCli.nombre; c.aceptacion.condiciones = true; }
+        nt('aceptacion', 'El cliente ha aceptado la propuesta ' + (c.aceptacion ? c.aceptacion.versionId : '') + ' (' + a.fmtEur(c.aceptacion ? c.aceptacion.importe : 0) + ')'); break; }
+      case 'pedirCambios': a.aplicarAccionCliente(c, 'pedir_cambios', { texto: d.t }); a.escribirMensaje(c, { autor: 'cliente', texto: 'Quiero pedir cambios en el presupuesto: ' + d.t, sinEvento: true }); nt('solicitud_cambio', 'El cliente pide cambios en el presupuesto: «' + d.t + '»'); break;
       case 'rechazar': a.aplicarAccionCliente(c, 'rechazar', { motivo: d.motivo }); break;
-      case 'solicitudObra': (c.obra.solicitudesCambio = c.obra.solicitudesCambio || []).push({ id: a.nuevoIdSeq(c.obra.solicitudesCambio, 'S'), fecha: hoy, texto: d.texto, estado: 'abierta' }); ev('El cliente pide un cambio en la obra: ' + d.texto); break;
+      case 'solicitudObra': (c.obra.solicitudesCambio = c.obra.solicitudesCambio || []).push({ id: a.nuevoIdSeq(c.obra.solicitudesCambio, 'S'), fecha: hoy, texto: d.texto, estado: 'abierta' }); ev('El cliente pide un cambio en la obra: ' + d.texto); nt('solicitud_cambio', 'Solicitud de cambio del cliente: «' + d.texto + '»'); break;
       case 'aceptarCambio': { const ch = c.obra.cambios.find(x => x.id === d.id); if (ch) { ch.avisoCliente = Object.assign({}, ch.avisoCliente, { aceptadoAt: hoy, desacuerdo: false }); ev('El cliente ha aceptado el cambio ' + ch.id + ': ' + ch.concepto); } break; }
-      case 'desacuerdo': { a.aplicarAccionCliente(c, 'desacuerdo', { id: d.id }); const ch = c.obra.cambios.find(x => x.id === d.id); if (ch && d.comentario) ch.comentarioCliente = d.comentario; break; }
-      case 'firmarAdenda': a.aplicarAccionCliente(c, 'firmar_adenda', { id: d.id }); break;
-      case 'remate': { a.aplicarAccionCliente(c, 'listar_remate', { texto: d.texto }); const r = c.obra.remates[c.obra.remates.length - 1]; if (r) { r.itemId = d.itemId || null; r.localId = d.localId || null; } break; }
-      case 'conformidad': {
-        const ok = a.puedeCerrarObra(c, DBA().cfg, 'expresa');
-        if (!ok.ok) { toast('⚠ La conformidad no se ha podido registrar: ' + ok.motivo); break; }
-        a.aplicarAccionCliente(c, 'conformidad', {}); break;
-      }
-      case 'mensaje': ev('El cliente escribe: «' + d.t + '»' + (d.kind === 'aviso_pago' ? ' (aviso de pago)' : d.kind === 'otra_fecha' ? ' (pide otras fechas de visita)' : ''), 'mensaje'); break;
-      case 'datos': {
-        const ok = d.datos.every(x => x.valor); c.datosCliente = d.datos;
-        const nif = d.datos.find(x => x.id === 'nif'); if (nif && nif.valor) { c.fiscal = Object.assign({}, c.fiscal, { nif: nif.valor }); }
-        const ini = d.datos.find(x => x.id === 'inicio'); if (ini && ini.valor) c.vivienda.fechaInicioDeseada = ini.valor;
-        const fo = d.datos.find(x => x.id === 'fotos'); if (fo && fo.valor) { c.solicitud.fotosCliente = []; for (let i = 0; i < fo.valor; i++) c.solicitud.fotosCliente.push('foto_cliente_' + (i + 1) + '.jpg'); }
-        ev(ok ? 'El cliente ha completado todos sus datos' : 'El cliente ha actualizado sus datos');
-        if (c.estado === 'esperando_info' && a.puedeTransitar(c, 'en_triaje')) a.transitar(c, 'en_triaje', { autor: 'cliente', texto: 'El cliente respondió con la información pedida' });
-        break;
-      }
-      case 'valoracion': ev('El cliente valora el servicio con ' + d.n + ' estrellas' + (d.t ? ': «' + d.t + '»' : '')); c.valoracion = { n: d.n, t: d.t }; break;
+      case 'desacuerdo': { a.aplicarAccionCliente(c, 'desacuerdo', { id: d.id }); const ch = c.obra.cambios.find(x => x.id === d.id); if (ch && d.comentario) ch.comentarioCliente = d.comentario; nt('duda_cambio', 'El cliente tiene dudas sobre el cambio ' + d.id + (ch ? ' («' + ch.concepto + '»)' : '') + (d.comentario ? ': ' + d.comentario : '')); break; }
+      case 'firmarAdenda': a.aplicarAccionCliente(c, 'firmar_adenda', { id: d.id }); nt('firma_adenda', 'El cliente ha firmado la adenda ' + d.id); break;
+      case 'remate': { a.aplicarAccionCliente(c, 'listar_remate', { texto: d.texto }); const r = c.obra.remates[c.obra.remates.length - 1]; if (r) { r.itemId = d.itemId || null; r.localId = d.localId || null; } nt('remate', 'El cliente ha listado un remate: «' + d.texto + '»'); break; }
+      case 'conformidad': { a.registrarConformidadCliente(c, cfg, { nombre: d.nombre }); nt('conformidad', 'El cliente ha dado su conformidad: obra cerrada'); break; }
+      case 'mensaje': {
+        const tipo = d.kind === 'aviso_pago' ? 'aviso_pago' : d.kind === 'otra_fecha' ? 'otra_fecha' : 'mensaje';
+        const m = a.escribirMensaje(c, { autor: 'cliente', texto: d.t || '', tipo, adjuntos: d.adjuntos || [] });
+        nt(tipo === 'otra_fecha' ? 'franja' : 'mensaje', (tipo === 'otra_fecha' ? 'El cliente pide otras fechas de visita: «' : 'Mensaje del cliente: «') + String(d.t || '').slice(0, 100) + '»', { clave: 'msg:' + c.id + ':' + m.id }); break; }
+      case 'leerMensajes': a.marcarMensajesLeidos(c, 'cli'); break;
+      case 'datosVivienda': {
+        const antes = !!(c.datosVivienda && c.datosVivienda.completos);
+        const rs = a.aplicarDatosVivienda(c, d.campos, cfg);
+        if (!rs.ok) { toast('⚠ ' + Object.values(rs.errores).join(' ')); break; }
+        (c.datosVivienda.fotosExtra || []).forEach(fid => { if (!c.solicitud.fotosCliente.includes(fid)) c.solicitud.fotosCliente.push(fid); });
+        const e2 = rs.evaluacion; ev(e2.completos ? 'El cliente ha completado los datos de su vivienda' : 'El cliente ha actualizado los datos de su vivienda (' + e2.hechos + ' de ' + e2.total + ' obligatorios)');
+        if (e2.completos && !antes) nt('datos_vivienda', 'El cliente ha completado los datos de su vivienda', { clave: 'dv:' + c.id + ':ok' });
+        e2.discrepancias.forEach(x => nt('discrepancia', x.texto, { clave: 'disc:' + c.id + ':' + x.id }));
+        if (c.estado === 'esperando_info' && e2.completos && a.puedeTransitar(c, 'en_triaje')) a.transitar(c, 'en_triaje', { autor: 'cliente', texto: 'El cliente respondió con la información pedida' });
+        break; }
+      case 'fiscal': { const f = a.aplicarFiscal(c, d.fiscal); ev(f.completos ? 'El cliente ha completado sus datos de facturación' : 'El cliente ha actualizado sus datos de facturación'); nt('fiscal', f.completos ? 'Datos de facturación completos' : 'Datos de facturación actualizados (incompletos)', { clave: 'fis:' + c.id + ':' + (f.completos ? 'ok' : 'parcial') }); break; }
+      case 'valoracion': ev('El cliente valora el servicio con ' + d.n + ' estrellas' + (d.t ? ': «' + d.t + '»' : '')); c.valoracion = { n: d.n, t: d.t }; nt('valoracion', 'Valoración del cliente: ' + d.n + ' estrellas'); break;
     }
   } catch (e) { console.error('Proto.cli', kind, e); toast('⚠ ' + e.message); }
   AP().refresh(); Proto.tick(true); Proto.proyectarCliente(true);
 };
+
+/* Evaluación en vivo de formularios del cliente con las MISMAS reglas del admin (no se duplican en el panel del cliente) */
+Proto.evalVivienda = dv => { const c = casoActivo(); const fake = Object.assign({}, c || { vivienda: { tipo: 'piso' }, solicitud: {} }, { datosVivienda: dv }); return A().evaluarDatosVivienda(fake, DBA().cfg); };
+Proto.evalFiscal = f => A().evaluarFiscal(f, casoActivo());
 
 /* ---------- 6. Vigilancia de cambios ---------- */
 const GUIA = {
@@ -274,7 +402,8 @@ function refreshBadges() {
 Proto.tick = function (force) {
   if (!W('adm') || !W('adm').__P || !W('cli') || !W('lite')) return;
   const c = casoActivo();
-  const sig = c ? hash(JSON.stringify(c) + JSON.stringify(DBA().cobros.filter(x => x.casoId === c.id)) + AP().off()) : '';
+  try { const p = A().horquillaPct(DBA().cfg), wc = W('cfg'); if (wc && wc.CFG && wc.CFG.HORQUILLA_PCT !== p) wc.CFG.HORQUILLA_PCT = p; } catch (e) {}
+  const sig = c ? hash(JSON.stringify(c) + JSON.stringify(DBA().cobros.filter(x => x.casoId === c.id)) + JSON.stringify((DBA().avisosPago || []).filter(x => x.casoId === c.id)) + AP().off()) : '';
   if (force || sig !== Proto.sigCaso) {
     Proto.sigCaso = sig;
     if (c) { Proto.proyectarCliente(); Proto.proyectarLite(); }
@@ -301,11 +430,13 @@ function tab(k) {
 function avanzar(d) { try { A().avanzarTiempo(d); Proto.tick(true); } catch (e) { console.error(e); } }
 function reiniciarTodo() {
   if (!confirm('¿Reiniciar el prototipo? Se borrará la solicitud en curso y todos los cambios.')) return;
-  try { localStorage.removeItem('panelClienteV1'); localStorage.removeItem('panelLiteV1'); sessionStorage.removeItem('protoTab'); } catch (e) {}
+  try { localStorage.removeItem('panelClienteV1'); localStorage.removeItem('panelLiteV1'); localStorage.removeItem('panelClienteV2'); localStorage.removeItem('panelLiteV2'); sessionStorage.removeItem('protoTab'); } catch (e) {}
+  try { Proto.adjuntos.limpiar(); } catch (e) {}
   location.reload();
 }
 function arrancar() {
-  try { localStorage.removeItem('panelClienteV1'); localStorage.removeItem('panelLiteV1'); } catch (e) {}
+  try { localStorage.removeItem('panelClienteV1'); localStorage.removeItem('panelLiteV1'); localStorage.removeItem('panelClienteV2'); localStorage.removeItem('panelLiteV2'); } catch (e) {}
+  try { Proto.adjuntos.limpiar(); } catch (e) {} // cada carga parte de los datos de ejemplo
   let pend = TABS.length;
   TABS.forEach(k => {
     const f = document.createElement('iframe'); f.id = 'fr-' + k; f.title = ({ cfg: 'Configurador', adm: 'Panel administrador', lite: 'Panel Lite', cli: 'Panel del cliente' })[k];

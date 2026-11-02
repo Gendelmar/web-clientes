@@ -134,7 +134,7 @@ main{padding:14px 14px calc(var(--nav) + 90px);min-width:0}
 // ═══════════════════════════════════════════════════════
 // 1. UTILIDADES
 // ═══════════════════════════════════════════════════════
-const LS = 'panelClienteV1';
+const LS = 'panelClienteV2';
 const $ = s => document.querySelector(s);
 const r2 = v => Math.round((Number(v) || 0) * 100) / 100;
 const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]));
@@ -185,19 +185,14 @@ function nuevoCaso() {
   const tok = Math.random().toString(36).slice(2, 8) + Math.random().toString(36).slice(2, 8);
   const t0 = Date.now();
   return {
-    ver:1, token:tok, ref:'REF-' + (3000 + Math.floor(Math.random() * 900)), creado:t0, dias:0,
+    ver:2, token:tok, ref:'REF-' + (3000 + Math.floor(Math.random() * 900)), creado:t0, dias:0,
     cliente:{ nombre:'Laura Martín', email:'laura.martin@ejemplo.es', tel:'612 345 678', direccion:'C/ Alcalá 245, 4.º B · 28027 Madrid' },
     reformista:{ empresa:'Anatoliy Reformas', contacto:'Anatoliy', tel:'600 000 000', email:'hola@anatoliyreformas.es', iban:'ES00 0000 0000 0000 0000 0000' },
     fase:'recibida',
-    datos:[
-      { id:'nif', label:'NIF / NIE (para el contrato)', tipo:'text', valor:'', ph:'12345678Z' },
-      { id:'inicio', label:'¿Cuándo te gustaría empezar la obra?', tipo:'date', valor:'' },
-      { id:'acceso', label:'Acceso al edificio', tipo:'select', opts:['Ascensor', 'Solo escaleras', 'Planta baja'], valor:'' },
-      { id:'habitada', label:'¿Vivirás en la casa durante la obra?', tipo:'select', opts:['Sí', 'No'], valor:'' },
-      { id:'fotos', label:'Fotos del estado actual de la vivienda', tipo:'fotos', valor:[] },
-    ],
+    dv:{ ubicacion:{ calle:'', numero:'', piso:'', puerta:'', cp:'28027', localidad:'' }, regimen:null, permisoPropietario:false, permisoDocId:null, contactoPropietario:'', anioConstruccion:null, anioDesconocido:false, inicio:null, inicioSinFecha:false, habitada:null, fotosExtra:[], comentarios:'', comunidad:null, eval:{ items:[], faltan:[{ id:'ubicacion', texto:'ubicación exacta' }, { id:'regimen', texto:'propietario o inquilino' }, { id:'anioConstruccion', texto:'año de construcción' }, { id:'inicio', texto:'fecha deseada de inicio' }, { id:'habitada', texto:'si vivirás en la casa durante la obra' }], hechos:0, total:5, completos:false, discrepancias:[] } },
+    fiscal:null, req:{}, avisosPago:[], tipoVivienda:'piso', pago:{ justificanteObligatorio:{ transferencia:true, bizum:true, efectivo:false } },
     versiones:[{ id:'V1', tipo:'estimacion', fecha:t0, estado:'vigente', est }],
-    visita:{ estado:'no', franjas:[], elegida:null, importe:60 },
+    visita:{ estado:'no', franjas:[], elegida:null, importe:60, cobro:{ estado:'no_aplica', importe:60 } },
     aceptacion:null,
     obra:{ inicio:null, hitos:[], fotos:[], cambios:[], adendas:[], solicitudes:[], remates:[], cierre:null },
     plan:[{ label:'Señal al aceptar', pct:30, cuando:'aceptacion' }, { label:'Al completar instalaciones', pct:30, cuando:'hito2' }, { label:'A la entrega', pct:40, cuando:'entrega' }],
@@ -212,6 +207,8 @@ const subL = l => r2(l.cant * l.precio);
 const subEst = e => r2(e.lineas.reduce((s, l) => s + subL(l), 0));
 const totalV = v => fin(v.est.reduce((s, e) => s + subEst(e), 0));
 const totalEstF = e => fin(subEst(e));
+// R-03: la V1 se muestra como rango (lo/hi los calcula el admin con su horquilla); V2 en adelante, importe exacto
+const rangoV = v => v.rango ? { lo:v.rango.lo, hi:v.rango.hi } : { lo:Math.floor(totalV(v) * 0.95), hi:Math.ceil(totalV(v) * 1.05) };
 const ahora = S => Date.now() + (S.dias || 0) * D_MS;
 const vigente = S => S.versiones.find(v => v.estado === 'vigente') || S.versiones[S.versiones.length - 1];
 const vAcept = S => S.aceptacion ? S.versiones.find(v => v.id === S.aceptacion.versionId) : null;
@@ -248,15 +245,16 @@ function checklistFinal(S) {
     { id:'g_doc', label:'He recibido llaves, manuales y documentación de garantías', estado:'pendiente', nota:'' }];
 }
 function pendientes(S) {
-  const p = []; const f = S.fase;
-  const faltan = S.datos.filter(d => !(d.tipo === 'fotos' ? d.valor.length : d.valor)).length;
-  if (faltan && f !== 'cerrada') p.push({ sec:'inicio', ic:'📝', t:'Completa tus datos', s:faltan + ' dato' + (faltan > 1 ? 's' : '') + ' por rellenar para afinar el presupuesto', fn:'abrirDatos()' });
+  const p = []; const f = S.fase; const ev = S.dv && S.dv.eval; const cb = S.visita.cobro || {};
+  if (ev && !ev.completos && !S.aceptacion && f !== 'cerrada') p.push({ sec:f === 'visita_propuesta' ? 'visita' : 'inicio', ic:'📝', t:'Completa los datos de tu vivienda', s:ev.hechos + ' de ' + ev.total + ' obligatorios' + (f === 'visita_propuesta' ? ' · necesarios para elegir fecha' : ''), fn:f === 'visita_propuesta' ? "ir('visita')" : 'abrirDatos()' });
   if (f === 'visita_propuesta') p.push({ sec:'visita', ic:'📅', t:'Elige el día de la visita técnica', s:'Hay ' + S.visita.franjas.length + ' huecos disponibles', fn:"ir('visita')" });
+  if (f === 'visita_confirmada' && cb.estado === 'pendiente_pago') p.push({ sec:'visita', ic:'💶', t:'Paga la visita para reservar tu hueco', s:eur0(cb.importe) + ' · sube el justificante', fn:"ir('visita')" });
   if (f === 'propuesta') p.push({ sec:'presupuesto', ic:'📄', t:'Revisa y acepta tu presupuesto ' + vigente(S).id, s:'Total ' + eur0(totalV(vigente(S))) + ' · IVA incluido', fn:"ir('presupuesto')" });
   const ch = S.obra.cambios.filter(c => c.estado === 'pendiente_cliente').length; if (ch) p.push({ sec:'cambios', ic:'🔁', t:ch + ' cambio' + (ch > 1 ? 's' : '') + ' por responder', s:'Acéptalos o cuéntanos tus dudas', fn:"ir('cambios')" });
   const ad = S.obra.adendas.filter(a => a.estado === 'por_firmar').length; if (ad) p.push({ sec:'cambios', ic:'✍️', t:ad + ' adenda' + (ad > 1 ? 's' : '') + ' por firmar', s:'Agrupa los cambios que ya has aceptado', fn:"ir('cambios')" });
   if (f === 'remates') p.push({ sec:'entrega', ic:'✅', t:'Revisión final de tu obra', s:'Completa el checklist y firma tu conformidad', fn:"ir('entrega')" });
   if (f === 'aceptada' || f === 'obra' || f === 'remates') { const d = planPagos(S).find(t => t.estado === 'debido'); if (d) p.push({ sec:'pagos', ic:'💶', t:'Pago pendiente: ' + d.label, s:eur(d.falta), fn:"ir('pagos')" }); }
+  if ((S.avisosPago || []).some(a => a.estado === 'rechazado' && a.tipo !== 'visita')) p.push({ sec:'pagos', ic:'📎', t:'Sube otro justificante de pago', s:'Tu reformista no pudo confirmar el anterior', fn:"ir('pagos')" });
   return p;
 }
 const linkPanel = (S, sec) => 'https://panel.anatoliyreformas.es/c/' + S.token + (sec ? '/' + sec : '');
@@ -270,17 +268,17 @@ function fotoSvg(texto, hue) {
 // ═══════════════════════════════════════════════════════
 // 4. ESTADO, AVISOS AUTOMÁTICOS Y RUTAS
 // ═══════════════════════════════════════════════════════
-function cargar() { try { const o = JSON.parse(localStorage.getItem(LS)); return o && o.ver === 1 && o.token ? o : null; } catch (e) { return null; } }
+function cargar() { try { const o = JSON.parse(localStorage.getItem(LS)); return o && o.ver === 2 && o.token ? o : null; } catch (e) { return null; } }
 let S = cargar(); let saveErr = false; let sec = 'inicio'; let toastT = null;
-const UI = { ver:null, slot:null, estrellas:0, previa:{}, canal:'email', avisoSel:null };
+const UI = { ver:null, slot:null, estrellas:0, previa:{}, canal:'email', avisoSel:null, pagoV:{ medio:'transferencia', adjuntoId:null }, pago:{ adjuntoId:null, medio:'transferencia', tramo:'' }, chatAdj:[] };
 function guardar() { try { localStorage.setItem(LS, JSON.stringify(S)); saveErr = false; } catch (e) { saveErr = true; toast('⚠ No hay espacio para guardar más fotos en este dispositivo.'); } }
 function ev(texto, autor, tipo) { S.eventos.push({ id:uid('v'), f:ahora(S), texto, autor:autor || 'sistema', tipo:tipo || '' }); }
 function avisar(tipo, asunto, parrafos, wa, extra) {
   S.avisos.push(Object.assign({ id:uid('a'), f:ahora(S), tipo, asunto, parrafos, wa:wa || parrafos[0], leido:false, cta:'Abrir mi panel' }, extra || {}));
 }
 function avisoPrimero() {
-  const v = S.versiones[0]; const t = totalV(v); const lo = Math.round(t * 0.88 / 100) * 100, hi = Math.round(t * 1.12 / 100) * 100;
-  const falta = S.datos.map(d => d.label);
+  const v = S.versiones[0]; const t = totalV(v); const rg = rangoV(v); const lo = rg.lo, hi = rg.hi;
+  const falta = ['la ubicación exacta de la vivienda', 'si eres propietario o inquilino', 'el año del edificio', 'tu fecha deseada de inicio', 'si vivirás en la casa durante la obra'];
   avisar('primero', 'Hemos recibido tu solicitud · presupuesto estimado ' + S.ref,
     ['Hola ' + S.cliente.nombre.split(' ')[0] + ', ¡gracias por confiar en ' + S.reformista.empresa + '! Hemos recibido tu solicitud de reforma integral y ya la tiene tu reformista.',
      'Con los datos que nos has dado, tu presupuesto estimado es de ' + eur0(lo) + ' a ' + eur0(hi) + ' (IVA incluido). Es una estimación: la afinaremos tras la visita técnica.',
@@ -349,7 +347,7 @@ const FASE_TXT = {
   cerrada:['Obra cerrada · ¡gracias!', 'Tienes tu acta y la información de la garantía.'],
 };
 function badgeSec(s) {
-  let n = pendientes(S).filter(p => p.sec === s).length; if (s === 'mensajes') n = S.avisos.filter(a => !a.leido).length;
+  let n = pendientes(S).filter(p => p.sec === s).length; if (s === 'mensajes') n = S.avisos.filter(a => !a.leido).length + mensajesSinLeer();
   return n ? '<span class="badge" aria-label="' + n + ' pendientes">' + n + '</span>' : '';
 }
 function vPanel() {
@@ -369,7 +367,7 @@ function vInicio() {
   const p = pendientes(S); const tv = totalVigente(S); const v = vigente(S); const pr = progresoObra(S); const nombre = S.cliente.nombre.split(' ')[0];
   const t = FASE_TXT[S.fase]; const pl = planPagos(S);
   const eco = S.aceptacion ? '<div class="card"><div class="lbl">Resumen económico</div><div class="big">' + eur0(tv.total) + '</div><div class="muted" style="margin-bottom:8px">Total vigente (IVA incl.)' + (tv.provisional ? ' · incluye ' + eur0(tv.provisional) + ' de cambios por confirmar' : '') + '</div><div class="progress"><i style="width:' + Math.min(100, Math.round(cobrado(S) / tv.total * 100)) + '%"></i></div><div class="row" style="margin-top:6px"><span class="muted sp">Pagado ' + eur0(cobrado(S)) + '</span><span class="muted">Pendiente ' + eur0(Math.max(0, tv.total - cobrado(S))) + '</span></div></div>'
-    : '<div class="card"><div class="lbl">' + (v.tipo === 'estimacion' ? 'Presupuesto estimado' : 'Presupuesto ' + v.id) + '</div><div class="big">' + (v.tipo === 'estimacion' ? eur0(totalV(v) * 0.88) + ' – ' + eur0(totalV(v) * 1.12) : eur0(totalV(v))) + '</div><div class="muted">IVA incluido' + (v.tipo === 'estimacion' ? ' · orientativo hasta la visita' : '') + '</div><button class="btn sm" style="margin-top:10px" onclick="ir(\'presupuesto\')">Ver el detalle</button></div>';
+    : '<div class="card"><div class="lbl">' + (v.tipo === 'estimacion' ? 'Presupuesto estimado' : 'Presupuesto ' + v.id) + '</div><div class="big">' + (v.tipo === 'estimacion' && v.id === 'V1' ? eur0(rangoV(v).lo) + ' – ' + eur0(rangoV(v).hi) : eur0(totalV(v))) + '</div><div class="muted">IVA incluido' + (v.tipo === 'estimacion' ? (v.id === 'V1' ? ' · orientativo hasta la visita' : ' · estimación revisada, sujeta a visita') : '') + '</div><button class="btn sm" style="margin-top:10px" onclick="ir(\'presupuesto\')">Ver el detalle</button></div>';
   const prox = S.fase === 'visita_confirmada' ? '<div class="card"><div class="lbl">Próxima cita</div><b>Visita técnica</b><div>' + fsemana(S.visita.elegida.t) + ' · ' + esc(S.visita.elegida.h) + '</div></div>' : (S.obra.hitos.length && S.fase === 'obra' ? (() => { const h = S.obra.hitos.find(x => x.estado !== 'hecho'); return h ? '<div class="card"><div class="lbl">Ahora en tu obra</div><b>' + esc(h.nombre) + '</b><div class="muted">Previsto hasta el ' + fdia(h.previsto) + '</div><div class="progress" style="margin-top:8px"><i style="width:' + pr + '%"></i></div><div class="muted" style="margin-top:4px">' + pr + ' % completado</div></div>' : ''; })() : '');
   const ult = S.eventos.slice(-4).reverse();
   return '<div class="hero"><div class="lbl" style="color:#e6c9a3">Hola, ' + esc(nombre) + '</div><h1>' + esc(t[0]) + '</h1><p>' + esc(t[1]) + '</p></div>' + stepper() +
@@ -388,7 +386,7 @@ function vPresupuesto() {
   const ac = S.aceptacion && S.aceptacion.versionId === sel.id;
   const acciones = S.rechazo && S.fase === 'propuesta' ? '<div class="warn">Indicaste que este presupuesto no te interesa (' + esc(S.rechazo.motivo) + '). Si cambias de idea, puedes retomarlo.<div style="margin-top:8px"><button class="btn sm" onclick="S.rechazo=null;guardar();render()">Reconsiderarlo</button></div></div>' : S.fase === 'propuesta' && sel.estado === 'vigente' ? '<div class="card" style="border:2px solid var(--accent)"><h3>¿Qué te parece?</h3><div style="display:grid;gap:10px"><button class="btn ok blk" onclick="abrirAceptar()">✓ Aceptar este presupuesto</button><button class="btn blk" onclick="abrirPedirCambios()">✎ Pedir cambios</button><button class="btn dng blk" onclick="abrirRechazo()">No me interesa</button></div></div>' : '';
   return '<h2>Presupuesto</h2><div class="chips">' + S.versiones.map(v => '<button class="chip ' + (v.id === sel.id ? 'on' : '') + '" onclick="UI.ver=\'' + v.id + '\';render()">' + v.id + ' · ' + (v.tipo === 'estimacion' ? 'Estimación' : 'Propuesta') + (v.estado === 'vigente' ? ' ✓' : '') + '</button>').join('') + '</div>' +
-    '<div class="card"><div class="row"><div class="sp"><div class="lbl">' + sel.id + ' · ' + ffecha(sel.fecha) + '</div><div class="big">' + (est ? eur0(t * 0.88) + ' – ' + eur0(t * 1.12) : eur0(t)) + '</div><div class="muted">IVA incluido' + (est ? ' · estimación orientativa' : '') + '</div></div><span class="pill ' + (ac ? 'ok' : sel.estado === 'vigente' ? 'wip' : '') + '">' + (ac ? 'Aceptado' : sel.estado === 'vigente' ? 'Vigente' : 'Sustituido') + '</span></div>' +
+    '<div class="card"><div class="row"><div class="sp"><div class="lbl">' + sel.id + ' · ' + ffecha(sel.fecha) + '</div><div class="big">' + (est && sel.id === 'V1' ? eur0(rangoV(sel).lo) + ' – ' + eur0(rangoV(sel).hi) : eur0(t)) + '</div><div class="muted">IVA incluido' + (est ? (sel.id === 'V1' ? ' · horquilla ±' + (S.horquillaPct || 5) + ' %, orientativa' : ' · ' + (sel.etiqueta || 'estimación revisada · sujeta a visita')) : '') + '</div></div><span class="pill ' + (ac ? 'ok' : sel.estado === 'vigente' ? 'wip' : '') + '">' + (ac ? 'Aceptado' : sel.estado === 'vigente' ? 'Vigente' : 'Sustituido') + '</span></div>' +
     (est ? '<div class="info" style="margin:12px 0 0">Es una primera estimación con lo que nos contaste. Tras la visita técnica tu reformista la ajustará con medidas reales.</div>' : '') + '<div class="row" style="margin-top:10px"><button class="btn sm" onclick="imprimirPres(\'' + sel.id + '\')">🖨 Imprimir / guardar PDF</button></div></div>' + acciones +
     (ac ? '<div class="good">✓ Aceptaste este presupuesto el ' + ffecha(S.aceptacion.f) + ' (' + esc(S.aceptacion.nombre) + ').</div>' : '') +
     (dif && (dif.anadidos.length + dif.quitados.length + dif.modificados.length) ? '<div class="card"><h3>Qué ha cambiado respecto a ' + S.versiones[idx - 1].id + '</h3>' + dif.anadidos.map(x => '<div class="ln" style="padding:6px 0"><span class="tag add">Nuevo</span><span class="sp"><b>' + esc(x.e.nombre) + '</b> · ' + esc(x.l.l) + '<div class="muted">' + esc(x.l.nota || '') + '</div></span><b>' + eur0(fin(subL(x.l))) + '</b></div>').join('') + dif.quitados.map(x => '<div class="ln" style="padding:6px 0"><span class="tag del">Quitado</span><span class="sp"><b>' + esc(x.e.nombre) + '</b> · ' + esc(x.l.l) + '<div class="muted">' + esc(x.motivo) + '</div></span><b>−' + eur0(fin(subL(x.l))) + '</b></div>').join('') + dif.modificados.map(x => '<div class="ln" style="padding:6px 0"><span class="tag mod">Modificado</span><span class="sp"><b>' + esc(x.e.nombre) + '</b> · ' + esc(x.l.l) + '<div class="muted">' + fnum(x.antes.cant) + ' → ' + fnum(x.l.cant) + ' ' + esc(x.l.u) + (x.l.nota ? ' · ' + esc(x.l.nota) : '') + '</div></span></div>').join('') + '</div>' : '') +
@@ -396,16 +394,6 @@ function vPresupuesto() {
     '<div class="muted" style="margin-top:10px">Importes con IVA incluido. Cualquier trabajo adicional que surja durante la obra se te consultará antes y quedará recogido en una adenda que tú firmas.</div>';
 }
 
-function vVisita() {
-  const f = S.fase; const el = S.visita.elegida;
-  if (f === 'recibida') return '<h2>Visita técnica</h2><div class="card"><div style="font-size:40px">📅</div><b>Aún no hay visita propuesta</b><p class="muted">Cuando tu reformista revise tu solicitud te propondrá varios días. Te avisaremos por correo y WhatsApp.</p></div>';
-  if (f === 'visita_propuesta') return '<h2>Elige el día de la visita</h2><p class="muted" style="margin-bottom:12px">Dura aproximadamente una hora. Tu reformista medirá, hará fotos y revisará contigo estancia por estancia lo que quieres hacer.</p>' + S.visita.franjas.map((s, i) => '<button class="slot ' + (UI.slot === i ? 'on' : '') + '" onclick="UI.slot=' + i + ';render()" aria-pressed="' + (UI.slot === i) + '"><span style="font-size:24px">🗓️</span><span class="sp"><b style="text-transform:capitalize">' + fsemana(s.t) + '</b><div class="muted">' + esc(s.h) + '</div></span>' + (UI.slot === i ? '✓' : '') + '</button>').join('') +
-    '<div class="info">La visita técnica cuesta ' + eur0(S.visita.importe) + ' y <b>se descuenta íntegramente</b> del presupuesto si lo aceptas. Puedes cambiarla sin coste hasta 24 h antes.</div><button class="btn pri blk" ' + (UI.slot == null ? 'disabled' : '') + ' onclick="confirmarVisita()">Confirmar este día</button><button class="btn blk" style="margin-top:10px" onclick="abrirOtraFecha()">Ninguna me va bien</button>';
-  if (f === 'visita_confirmada') return '<h2>Visita confirmada</h2><div class="card" style="border:2px solid var(--ok)"><div class="lbl">Tu cita</div><div class="big" style="font-size:30px;text-transform:capitalize">' + fsemana(el.t) + '</div><div style="font-size:18px">' + esc(el.h) + '</div><div class="muted" style="margin:6px 0 12px">' + esc(S.cliente.direccion) + '</div><div class="row"><button class="btn sm" onclick="descargarIcs()">📆 Añadir al calendario</button><button class="btn sm" onclick="abrirReprogramar()">Cambiar el día</button></div></div>' +
-    '<div class="card"><h3>Prepara la visita</h3>' + ['Despeja el acceso a todas las estancias', 'Ten a mano las llaves de trasteros o accesos', 'Piensa qué acabados te gustan (suelos, alicatados…)', 'Si puedes, ten los planos o las facturas de instalaciones'].map((t, i) => '<label class="chk"><input type="checkbox" ' + (UI.previa[i] ? 'checked' : '') + ' onchange="UI.previa[' + i + ']=this.checked"> ' + t + '</label>').join('') + '</div>' +
-    '<div class="info">Cambiar el día es gratis hasta 24 h antes. Después se retiene el importe de la visita (' + eur0(S.visita.importe) + ').</div>';
-  return '<h2>Visita técnica</h2><div class="card"><div style="font-size:36px">✅</div><b>Visita realizada</b>' + (el ? '<div class="muted" style="text-transform:capitalize">' + fsemana(el.t) + '</div>' : '') + '<p class="muted" style="margin-top:6px">Tu presupuesto se actualizó tras la visita. La visita (' + eur0(S.visita.importe) + ') se descuenta como pago a cuenta.</p></div>';
-}
 
 function vObra() {
   const o = S.obra;
@@ -430,15 +418,6 @@ function vCambios() {
     (!o.cambios.length && !o.adendas.length && !o.solicitudes.length ? '<div class="card" style="text-align:center"><div style="font-size:40px">🙌</div><b>Sin cambios por ahora</b><p class="muted">Si durante la obra aparece algo imprevisto, lo verás aquí.</p></div>' : '');
 }
 
-function vPagos() {
-  if (!S.aceptacion) return '<h2>Pagos</h2><div class="card"><div style="font-size:40px">💶</div><b>Todavía no hay pagos</b><p class="muted">Cuando aceptes el presupuesto verás aquí el plan de pagos: ' + S.plan.map(p => p.pct + ' % ' + p.label.toLowerCase()).join(' · ') + '.</p></div>' + (S.visita.estado === 'realizada' ? '' : '');
-  const tv = totalVigente(S); const pag = cobrado(S); const pl = planPagos(S); const pend = Math.max(0, r2(tv.total - pag));
-  return '<h2>Pagos</h2><div class="card"><div class="row"><div class="sp"><div class="lbl">Total vigente</div><div class="big">' + eur0(tv.total) + '</div></div><div style="text-align:right"><div class="lbl">Pendiente</div><b style="font-size:22px;color:' + (pend ? 'var(--danger)' : 'var(--ok)') + '">' + eur0(pend) + '</b></div></div><div class="progress" style="margin:10px 0 4px"><i style="width:' + Math.min(100, Math.round(pag / tv.total * 100)) + '%"></i></div><div class="muted">Pagado ' + eur(pag) + '</div></div>' +
-    '<h3>Plan de pagos</h3>' + pl.map(t => '<div class="card"><div class="row"><div class="sp"><b>' + esc(t.label) + '</b><div class="muted">' + t.pct + ' % · ' + eur(t.importe) + '</div></div><span class="pill ' + ({ pagado:'ok', debido:'wip', previsto:'' }[t.estado]) + '">' + ({ pagado:'Pagado', debido:'Toca pagar', previsto:'Previsto' }[t.estado]) + '</span></div>' + (t.estado === 'debido' ? '<div class="row" style="margin-top:10px"><button class="btn pri sp" onclick="abrirComoPagar(' + t.falta + ')">Cómo pagar ' + eur0(t.falta) + '</button></div>' : '') + '</div>').join('') +
-    (tv.firmado + tv.provisional > tv.aceptada ? '<div class="info">Además del plan, tienes ' + eur(r2(tv.total - tv.aceptada)) + ' de adendas y cambios que se facturarán cuando los apruebes.</div>' : '') +
-    '<h3>Movimientos</h3><div class="card">' + (S.cobros.length ? S.cobros.map(c => '<div class="kv"><span>' + fdia(c.f) + ' · ' + esc(c.concepto) + '<div class="muted">' + esc(c.medio) + '</div></span><b>' + eur(c.importe) + '</b></div>').join('') : '<div class="muted">Sin pagos registrados.</div>') + '</div>' +
-    '<div class="row"><button class="btn sp" onclick="abrirAvisoPago()">He hecho un pago</button><button class="btn sp" onclick="imprimirResumen()">🖨 Resumen económico</button></div><div class="muted" style="margin-top:10px">Este resumen es informativo y no sustituye a la factura oficial.</div>';
-}
 
 function vEntrega() {
   const o = S.obra; const f = S.fase;
@@ -465,11 +444,6 @@ function vDocs() {
     '<div class="card"><h3>Tu enlace privado</h3><p class="muted" style="margin-bottom:10px">Es personal y sirve durante toda tu reforma. Guárdalo en favoritos o búscalo en el correo de bienvenida.</p><div class="row"><button class="btn sm" onclick="abrirEnlace()">🔗 Ver y copiar mi enlace</button><a class="btn sm" href="#/correo">✉ Ver correo de bienvenida</a></div></div>';
 }
 
-function vMensajes() {
-  const chat = S.chat.map(m => '<div class="bubble ' + (m.autor === 'cliente' ? 'yo' : 'el') + '">' + esc(m.t) + '<small>' + (m.autor === 'cliente' ? 'Tú' : esc(S.reformista.contacto)) + ' · ' + fdia(m.f) + ' ' + fhora(m.f) + '</small></div>').join('');
-  return '<h2>Mensajes</h2><div class="card"><h3>Conversación con ' + esc(S.reformista.contacto) + '</h3><div style="max-height:360px;overflow:auto;margin-bottom:10px" id="chat">' + (chat || '<div class="muted">Escribe aquí tus dudas. Normalmente respondemos en menos de 24 h.</div>') + '</div><div class="row" style="flex-wrap:nowrap"><textarea id="chat-t" aria-label="Tu mensaje" style="min-height:52px;height:52px" placeholder="Escribe tu mensaje…"></textarea><button class="btn pri" onclick="enviarChat()" aria-label="Enviar mensaje">Enviar</button></div></div>' +
-    '<h3>Avisos que te hemos enviado</h3><div class="muted" style="margin-bottom:8px">Copia en el panel de lo que recibes por correo y WhatsApp.</div>' + S.avisos.slice().reverse().map(a => '<button class="card" style="width:100%;text-align:left;display:block;' + (a.leido ? '' : 'border:2px solid var(--accent)') + '" onclick="verAviso(\'' + a.id + '\')"><div class="row"><b class="sp">' + esc(a.asunto) + '</b>' + (a.leido ? '' : '<span class="pill wip">Nuevo</span>') + '</div><div class="muted">' + ffecha(a.f) + ' · correo y WhatsApp</div></button>').join('');
-}
 
 // ═══════════════════════════════════════════════════════
 // 7. DOCUMENTOS IMPRIMIBLES
@@ -496,7 +470,7 @@ function cerrarSheet() { $('#ov').classList.remove('on'); $('#sheet').innerHTML 
 $('#ov').addEventListener('click', e => { if (e.target.id === 'ov') cerrarSheet(); });
 document.addEventListener('keydown', e => { if (e.key === 'Escape') { if ($('#viewer').classList.contains('on')) cerrarVisor(); else cerrarSheet(); } });
 const head = (t) => '<div class="row" style="margin-bottom:10px"><h3 class="sp" style="margin:0">' + t + '</h3><button class="btn sm" onclick="cerrarSheet()">Cerrar</button></div>';
-function allFotos() { return [...(S.datos.find(d => d.id === 'fotos') || { valor:[] }).valor, ...S.obra.hitos.flatMap(h => h.fotos), ...S.obra.fotos]; }
+function allFotos() { return [...S.obra.hitos.flatMap(h => h.fotos), ...S.obra.fotos]; }
 function verFoto(id) { const f = allFotos().find(x => x.id === id); if (!f) return; $('#viewer').innerHTML = '<img src="' + f.src + '" alt="' + esc(f.cap) + '"><div class="vb"><span class="sp">' + esc(f.cap) + '</span><button class="btn sm" onclick="cerrarVisor()">Cerrar</button></div>'; $('#viewer').classList.add('on'); }
 function cerrarVisor() { $('#viewer').classList.remove('on'); $('#viewer').innerHTML = ''; }
 function abrirMas() { sheet(head('Más') + ['visita', 'pagos', 'entrega', 'docs', 'mensajes'].map(id => { const n = NAV.find(x => x[0] === id); const b = badgeSec(id); return '<button class="btn blk" style="justify-content:flex-start;margin-bottom:8px" onclick="cerrarSheet();ir(\'' + id + '\')"><span style="font-size:22px">' + n[1] + '</span><span class="sp" style="text-align:left">' + n[2] + '</span>' + (b ? '<span class="pill wip">pendiente</span>' : '') + '</button>'; }).join('')); }
@@ -512,36 +486,294 @@ function enviarSolicitud() { S = nuevoCaso(); UI.ver = null; ev('Solicitud de pr
 function reiniciar() { try { localStorage.removeItem(LS); } catch (e) {} S = null; UI.ver = null; UI.slot = null; location.hash = '#/'; render(); }
 function comprimir(file) { return new Promise((res, rej) => { const u = URL.createObjectURL(file), im = new Image(); im.onload = () => { const k = Math.min(1, 1000 / Math.max(im.naturalWidth, im.naturalHeight)); const c = document.createElement('canvas'); c.width = Math.round(im.naturalWidth * k); c.height = Math.round(im.naturalHeight * k); c.getContext('2d').drawImage(im, 0, 0, c.width, c.height); URL.revokeObjectURL(u); res(c.toDataURL('image/jpeg', 0.65)); }; im.onerror = () => { URL.revokeObjectURL(u); rej(); }; im.src = u; }); }
 
-function abrirDatos() {
-  sheet(head('Completa tus datos') + '<p class="muted" style="margin-bottom:12px">Con esto afinamos mejor tu presupuesto. Puedes guardar y volver cuando quieras.</p>' + S.datos.map(d => d.tipo === 'fotos' ? '<div class="field"><span>' + esc(d.label) + '</span><label class="btn blk" style="position:relative">📷 Añadir fotos<input type="file" accept="image/*" multiple style="position:absolute;opacity:0;width:1px;height:1px" aria-label="Añadir fotos" onchange="datoFotos(this)"></label><div class="thumbs">' + d.valor.map(f => '<div class="thumb"><img src="' + f.src + '" alt="Foto"></div>').join('') + '</div></div>' :
-    '<label class="field"><span>' + esc(d.label) + '</span>' + (d.tipo === 'select' ? '<select id="d-' + d.id + '"><option value="">— elige —</option>' + d.opts.map(o => '<option' + (d.valor === o ? ' selected' : '') + '>' + o + '</option>').join('') + '</select>' : '<input id="d-' + d.id + '" type="' + d.tipo + '" value="' + esc(d.valor) + '" placeholder="' + esc(d.ph || '') + '">') + '</label>').join('') + '<button class="btn pri blk" onclick="guardarDatos()">Guardar mis datos</button>');
-}
-function leerDatos() { S.datos.forEach(d => { if (d.tipo !== 'fotos') { const el = $('#d-' + d.id); if (el) d.valor = el.value.trim(); } }); }
-async function datoFotos(input) { leerDatos(); const d = S.datos.find(x => x.id === 'fotos'); for (const f of [...input.files]) { try { d.valor.push({ id:uid('f'), src:await comprimir(f), cap:'Foto del estado actual', f:ahora(S) }); } catch (e) { toast('No se pudo leer una foto'); } } input.value = ''; guardar(); abrirDatos(); }
-function guardarDatos() {
-  leerDatos(); const ok = S.datos.every(d => d.tipo === 'fotos' ? d.valor.length : d.valor);
-  ev(ok ? 'Has completado todos tus datos' : 'Has actualizado tus datos', 'cliente'); guardar(); cerrarSheet(); render();
-  toast(ok ? 'Datos completos. ¡Gracias! Tu reformista ya puede afinar el presupuesto.' : 'Datos guardados. Aún faltan algunos.');
-}
 function confirmarVisita() { if (UI.slot == null) return; S.visita.elegida = S.visita.franjas[UI.slot]; S.visita.estado = 'confirmada'; S.fase = 'visita_confirmada'; UI.slot = null; ev('Has confirmado la visita técnica: ' + fsemana(S.visita.elegida.t) + ', ' + S.visita.elegida.h, 'cliente'); avisar('visita_ok', 'Visita técnica confirmada', ['Tu visita está confirmada para el ' + fsemana(S.visita.elegida.t) + ' (' + S.visita.elegida.h + '). Te recordaremos el día antes.'], 'Visita confirmada: ' + fsemana(S.visita.elegida.t) + ', ' + S.visita.elegida.h + '. ¡Hasta entonces!', { sec:'visita' }); guardar(); render(); toast('Visita confirmada. Se ha avisado a tu reformista.'); }
 function abrirOtraFecha() { sheet(head('Proponer otro día') + '<label class="field"><span>¿Qué días y horas te vienen mejor?</span><textarea id="of-t" placeholder="Ej.: martes o jueves por la tarde"></textarea></label><button class="btn pri blk" onclick="enviarOtraFecha()">Enviar a mi reformista</button>'); }
 function enviarOtraFecha() { const t = $('#of-t').value.trim(); if (!t) { toast('Escribe tu disponibilidad'); return; } S.chat.push({ f:ahora(S), autor:'cliente', t:'Ninguna de las fechas me va bien. Me vendría mejor: ' + t }); ev('Has pedido otras fechas para la visita', 'cliente'); guardar(); cerrarSheet(); toast('Enviado. Tu reformista te propondrá nuevas fechas.'); render(); }
-function abrirReprogramar() { const otros = S.visita.franjas.filter(s => s.t !== S.visita.elegida.t); sheet(head('Cambiar el día de la visita') + '<div class="info">Cambiar es gratis hasta 24 h antes de la cita.</div>' + (otros.length ? otros.map((s, i) => '<button class="slot" onclick="reprogramar(' + S.visita.franjas.indexOf(s) + ')"><span style="font-size:24px">🗓️</span><span class="sp"><b style="text-transform:capitalize">' + fsemana(s.t) + '</b><div class="muted">' + esc(s.h) + '</div></span></button>').join('') : '<p class="muted">No hay más huecos propuestos. Escribe a tu reformista.</p>')); }
-function reprogramar(i) { S.visita.elegida = S.visita.franjas[i]; ev('Has cambiado la visita a ' + fsemana(S.visita.elegida.t), 'cliente'); guardar(); cerrarSheet(); render(); toast('Visita cambiada'); }
+function citaTardia() { const el = S.visita.elegida; if (!el) return false; const ini = new Date(el.t); ini.setHours(parseInt(String(el.h).slice(0, 2), 10) || 0, parseInt(String(el.h).slice(3, 5), 10) || 0, 0, 0); return (ini.getTime() - ahora(S)) < 24 * 3600000; }
+function abrirReprogramar() { UI.rpRet = false; const tarde = citaTardia(); const otros = S.visita.franjas.filter(s => s.t !== S.visita.elegida.t); sheet(head('Cambiar el día de la visita') + (tarde ? '<div class="warn"><b>Faltan menos de 24 h.</b> Si cambias el día ahora, se retiene el importe de la visita (' + eur0(S.visita.importe) + ') y se cobrará la nueva.<label class="chk"><input type="checkbox" onchange="UI.rpRet=this.checked"> Acepto que se retenga el importe de la visita.</label></div>' : '<div class="info">Cambiar es gratis hasta 24 h antes de la cita.</div>') + (otros.length ? otros.map((s, i) => '<button class="slot" onclick="reprogramar(' + S.visita.franjas.indexOf(s) + ')"><span style="font-size:24px">🗓️</span><span class="sp"><b style="text-transform:capitalize">' + fsemana(s.t) + '</b><div class="muted">' + esc(s.h) + '</div></span></button>').join('') : '<p class="muted">No hay más huecos propuestos. Escribe a tu reformista.</p>')); }
+function reprogramar(i) { if (citaTardia() && !UI.rpRet) { toast('Para cambiar el día con menos de 24 h debes aceptar la retención del importe de la visita'); return; } S.visita.elegida = S.visita.franjas[i]; ev('Has cambiado la visita a ' + fsemana(S.visita.elegida.t), 'cliente'); guardar(); cerrarSheet(); render(); toast('Visita cambiada'); }
 function descargarIcs() { const e = S.visita.elegida; const d = new Date(e.t); const p = n => String(n).padStart(2, '0'); const dt = d.getFullYear() + p(d.getMonth() + 1) + p(d.getDate()); const hi = e.h.slice(0, 5).replace(':', ''), hf = e.h.slice(-5).replace(':', '');
   const ics = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'BEGIN:VEVENT', 'UID:' + S.ref + '@panel', 'SUMMARY:Visita técnica · ' + S.reformista.empresa, 'DTSTART:' + dt + 'T' + hi + '00', 'DTEND:' + dt + 'T' + hf + '00', 'LOCATION:' + S.cliente.direccion, 'END:VEVENT', 'END:VCALENDAR'].join('\r\n');
   const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([ics], { type:'text/calendar' })); a.download = 'visita-tecnica.ics'; document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 500); toast('Evento descargado'); }
 
+// ═══════════════════════════════════════════════════════
+// 6B. PROTOTIPO V2 · adjuntos, datos de la vivienda, facturación, pagos con justificante y mensajes
+//     Las reglas ("no puedes hacer X sin Y") las calcula el admin (requisitos) y llegan en S.req; aquí solo se pintan.
+// ═══════════════════════════════════════════════════════
+const PX = () => (window.parent && window.parent !== window && window.parent.Proto) || null;
+const AD = () => { const p = PX(); return p && p.adjuntos || null; };
+const adjUrl = id => { const s = AD(); return s ? s.url(id) : null; };
+const adjMeta = id => { const s = AD(); return s ? (s.meta(id) || null) : null; };
+const hoyStr = () => new Date(ahora(S)).toISOString().slice(0, 10);
+const $q = id => document.querySelector('#sheet #' + id) || document.getElementById(id);
+const val = id => { const e = $q(id); return e ? e.value : ''; };
+const chk = id => { const e = $q(id); return !!(e && e.checked); };
+const radio = name => { const e = document.querySelector((document.querySelector('#ov.on') ? '#sheet ' : '') + 'input[name=' + name + ']:checked'); return e ? e.value : null; };
+function adjChip(id) {
+  const m = adjMeta(id) || {}; const u = adjUrl(id); const img = /^image\//.test(m.tipo || '');
+  if (img && u) return '<button type="button" class="thumb" onclick="verAdj(\'' + id + '\')" aria-label="Ver imagen adjunta"><img src="' + u + '" alt="' + esc(m.nombre || 'Imagen adjunta') + '"><em>' + esc(m.nombre || '') + '</em></button>';
+  return '<button type="button" class="btn sm" onclick="verAdj(\'' + id + '\')">📄 ' + esc(m.nombre || 'Documento adjunto') + '</button>';
+}
+function verAdj(id) {
+  const m = adjMeta(id) || {}; const u = adjUrl(id); if (!u) { toast('No se encuentra el archivo adjunto'); return; }
+  const cuerpo = /^image\//.test(m.tipo || '') ? '<img src="' + u + '" alt="' + esc(m.nombre || '') + '">' : '<iframe title="' + esc(m.nombre || 'Documento') + '" src="' + u + '" style="flex:1;border:0;background:#fff"></iframe>';
+  $('#viewer').innerHTML = cuerpo + '<div class="vb"><span class="sp">' + esc(m.nombre || '') + '</span><a class="btn sm" download="' + esc(m.nombre || 'adjunto') + '" href="' + u + '">Descargar</a><button class="btn sm" onclick="cerrarVisor()">Cerrar</button></div>'; $('#viewer').classList.add('on');
+}
+// Sube un archivo al servicio compartido (comprime imágenes a 1600 px, máx. 5 MB). Devuelve su id o null.
+async function subirAdj(file) {
+  const s = AD(); if (!s) { toast('El servicio de adjuntos no está disponible'); return null; }
+  try { return await s.put(file, { casoId: S.ref, origen: 'cliente', nombre: file.name }); } catch (e) { toast('⚠ ' + e.message); return null; }
+}
+const prevAdjHtml = (id, quitar) => id ? '<div class="row" style="margin-top:8px;align-items:flex-start">' + adjChip(id) + '<button type="button" class="btn sm" onclick="' + quitar + '">Quitar</button></div>' : '';
+const FAL = (rq, accion) => (rq && rq.faltan || []).filter(f => !accion || f.accion === accion);
+const faltaTxt = lista => lista.map(f => f.texto).join(', ');
+// Bloque "Te falta: …" con botón «Completar ahora»
+const bloqueFalta = (lista, boton, fn) => lista.length ? '<div class="warn"><b>Te falta:</b> ' + esc(faltaTxt(lista)) + '.' + (boton ? '<div style="margin-top:8px"><button class="btn sm pri" onclick="' + fn + '">' + boton + '</button></div>' : '') + '</div>' : '';
+
+// ── R-04 · Datos de tu vivienda ──────────────────────────
+const PX_DV = () => Object.assign({ ubicacion: { calle: '', numero: '', piso: '', puerta: '', cp: '', localidad: '' }, regimen: null, permisoPropietario: false, permisoDocId: null, contactoPropietario: '', anioConstruccion: null, anioDesconocido: false, inicio: null, inicioSinFecha: false, habitada: null, fotosExtra: [], comentarios: '', comunidad: null }, S.dv || {});
+const evalDV = dv => { const p = PX(); try { if (p && p.evalVivienda) return p.evalVivienda(dv); } catch (e) { console.error(e); } return (S.dv && S.dv.eval) || { items: [], faltan: [], hechos: 0, total: 5, completos: false, discrepancias: [] }; };
+function dvFormHtml() {
+  const d = PX_DV(); const u = d.ubicacion || {}; const esPiso = (S.tipoVivienda || 'piso') === 'piso'; const ev = evalDV(d);
+  const reg = d.regimen; const hoyS = hoyStr();
+  const fila = (id, etq, v, extra) => '<label class="field"><span>' + etq + '</span><input id="' + id + '" value="' + esc(v == null ? '' : v) + '" oninput="dvUpd()" ' + (extra || '') + '></label>';
+  const marca = k => '<span class="dv-m" id="dv-m-' + k + '" aria-hidden="true">' + ((ev.items.find(i => i.id === k) || {}).ok ? '✓' : '•') + '</span>';
+  return '<div data-keep="1" class="dvform">' +
+    '<div class="card" style="margin-bottom:10px"><div class="row"><b class="sp" id="dv-prog">' + ev.hechos + ' de ' + ev.total + ' obligatorios</b><span class="muted">Puedes guardar y seguir más tarde</span></div><div class="progress" style="margin-top:8px"><i id="dv-prog-b" style="width:' + Math.round(ev.hechos / Math.max(1, ev.total) * 100) + '%"></i></div></div>' +
+    '<div class="lbl">' + marca('ubicacion') + ' Ubicación exacta de la obra *</div>' +
+    '<div class="row" style="flex-wrap:nowrap;align-items:flex-end">' + '<div class="sp">' + fila('dv-calle', 'Calle', u.calle, 'autocomplete="street-address"') + '</div><div style="width:92px">' + fila('dv-numero', 'Número', u.numero, 'inputmode="numeric"') + '</div></div>' +
+    '<div class="row" id="dv-pp" style="flex-wrap:nowrap;' + (esPiso ? '' : 'display:none') + '"><div class="sp">' + fila('dv-piso', 'Piso', u.piso, 'placeholder="3º"') + '</div><div class="sp">' + fila('dv-puerta', 'Puerta', u.puerta, 'placeholder="B"') + '</div></div>' +
+    '<div class="row" style="flex-wrap:nowrap"><div style="width:120px">' + fila('dv-cp', 'Código postal', u.cp, 'inputmode="numeric" maxlength="5" autocomplete="postal-code"') + '</div><div class="sp">' + fila('dv-loc', 'Localidad', u.localidad, 'autocomplete="address-level2"') + '</div></div>' +
+    '<a class="btn sm" id="dv-mapa" target="_blank" rel="noopener" style="margin-bottom:14px" href="' + mapaHref(u) + '">📍 Abrir en el mapa</a>' +
+    '<div class="lbl">' + marca('regimen') + ' ¿Eres propietario o inquilino? *</div>' +
+    '<div class="chips"><label class="chip ' + (reg === 'propietario' ? 'on' : '') + '"><input type="radio" name="dv-reg" value="propietario" class="sr" ' + (reg === 'propietario' ? 'checked' : '') + ' onchange="dvUpd()">Propietario</label><label class="chip ' + (reg === 'inquilino' ? 'on' : '') + '"><input type="radio" name="dv-reg" value="inquilino" class="sr" ' + (reg === 'inquilino' ? 'checked' : '') + ' onchange="dvUpd()">Inquilino</label></div>' +
+    '<div id="dv-inq" class="info" style="' + (reg === 'inquilino' ? '' : 'display:none') + '"><label class="chk"><input type="checkbox" id="dv-permiso" ' + (d.permisoPropietario ? 'checked' : '') + ' onchange="dvUpd()"> Confirmo que tengo permiso del propietario para hacer la obra *</label>' +
+    '<label class="btn sm" style="position:relative;margin:6px 0">📎 Adjuntar la autorización (opcional)<input type="file" accept="image/*,application/pdf" style="position:absolute;opacity:0;width:1px;height:1px" aria-label="Adjuntar autorización del propietario" onchange="dvPermisoDoc(this)"></label><div id="dv-permiso-prev">' + prevAdjHtml(d.permisoDocId, 'dvQuitarPermiso()') + '</div>' +
+    '<label class="field"><span>Contacto del propietario (opcional)</span><input id="dv-contacto" value="' + esc(d.contactoPropietario || '') + '" placeholder="Teléfono o correo" oninput="dvUpd()"></label></div>' +
+    '<div class="lbl">' + marca('anioConstruccion') + ' Año de construcción del edificio *</div>' +
+    '<div class="row" style="flex-wrap:nowrap;align-items:flex-end"><div style="width:130px">' + fila('dv-anio', 'Año', d.anioDesconocido ? '' : d.anioConstruccion, 'inputmode="numeric" maxlength="4"' + (d.anioDesconocido ? ' disabled' : '')) + '</div><label class="chk sp"><input type="checkbox" id="dv-anio-ns" ' + (d.anioDesconocido ? 'checked' : '') + ' onchange="dvUpd()"> No lo sé</label></div>' +
+    '<div class="chips">' + [['antes de 1980', 1970], ['1980–2000', 1990], ['después de 2000', 2010]].map(x => '<button type="button" class="chip" onclick="dvAnio(' + x[1] + ')">' + x[0] + '</button>').join('') + '</div>' +
+    '<div class="lbl">' + marca('inicio') + ' Fecha deseada de inicio *</div>' +
+    '<div class="row" style="flex-wrap:nowrap;align-items:flex-end"><div class="sp"><input id="dv-inicio" type="date" min="' + hoyS + '" value="' + esc(d.inicio || '') + '" oninput="dvUpd()" aria-label="Fecha deseada de inicio" ' + (d.inicioSinFecha ? 'disabled' : '') + '></div><label class="chk sp"><input type="checkbox" id="dv-inicio-sf" ' + (d.inicioSinFecha ? 'checked' : '') + ' onchange="dvUpd()"> Sin fecha concreta</label></div>' +
+    '<div class="lbl" style="margin-top:14px">' + marca('habitada') + ' ¿Vivirás en la casa durante la obra? *</div>' +
+    '<div class="chips">' + [['si', 'Sí'], ['no', 'No'], ['parcialmente', 'Parcialmente']].map(x => '<label class="chip ' + (d.habitada === x[0] ? 'on' : '') + '"><input type="radio" name="dv-hab" value="' + x[0] + '" class="sr" ' + (d.habitada === x[0] ? 'checked' : '') + ' onchange="dvUpd()">' + x[1] + '</label>').join('') + '</div>' +
+    '<div class="lbl" style="margin-top:6px">Fotos extra de la vivienda (opcional)</div>' +
+    '<label class="btn blk" style="position:relative">📷 Añadir fotos<input type="file" accept="image/*" multiple style="position:absolute;opacity:0;width:1px;height:1px" aria-label="Añadir fotos de la vivienda" onchange="dvFotos(this)"></label><div class="thumbs" id="dv-fotos">' + (d.fotosExtra || []).map(adjChip).join('') + '</div>' +
+    '<label class="field" style="margin-top:12px"><span>Comentarios (opcional)</span><textarea id="dv-coment" oninput="dvUpd()" placeholder="Accesos, horarios, mascotas…">' + esc(d.comentarios || '') + '</textarea></label>' +
+    (esPiso ? '<label class="field"><span>Comunidad de propietarios (opcional)</span><select id="dv-comun" onchange="dvUpd()">' + [['', '— elige —'], ['informada', 'Ya está informada'], ['no_hace_falta', 'No hace falta'], ['no', 'No la he informado'], ['no_se', 'No lo sé']].map(o => '<option value="' + o[0] + '"' + ((d.comunidad || '') === o[0] ? ' selected' : '') + '>' + o[1] + '</option>').join('') + '</select></label>' : '') +
+    '</div>';
+}
+const mapaHref = u => 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent([[u.calle, u.numero].filter(Boolean).join(' '), u.cp, u.localidad].filter(Boolean).join(', '));
+// Lee el formulario → objeto de campos (sin repintar nada)
+function dvLeer() {
+  const d = PX_DV(); const o = { ubicacion: { calle: val('dv-calle').trim(), numero: val('dv-numero').trim(), piso: val('dv-piso').trim(), puerta: val('dv-puerta').trim(), cp: val('dv-cp').trim(), localidad: val('dv-loc').trim() } };
+  o.regimen = radio('dv-reg'); o.permisoPropietario = o.regimen === 'inquilino' && chk('dv-permiso'); o.contactoPropietario = val('dv-contacto').trim();
+  o.anioDesconocido = chk('dv-anio-ns'); o.anioConstruccion = o.anioDesconocido ? null : (val('dv-anio').trim() ? Number(val('dv-anio')) : null);
+  o.inicioSinFecha = chk('dv-inicio-sf'); o.inicio = o.inicioSinFecha ? null : (val('dv-inicio') || null);
+  o.habitada = radio('dv-hab'); o.comentarios = val('dv-coment'); const cm = $q('dv-comun'); o.comunidad = cm ? (cm.value || null) : d.comunidad;
+  o.permisoDocId = (S.dv && S.dv._draftPermiso !== undefined) ? S.dv._draftPermiso : d.permisoDocId; o.fotosExtra = (S.dv && S.dv._draftFotos) || d.fotosExtra || [];
+  return o;
+}
+// Actualiza progreso, marcas y subpaneles SIN repintar el formulario (no se cierra el teclado)
+function dvUpd() {
+  const o = dvLeer(); const base = PX_DV(); const ev = evalDV(Object.assign({}, base, o));
+  const set = (id, t) => { const e = $q(id); if (e) e.textContent = t; };
+  set('dv-prog', ev.hechos + ' de ' + ev.total + ' obligatorios'); const b = $q('dv-prog-b'); if (b) b.style.width = Math.round(ev.hechos / Math.max(1, ev.total) * 100) + '%';
+  ev.items.forEach(i => set('dv-m-' + i.id, i.ok ? '✓' : '•'));
+  const inq = $q('dv-inq'); if (inq) inq.style.display = o.regimen === 'inquilino' ? '' : 'none';
+  const an = $q('dv-anio'); if (an) an.disabled = o.anioDesconocido; const ini = $q('dv-inicio'); if (ini) ini.disabled = o.inicioSinFecha;
+  document.querySelectorAll((document.querySelector('#ov.on') ? '#sheet ' : '') + '.dvform .chip input[type=radio]').forEach(r => r.parentElement.classList.toggle('on', r.checked));
+  const m = $q('dv-mapa'); if (m) m.href = mapaHref(o.ubicacion);
+}
+function dvAnio(n) { const e = $q('dv-anio'); if (e) { e.value = n; e.disabled = false; } const ns = $q('dv-anio-ns'); if (ns) ns.checked = false; dvUpd(); toast('Año aproximado: ' + n + '. Puedes ajustarlo.'); }
+async function dvFotos(input) {
+  const ids = (S.dv && S.dv._draftFotos) || (PX_DV().fotosExtra || []).slice(); const ref = $q('dv-fotos');
+  for (const f of [...input.files]) { const id = await subirAdj(f); if (id) ids.push(id); }
+  input.value = ''; S.dv = Object.assign({}, S.dv, { _draftFotos: ids }); if (ref) ref.innerHTML = ids.map(adjChip).join('');
+}
+async function dvPermisoDoc(input) { const f = input.files[0]; if (!f) return; const id = await subirAdj(f); input.value = ''; if (id) { S.dv = Object.assign({}, S.dv, { _draftPermiso: id }); const p = $q('dv-permiso-prev'); if (p) p.innerHTML = prevAdjHtml(id, 'dvQuitarPermiso()'); } }
+function dvQuitarPermiso() { S.dv = Object.assign({}, S.dv, { _draftPermiso: null }); const p = $q('dv-permiso-prev'); if (p) p.innerHTML = ''; }
+function abrirDatos() {
+  S.dv = Object.assign({}, S.dv); delete S.dv._draftFotos; delete S.dv._draftPermiso;
+  sheet(head('Datos de tu vivienda') + '<p class="muted" style="margin-bottom:12px">Con esto preparamos la visita y afinamos tu presupuesto. Los campos con * son obligatorios.</p>' + dvFormHtml() + '<button class="btn pri blk" onclick="guardarDatos()">Guardar mis datos</button>');
+}
+function guardarDatos() {
+  const o = dvLeer(); const p = PX();
+  if (p) p.cli('datosVivienda', { campos: o }); else toast('Sin conexión con el panel del reformista');
+  if (S.dv) { delete S.dv._draftFotos; delete S.dv._draftPermiso; }
+  const ev = evalDV(Object.assign({}, PX_DV(), o)); cerrarSheet(); render();
+  toast(ev.completos ? 'Datos completos. ¡Gracias! Ya puedes elegir el día de la visita.' : 'Datos guardados. Aún faltan: ' + faltaTxt(ev.faltan) + '.');
+}
+
+// ── R-05 / R-07 · Visita: elegir fecha, pagar para reservar el hueco ──
+function vVisita() {
+  const f = S.fase; const el = S.visita.elegida; const rq = S.req || {}; const cb = S.visita.cobro || { estado: 'no_aplica' };
+  if (f === 'recibida') return '<h2>Visita técnica</h2><div class="card"><div style="font-size:40px">📅</div><b>Aún no hay visita propuesta</b><p class="muted">Cuando tu reformista revise tu solicitud te propondrá varios días. Te avisaremos por correo y WhatsApp.</p></div>' + (S.dv && S.dv.eval && !S.dv.eval.completos ? '<div class="info">Puedes adelantar trabajo: completa los <b>datos de tu vivienda</b> desde Inicio y podrás elegir fecha en cuanto te propongan días.</div>' : '');
+  if (f === 'visita_propuesta') {
+    const eg = rq.elegir_franja || { ok: true, faltan: [] }; const bloqueado = !eg.ok;
+    const aviso = S.visita.cobro && S.visita.cobro.requierePago ? 'La visita técnica cuesta <b>' + eur0(S.visita.importe) + '</b> y se paga <b>al confirmar el día</b> para reservar tu hueco (' + S.visita.cobro.horas + ' h para subir el justificante). <b>Se descuenta íntegramente</b> del presupuesto si lo aceptas.' : 'La visita técnica cuesta ' + eur0(S.visita.importe) + ' y <b>se descuenta íntegramente</b> del presupuesto si lo aceptas.';
+    return '<h2>Elige el día de la visita</h2><p class="muted" style="margin-bottom:12px">Dura aproximadamente una hora. Tu reformista medirá, hará fotos y revisará contigo estancia por estancia lo que quieres hacer.</p>' +
+      (bloqueado ? '<div class="warn" role="alert"><b>Antes de elegir fecha, completa estos datos.</b> Te falta: ' + esc(faltaTxt(eg.faltan)) + '.<div style="margin-top:8px"><button class="btn sm pri" onclick="dvIrForm()">Completar ahora</button></div></div>' : '') +
+      S.visita.franjas.map((s, i) => '<button class="slot ' + (UI.slot === i && !bloqueado ? 'on' : '') + '" ' + (bloqueado ? 'disabled style="opacity:.5" title="Bloqueado: completa antes los datos de tu vivienda"' : '') + ' onclick="UI.slot=' + i + ';render()" aria-pressed="' + (UI.slot === i) + '"><span style="font-size:24px">' + (bloqueado ? '🔒' : '🗓️') + '</span><span class="sp"><b style="text-transform:capitalize">' + fsemana(s.t) + '</b><div class="muted">' + esc(s.h) + (bloqueado ? ' · bloqueado hasta completar tus datos' : '') + '</div></span>' + (UI.slot === i && !bloqueado ? '✓' : '') + '</button>').join('') +
+      '<div class="info">' + aviso + ' Puedes cambiarla sin coste hasta 24 h antes.</div>' +
+      '<button class="btn pri blk" ' + (UI.slot == null || bloqueado ? 'disabled' : '') + ' onclick="confirmarVisita()">Confirmar este día</button><button class="btn blk" style="margin-top:10px" onclick="abrirOtraFecha()">Ninguna me va bien</button>' +
+      (bloqueado ? '<div id="dv-inline" style="margin-top:16px"><h3>Datos de tu vivienda</h3>' + dvFormHtml() + '<button class="btn pri blk" onclick="guardarDatos()">Guardar y desbloquear las fechas</button></div>' : '');
+  }
+  if (f === 'visita_confirmada') {
+    const pago = cb.estado === 'pendiente_pago' ? vPagoVisita() : cb.estado === 'justificante_enviado' ? '<div class="info"><b>Justificante enviado.</b> Tu reformista está comprobando el pago de la visita (' + eur0(cb.importe) + '). Tu hueco sigue reservado.</div>' : cb.estado === 'cobrada' ? '<div class="good">✓ Pago de la visita confirmado (' + eur0(cb.importe) + '). Se descontará de tu presupuesto.</div>' : '';
+    return '<h2>' + (cb.estado === 'pendiente_pago' ? 'Reserva tu hueco' : 'Visita confirmada') + '</h2>' + pago + '<div class="card" style="border:2px solid ' + (cb.estado === 'pendiente_pago' ? 'var(--accent)' : 'var(--ok)') + '"><div class="lbl">Tu cita' + (cb.estado === 'pendiente_pago' ? ' (reservada, pendiente de pago)' : '') + '</div><div class="big" style="font-size:30px;text-transform:capitalize">' + fsemana(el.t) + '</div><div style="font-size:18px">' + esc(el.h) + '</div><div class="muted" style="margin:6px 0 12px">' + esc(S.cliente.direccion) + '</div><div class="row"><button class="btn sm" onclick="descargarIcs()">📆 Añadir al calendario</button><button class="btn sm" onclick="abrirReprogramar()">Cambiar el día</button></div></div>' +
+      '<div class="card"><h3>Prepara la visita</h3>' + ['Despeja el acceso a todas las estancias', 'Ten a mano las llaves de trasteros o accesos', 'Piensa qué acabados te gustan (suelos, alicatados…)', 'Si puedes, ten los planos o las facturas de instalaciones'].map((t, i) => '<label class="chk"><input type="checkbox" ' + (UI.previa[i] ? 'checked' : '') + ' onchange="UI.previa[' + i + ']=this.checked"> ' + t + '</label>').join('') + '</div>' +
+      '<div class="info">Cambiar el día es gratis hasta 24 h antes. Después se retiene el importe de la visita (' + eur0(S.visita.importe) + ').</div>';
+  }
+  return '<h2>Visita técnica</h2><div class="card"><div style="font-size:36px">✅</div><b>Visita realizada</b>' + (el ? '<div class="muted" style="text-transform:capitalize">' + fsemana(el.t) + '</div>' : '') + '<p class="muted" style="margin-top:6px">Tu presupuesto se actualizó tras la visita. La visita (' + eur0(S.visita.importe) + ') se descuenta como pago a cuenta.</p></div>';
+}
+function dvIrForm() { const e = document.getElementById('dv-inline'); if (e) { e.scrollIntoView({ behavior: 'smooth', block: 'start' }); const c = $q('dv-calle'); if (c) setTimeout(() => c.focus({ preventScroll: true }), 350); } else abrirDatos(); }
+function pagoRestante(cb) { const rest = (cb.reservaExpiraAt || 0) - ahora(S); return rest > 0 ? Math.max(1, Math.round(rest / 3600000)) : 0; }
+function vPagoVisita() {
+  const cb = S.visita.cobro; const rf = (S.avisosPago || []).filter(a => a.tipo === 'visita' && a.estado === 'rechazado').slice(-1)[0]; const rest = pagoRestante(cb); const pg = UI.pagoV;
+  const meds = [['transferencia', 'Transferencia'], ['bizum', 'Bizum']];
+  return (rf ? '<div class="warn"><b>Tu reformista no ha podido confirmar el pago:</b> ' + esc(rf.motivo) + ' Sube otro justificante.</div>' : '') +
+    '<div class="card" style="border:2px solid var(--accent)"><h3>Paga la visita para reservar tu hueco</h3><div class="big">' + eur(cb.importe) + '</div><div class="muted" style="margin-bottom:10px">Tu hueco queda reservado ' + (rest ? 'hasta el ' + ffecha(cb.reservaExpiraAt) + ' ' + fhora(cb.reservaExpiraAt) + ' (unas ' + rest + ' h)' : 'unas horas') + '. Si no recibimos el justificante, liberaremos el día para que puedas elegir otro.</div>' +
+    '<div class="kv"><span>Titular</span><b>' + esc(S.reformista.titular || S.reformista.empresa) + '</b></div><div class="kv"><span>IBAN</span><b>' + esc(S.reformista.iban) + '</b></div><div class="kv"><span>Concepto</span><b>' + S.ref + '</b></div><div class="kv"><span>Bizum</span><b>' + esc(S.reformista.bizum || S.reformista.tel) + '</b></div>' +
+    '<div class="row" style="margin:10px 0"><button type="button" class="btn sm" onclick="navigator.clipboard&&navigator.clipboard.writeText(\'' + esc(S.reformista.iban) + '\');toast(\'IBAN copiado\')">Copiar IBAN</button></div>' +
+    '<label class="field"><span>Medio de pago</span><select id="pv-m" onchange="UI.pagoV.medio=this.value">' + meds.map(m => '<option value="' + m[0] + '"' + (pg.medio === m[0] ? ' selected' : '') + '>' + m[1] + '</option>').join('') + '</select></label>' +
+    '<div class="lbl">Justificante del pago *</div><label class="btn blk" style="position:relative">📎 Adjuntar justificante (imagen o PDF, máx. 5 MB)<input type="file" id="pv-f" accept="image/*,application/pdf" style="position:absolute;opacity:0;width:1px;height:1px" aria-label="Adjuntar justificante del pago" onchange="pvArchivo(this)"></label><div id="pv-prev">' + prevAdjHtml(pg.adjuntoId, 'pvQuitar()') + '</div>' +
+    '<button class="btn ok blk" id="pv-b" style="margin-top:12px" ' + (pg.adjuntoId ? '' : 'disabled') + ' onclick="pagarVisita()">He pagado: avisar a mi reformista</button>' +
+    '<div class="muted" style="margin-top:8px" id="pv-falta">' + (pg.adjuntoId ? '' : 'Te falta: el justificante del pago.') + '</div></div>';
+}
+async function pvArchivo(input) { const f = input.files[0]; if (!f) return; const id = await subirAdj(f); input.value = ''; if (!id) return; UI.pagoV.adjuntoId = id; pvActualiza(); }
+function pvQuitar() { UI.pagoV.adjuntoId = null; pvActualiza(); }
+function pvActualiza() { const pr = $q('pv-prev'); if (pr) pr.innerHTML = prevAdjHtml(UI.pagoV.adjuntoId, 'pvQuitar()'); const b = $q('pv-b'); if (b) b.disabled = !UI.pagoV.adjuntoId; const fa = $q('pv-falta'); if (fa) fa.textContent = UI.pagoV.adjuntoId ? '' : 'Te falta: el justificante del pago.'; }
+function pagarVisita() { if (!UI.pagoV.adjuntoId) { toast('Adjunta antes el justificante del pago'); return; } const p = PX(); if (!p) return; const d = { adjuntoId: UI.pagoV.adjuntoId, medio: UI.pagoV.medio, fecha: hoyStr() }; UI.pagoV = { medio: 'transferencia', adjuntoId: null }; p.cli('pagarVisita', d); toast('Justificante enviado. Tu reformista confirmará el pago.'); }
+
+// ── R-08 · Aceptar el presupuesto: datos para tu factura ──
+const FX = () => Object.assign({ tipo: 'particular', nombre: '', nif: '', razonSocial: '', cif: '', domicilio: { calle: '', numero: '', cp: '', localidad: '' }, mismaDireccion: false, usoVivienda: null }, S.fiscal || {});
+const evalFX = f => { const p = PX(); try { if (p && p.evalFiscal) return p.evalFiscal(f); } catch (e) { console.error(e); } return { ok: true, faltan: [] }; };
+function fxLeer() {
+  const tipo = radio('fx-tipo') || 'particular'; const same = chk('fx-same'); const u = (S.dv && S.dv.ubicacion) || {};
+  const dom = same ? { calle: u.calle || '', numero: [u.numero, u.piso, u.puerta].filter(Boolean).join(' '), cp: u.cp || '', localidad: u.localidad || '' } : { calle: val('fx-calle').trim(), numero: val('fx-num').trim(), cp: val('fx-cp').trim(), localidad: val('fx-loc').trim() };
+  return { tipo, nombre: tipo === 'empresa' ? val('fx-firmante').trim() : val('fx-nombre').trim(), razonSocial: val('fx-razon').trim(), nif: tipo === 'empresa' ? '' : val('fx-doc').trim(), cif: tipo === 'empresa' ? val('fx-doc').trim() : '', domicilio: dom, mismaDireccion: same, usoVivienda: radio('fx-uso') };
+}
+function fxHtml() {
+  const f = FX(); const emp = f.tipo === 'empresa'; const d = f.domicilio || {};
+  const fila = (id, etq, v, extra) => '<label class="field"><span>' + etq + '</span><input id="' + id + '" value="' + esc(v == null ? '' : v) + '" oninput="acCheck()" ' + (extra || '') + '></label>';
+  return '<div data-keep="1" id="fx-form"><h3>Datos para tu factura</h3><div class="muted" style="margin-bottom:8px">Solo los necesarios. No pedimos fecha de nacimiento ni IBAN.</div>' +
+    '<div class="chips"><label class="chip ' + (!emp ? 'on' : '') + '"><input type="radio" name="fx-tipo" value="particular" class="sr" ' + (!emp ? 'checked' : '') + ' onchange="fxTipo()">Particular</label><label class="chip ' + (emp ? 'on' : '') + '"><input type="radio" name="fx-tipo" value="empresa" class="sr" ' + (emp ? 'checked' : '') + ' onchange="fxTipo()">Empresa</label></div>' +
+    '<div id="fx-p" style="' + (emp ? 'display:none' : '') + '">' + fila('fx-nombre', 'Nombre y apellidos *', f.nombre, 'autocomplete="name"') + '</div>' +
+    '<div id="fx-e" style="' + (emp ? '' : 'display:none') + '">' + fila('fx-razon', 'Razón social *', f.razonSocial) + fila('fx-firmante', 'Persona que firma (nombre y apellidos)', f.nombre) + '</div>' +
+    '<label class="field"><span id="fx-doc-l">' + (emp ? 'CIF *' : 'DNI o NIE *') + '</span><input id="fx-doc" value="' + esc(emp ? f.cif : f.nif) + '" oninput="acCheck()" autocapitalize="characters" placeholder="' + (emp ? 'B12345674' : '12345678Z') + '"><small class="muted" id="fx-doc-m"></small></label>' +
+    '<label class="chk"><input type="checkbox" id="fx-same" ' + (f.mismaDireccion ? 'checked' : '') + ' onchange="fxSame()"> Es la misma dirección de la obra</label>' +
+    '<div id="fx-dom" style="' + (f.mismaDireccion ? 'display:none' : '') + '"><div class="row" style="flex-wrap:nowrap"><div class="sp">' + fila('fx-calle', 'Calle *', d.calle) + '</div><div style="width:110px">' + fila('fx-num', 'Número *', d.numero) + '</div></div><div class="row" style="flex-wrap:nowrap"><div style="width:120px">' + fila('fx-cp', 'Código postal *', d.cp, 'inputmode="numeric" maxlength="5"') + '</div><div class="sp">' + fila('fx-loc', 'Localidad *', d.localidad) + '</div></div></div>' +
+    '<div class="lbl" style="margin-top:6px">La obra es en una vivienda de uso particular *</div><div class="chips">' + [['si', 'Sí'], ['no', 'No']].map(x => '<label class="chip ' + (f.usoVivienda === x[0] ? 'on' : '') + '"><input type="radio" name="fx-uso" value="' + x[0] + '" class="sr" ' + (f.usoVivienda === x[0] ? 'checked' : '') + ' onchange="acCheck()">' + x[1] + '</label>').join('') + '</div>' +
+    '<div class="muted" style="margin-bottom:8px">Sirve a tu reformista para aplicar el IVA que corresponda (lo confirma con su gestor).</div></div>';
+}
+function fxTipo() { const t = radio('fx-tipo'); const p = $q('fx-p'), e = $q('fx-e'); if (p) p.style.display = t === 'empresa' ? 'none' : ''; if (e) e.style.display = t === 'empresa' ? '' : 'none'; const l = $q('fx-doc-l'); if (l) l.textContent = t === 'empresa' ? 'CIF *' : 'DNI o NIE *'; acCheck(); }
+function fxSame() { const d = $q('fx-dom'); if (d) d.style.display = chk('fx-same') ? 'none' : ''; acCheck(); }
 const CODIGO = '482913';
-function abrirAceptar() { const v = vigente(S); sheet(head('Aceptar el presupuesto ' + v.id) + '<div class="card" style="text-align:center"><div class="lbl">Importe total</div><div class="big">' + eur(totalV(v)) + '</div><div class="muted">IVA incluido</div></div>' +
-  '<label class="chk"><input type="checkbox" id="ac-1" onchange="acCheck()"> He revisado el presupuesto estancia por estancia.</label><label class="chk"><input type="checkbox" id="ac-2" onchange="acCheck()"> Entiendo que cualquier cambio durante la obra se me consultará y se recogerá en una adenda que yo firmo.</label>' +
-  '<label class="field"><span>Tu nombre completo</span><input id="ac-n" value="' + esc(S.cliente.nombre) + '" oninput="acCheck()"></label><label class="field"><span>Código recibido por SMS (demo: ' + CODIGO + ')</span><input id="ac-c" inputmode="numeric" maxlength="6" placeholder="6 dígitos" oninput="acCheck()"></label><button class="btn ok blk" id="ac-b" disabled onclick="aceptarOk()">✓ Aceptar y firmar</button>'); }
-function acCheck() { $('#ac-b').disabled = !($('#ac-1').checked && $('#ac-2').checked && $('#ac-n').value.trim().length > 3 && $('#ac-c').value.trim() === CODIGO); }
+function abrirAceptar() {
+  const v = vigente(S); const rq = (S.req || {}).aceptar || { ok: true, faltan: [] }; const pl = planPagos(S); const avisos = v.avisosVisita || [];
+  const viv = FAL(rq, 'completar_vivienda'); const tieneAv = avisos.length > 0;
+  UI.acV = v.id;
+  sheet(head('Aceptar el presupuesto ' + v.id) + '<div class="card" style="text-align:center"><div class="lbl">Importe total</div><div class="big">' + eur(totalV(v)) + '</div><div class="muted">IVA incluido</div></div>' +
+    (viv.length ? '<div class="warn"><b>Antes de aceptar, completa los datos de tu vivienda.</b> Te falta: ' + esc(faltaTxt(viv)) + '.<div style="margin-top:8px"><button class="btn sm pri" onclick="abrirDatos()">Completar ahora</button></div></div>' : '') +
+    fxHtml() +
+    '<h3 style="margin-top:6px">Plan de pagos</h3><div class="card">' + pl.map(t => '<div class="kv"><span>' + esc(t.label) + ' <span class="muted">(' + t.pct + ' %)</span></span><b>' + eur(t.importe) + '</b></div>').join('') + '<div class="muted" style="margin-top:6px">Los cambios firmados durante la obra se sumarán a tu siguiente pago.</div></div>' +
+    '<label class="chk"><input type="checkbox" id="ac-p" onchange="acCheck()"> He revisado el plan de pagos.</label>' +
+    '<label class="chk"><input type="checkbox" id="ac-1" onchange="acCheck()"> He revisado el presupuesto estancia por estancia y acepto las condiciones.</label><label class="chk"><input type="checkbox" id="ac-2" onchange="acCheck()"> Entiendo que cualquier cambio durante la obra se me consultará y se recogerá en una adenda que yo firmo.</label>' +
+    (tieneAv ? '<div class="info"><b>Avisos de la visita:</b><ul style="padding-left:18px;margin-top:4px">' + avisos.map(x => '<li>' + esc(typeof x === 'string' ? x : x.texto) + '</li>').join('') + '</ul></div><label class="chk"><input type="checkbox" id="ac-av" onchange="acCheck()"> He leído los avisos de la visita.</label>' : '') +
+    '<label class="field"><span>Tu nombre completo (firma)</span><input id="ac-n" value="' + esc(nombreFirmaDef()) + '" oninput="acCheck()"></label><label class="field"><span>Código recibido por SMS (demo: ' + CODIGO + ')</span><input id="ac-c" inputmode="numeric" maxlength="6" placeholder="6 dígitos" oninput="acCheck()"></label>' +
+    '<div class="warn" id="ac-falta" style="display:none"></div><button class="btn ok blk" id="ac-b" disabled onclick="aceptarOk()">✓ Aceptar y firmar</button>');
+  acCheck();
+}
+const nombreFirmaDef = () => (S.fiscal && (S.fiscal.tipo === 'empresa' ? (S.fiscal.nombre || S.fiscal.razonSocial) : S.fiscal.nombre)) || S.cliente.nombre;
+// Lo que falta para poder aceptar (reglas del admin + comprobaciones locales de casillas)
+function aceptarFaltas() {
+  const rq = (S.req || {}).aceptar || { faltan: [] }; const out = [];
+  FAL(rq).forEach(f => { if (f.accion === 'completar_vivienda' || ['estado', 'caducada'].includes(f.id)) out.push(f.texto); });
+  const fx = fxLeer(); evalFX(fx).faltan.forEach(f => out.push(f.texto));
+  if (!chk('ac-p')) out.push('revisar el plan de pagos'); if (!(chk('ac-1') && chk('ac-2'))) out.push('aceptar las condiciones');
+  if ($q('ac-av') && !chk('ac-av')) out.push('confirmar que has leído los avisos de la visita');
+  if (val('ac-n').trim().length <= 3) out.push('tu nombre completo'); if (val('ac-c').trim() !== CODIGO) out.push('el código de confirmación');
+  return out;
+}
+function acCheck() {
+  const b = $q('ac-b'); if (!b) return; const fal = aceptarFaltas(); b.disabled = fal.length > 0;
+  const m = $q('ac-falta'); if (m) { m.style.display = fal.length ? '' : 'none'; m.innerHTML = fal.length ? '<b>Te falta:</b> ' + esc(fal.join(', ')) + '.' : ''; }
+  const doc = $q('fx-doc'), dm = $q('fx-doc-m'); if (doc && dm) { const fx = fxLeer(); const fl = evalFX(fx).faltan.find(x => x.id === (fx.tipo === 'empresa' ? 'cif' : 'nif')); dm.textContent = doc.value.trim() && fl ? '⚠ ' + fl.texto : (doc.value.trim() ? '✓ Documento con letra de control correcta' : ''); dm.style.color = doc.value.trim() && fl ? 'var(--danger)' : 'var(--ok)'; }
+}
+function aceptarOk() {
+  if (aceptarFaltas().length) { acCheck(); toast('Te falta: ' + aceptarFaltas().join(', ')); return; }
+  const p = PX(); if (!p) return; const fx = fxLeer();
+  p.cli('aceptar', { fiscal: fx, condiciones: chk('ac-1') && chk('ac-2'), planRevisado: chk('ac-p'), avisosLeidos: $q('ac-av') ? chk('ac-av') : true, codigo: val('ac-c').trim(), nombre: val('ac-n').trim() });
+  cerrarSheet(); ir('inicio'); render(); if (S.aceptacion) toast('¡Presupuesto aceptado! Gracias por tu confianza.');
+}
+
+// ── R-11 · Avisar de un pago con justificante ──
+function abrirAvisoPago(f) {
+  UI.pago = { adjuntoId: null, medio: 'transferencia', tramo: '' };
+  const tv = totalVigente(S); const pend = Math.max(0, r2(tv.total - cobrado(S))); const pl = planPagos(S).filter(t => t.estado !== 'pagado');
+  const rf = (S.avisosPago || []).filter(a => a.tipo !== 'visita' && a.estado === 'rechazado').slice(-1)[0];
+  sheet(head('Avisar de un pago') + (rf ? '<div class="warn"><b>Tu reformista no pudo confirmar tu último pago:</b> ' + esc(rf.motivo) + ' Sube otro justificante.</div>' : '') +
+    '<div data-keep="1"><label class="field"><span>Importe pagado (€)</span><input id="ap-i" inputmode="decimal" value="' + (f || '') + '" oninput="apCheck()"></label><div class="warn" id="ap-sup" style="display:none"></div>' +
+    '<label class="field"><span>Medio</span><select id="ap-m" onchange="UI.pago.medio=this.value;apCheck()"><option value="transferencia">Transferencia</option><option value="bizum">Bizum</option><option value="efectivo">Efectivo</option></select></label>' +
+    '<label class="field"><span>Fecha del pago</span><input id="ap-f" type="date" max="' + hoyStr() + '" value="' + hoyStr() + '" oninput="apCheck()"></label>' +
+    '<label class="field"><span>Tramo al que corresponde</span><select id="ap-t" onchange="UI.pago.tramo=this.value"><option value="">Pago a cuenta</option>' + pl.map((t, i) => '<option value="' + esc(t.label) + '"' + (f && i === 0 ? ' selected' : '') + '>' + esc(t.label) + ' · ' + eur0(t.falta || t.importe) + '</option>').join('') + '</select></label>' +
+    '<div class="lbl" id="ap-jl">Justificante del pago *</div><label class="btn blk" style="position:relative">📎 Adjuntar justificante (imagen o PDF, máx. 5 MB)<input type="file" accept="image/*,application/pdf" style="position:absolute;opacity:0;width:1px;height:1px" aria-label="Adjuntar justificante del pago" onchange="apArchivo(this)"></label><div id="ap-prev"></div>' +
+    '<div class="muted" id="ap-falta" style="margin:8px 0"></div><button class="btn pri blk" id="ap-b" disabled onclick="avisoPagoOk()">Avisar a mi reformista</button><div class="muted" style="margin-top:8px">Tu reformista confirmará el pago y aparecerá en tus movimientos. Pendiente de pago ahora: ' + eur(pend) + '.</div></div>');
+  if (f) { const sel = $q('ap-t'); if (sel && sel.selectedIndex > 0) UI.pago.tramo = sel.value; }
+  apCheck();
+}
+async function apArchivo(input) { const f = input.files[0]; if (!f) return; const id = await subirAdj(f); input.value = ''; if (!id) return; UI.pago.adjuntoId = id; apCheck(); }
+function apQuitar() { UI.pago.adjuntoId = null; apCheck(); }
+function apFaltas() {
+  const imp = num(val('ap-i')); const med = val('ap-m'); const out = []; const obl = ((S.pago || {}).justificanteObligatorio || { transferencia: true, bizum: true, efectivo: false })[med] !== false && med !== 'efectivo';
+  if (!(imp > 0)) out.push('el importe'); const fecha = val('ap-f'); if (!fecha || fecha > hoyStr()) out.push('una fecha que no sea futura'); if (obl && !UI.pago.adjuntoId) out.push('el justificante del pago');
+  return out;
+}
+function apCheck() {
+  const b = $q('ap-b'); if (!b) return; const fal = apFaltas(); b.disabled = fal.length > 0; const m = $q('ap-falta'); if (m) m.textContent = fal.length ? 'Te falta: ' + fal.join(', ') + '.' : '';
+  const pr = $q('ap-prev'); if (pr) pr.innerHTML = prevAdjHtml(UI.pago.adjuntoId, 'apQuitar()'); const jl = $q('ap-jl'); if (jl) jl.textContent = 'Justificante del pago' + (val('ap-m') === 'efectivo' ? ' (opcional en efectivo)' : ' *');
+  const tv = totalVigente(S); const pend = Math.max(0, r2(tv.total - cobrado(S))); const sup = $q('ap-sup'); const imp = num(val('ap-i')); if (sup) { const over = imp > pend + 0.005; sup.style.display = over ? '' : 'none'; sup.textContent = over ? 'El importe (' + eur(imp) + ') supera lo que te queda por pagar (' + eur(pend) + '). Revísalo antes de enviar.' : ''; }
+}
+function avisoPagoOk() {
+  const fal = apFaltas(); if (fal.length) { apCheck(); toast('Te falta: ' + fal.join(', ')); return; }
+  const p = PX(); if (!p) return; const d = { importe: num(val('ap-i')), medio: val('ap-m'), fecha: val('ap-f'), tramo: val('ap-t'), adjuntoId: UI.pago.adjuntoId };
+  UI.pago = { adjuntoId: null, medio: 'transferencia', tramo: '' }; cerrarSheet(); p.cli('avisoPago', d); toast('Avisado. Tu reformista lo confirmará.');
+}
+function vPagos() {
+  if (!S.aceptacion) return '<h2>Pagos</h2><div class="card"><div style="font-size:40px">💶</div><b>Todavía no hay pagos</b><p class="muted">Cuando aceptes el presupuesto verás aquí el plan de pagos: ' + S.plan.map(p => p.pct + ' % ' + p.label.toLowerCase()).join(' · ') + '.</p></div>';
+  const tv = totalVigente(S); const pag = cobrado(S); const pl = planPagos(S); const pend = Math.max(0, r2(tv.total - pag)); const avs = (S.avisosPago || []).filter(a => a.tipo !== 'visita');
+  const pillA = { pendiente: ['wip', 'En revisión'], confirmado: ['ok', 'Confirmado'], rechazado: ['bad', 'Justificante rechazado'] };
+  return '<h2>Pagos</h2><div class="card"><div class="row"><div class="sp"><div class="lbl">Total vigente</div><div class="big">' + eur0(tv.total) + '</div></div><div style="text-align:right"><div class="lbl">Pendiente</div><b style="font-size:22px;color:' + (pend ? 'var(--danger)' : 'var(--ok)') + '">' + eur0(pend) + '</b></div></div><div class="progress" style="margin:10px 0 4px"><i style="width:' + Math.min(100, Math.round(pag / tv.total * 100)) + '%"></i></div><div class="muted">Pagado ' + eur(pag) + '</div></div>' +
+    '<h3>Plan de pagos</h3>' + pl.map(t => '<div class="card"><div class="row"><div class="sp"><b>' + esc(t.label) + '</b><div class="muted">' + t.pct + ' % · ' + eur(t.importe) + '</div></div><span class="pill ' + ({ pagado: 'ok', debido: 'wip', previsto: '' }[t.estado]) + '">' + ({ pagado: 'Pagado', debido: 'Toca pagar', previsto: 'Previsto' }[t.estado]) + '</span></div>' + (t.estado === 'debido' ? '<div class="row" style="margin-top:10px"><button class="btn pri sp" onclick="abrirComoPagar(' + t.falta + ')">Cómo pagar ' + eur0(t.falta) + '</button></div>' : '') + '</div>').join('') +
+    (tv.firmado + tv.provisional > tv.aceptada ? '<div class="info">Además del plan, tienes ' + eur(r2(tv.total - tv.aceptada)) + ' de adendas y cambios que se facturarán cuando los apruebes.</div>' : '') +
+    (avs.length ? '<h3>Avisos de pago enviados</h3>' + avs.slice().reverse().map(a => '<div class="card"><div class="row"><div class="sp"><b>' + eur(a.importe) + '</b> · ' + esc(a.medio) + '<div class="muted">' + fdia(a.f) + (a.tramo ? ' · ' + esc(a.tramo) : '') + '</div></div><span class="pill ' + pillA[a.estado][0] + '">' + pillA[a.estado][1] + '</span></div>' + (a.adjuntoId ? '<div class="thumbs" style="grid-template-columns:repeat(auto-fill,minmax(90px,1fr))">' + adjChip(a.adjuntoId) + '</div>' : '') + (a.estado === 'rechazado' ? '<div class="warn" style="margin:8px 0 0">' + esc(a.motivo) + '</div><button class="btn sm pri" style="margin-top:8px" onclick="abrirAvisoPago(' + a.importe + ')">Subir otro justificante</button>' : '') + '</div>').join('') : '') +
+    '<h3>Movimientos</h3><div class="card">' + (S.cobros.length ? S.cobros.map(c => '<div class="kv"><span>' + fdia(c.f) + ' · ' + esc(c.concepto) + '<div class="muted">' + esc(c.medio) + (c.justificanteId ? ' · <a href="#" onclick="verAdj(\'' + c.justificanteId + '\');return false" aria-label="Ver justificante">📎 justificante</a>' : '') + '</div></span><b>' + eur(c.importe) + '</b></div>').join('') : '<div class="muted">Sin pagos registrados.</div>') + '</div>' +
+    '<div class="row"><button class="btn sp" onclick="abrirAvisoPago()">He hecho un pago</button><button class="btn sp" onclick="imprimirResumen()">🖨 Resumen económico</button></div><div class="muted" style="margin-top:10px">Este resumen es informativo y no sustituye a la factura oficial.</div>';
+}
+
+// ── R-10 · Mensajes: conversación completa con adjuntos ──
+function burbuja(m) {
+  const yo = m.autor === 'cliente'; const quien = yo ? 'Tú' : (m.autor === 'sistema' ? 'Aviso automático' : esc(S.reformista.contacto));
+  return '<div class="bubble ' + (yo ? 'yo' : 'el') + '">' + (m.tipo === 'aviso_pago' ? '<span class="pill" style="margin-bottom:4px">💶 Aviso de pago</span><br>' : '') + esc(m.t) + (m.adjuntos && m.adjuntos.length ? '<div class="thumbs" style="grid-template-columns:repeat(auto-fill,minmax(80px,1fr))">' + m.adjuntos.map(adjChip).join('') + '</div>' : '') + '<small>' + quien + ' · ' + fdia(m.f) + ' ' + fhora(m.f) + (yo ? '' : (m.leido ? '' : ' · nuevo')) + '</small></div>';
+}
+function mensajesSinLeer() { return (S.chat || []).filter(m => m.autor !== 'cliente' && !m.leido).length; }
+function vMensajes() {
+  const chat = (S.chat || []).map(burbuja).join('');
+  if (mensajesSinLeer()) setTimeout(() => { if (sec === 'mensajes' && mensajesSinLeer()) { const p = PX(); if (p) p.cli('leerMensajes', {}); } }, 700);
+  return '<h2>Mensajes</h2><div class="card"><h3>Conversación con ' + esc(S.reformista.contacto) + '</h3><div style="max-height:360px;overflow:auto;margin-bottom:10px" id="chat">' + (chat || '<div class="muted">Escribe aquí tus dudas. Normalmente respondemos en menos de 24 h.</div>') + '</div><div id="chat-adj" class="thumbs" style="grid-template-columns:repeat(auto-fill,minmax(80px,1fr))">' + (UI.chatAdj || []).map(adjChip).join('') + '</div><div class="row" style="flex-wrap:nowrap" data-keep="1"><label class="btn sm" style="position:relative;min-width:48px" aria-label="Adjuntar archivo">📎<input type="file" accept="image/*,application/pdf" multiple style="position:absolute;opacity:0;width:1px;height:1px" onchange="chatArchivos(this)"></label><textarea id="chat-t" aria-label="Tu mensaje" style="min-height:52px;height:52px" placeholder="Escribe tu mensaje…"></textarea><button class="btn pri" onclick="enviarChat()" aria-label="Enviar mensaje">Enviar</button></div></div>' +
+    '<h3>Avisos que te hemos enviado</h3><div class="muted" style="margin-bottom:8px">Copia en el panel de lo que recibes por correo y WhatsApp.</div>' + S.avisos.slice().reverse().map(a => '<button class="card" style="width:100%;text-align:left;display:block;' + (a.leido ? '' : 'border:2px solid var(--accent)') + '" onclick="verAviso(\'' + a.id + '\')"><div class="row"><b class="sp">' + esc(a.asunto) + '</b>' + (a.leido ? '' : '<span class="pill wip">Nuevo</span>') + '</div><div class="muted">' + ffecha(a.f) + ' · correo y WhatsApp</div></button>').join('');
+}
+async function chatArchivos(input) { UI.chatAdj = UI.chatAdj || []; for (const f of [...input.files]) { const id = await subirAdj(f); if (id) UI.chatAdj.push(id); } input.value = ''; const c = $q('chat-adj'); if (c) c.innerHTML = UI.chatAdj.map(adjChip).join(''); }
+function enviarChat() {
+  const t = val('chat-t').trim(); const adj = (UI.chatAdj || []).slice(); if (!t && !adj.length) { toast('Escribe un mensaje o adjunta un archivo'); return; }
+  const p = PX(); if (!p) return; UI.chatAdj = []; p.cli('mensaje', { t, adjuntos: adj, kind: 'chat' }); const c = $q('chat'); if (c) c.scrollTop = c.scrollHeight; toast('Mensaje enviado');
+}
+
 function aceptarInterno(nombre) {
   const v = vigente(S); S.aceptacion = { versionId:v.id, total:totalV(v), f:ahora(S), nombre }; v.estado = 'aceptada'; S.fase = 'aceptada'; ev('Presupuesto ' + v.id + ' aceptado (' + eur0(totalV(v)) + ')', 'cliente');
   const pl = planPagos(S); avisar('aceptado', '¡Gracias! Presupuesto aceptado · ' + S.ref, ['Hemos recibido tu aceptación del presupuesto ' + v.id + ' por ' + eur(totalV(v)) + '.', 'Plan de pagos: ' + pl.map(t => t.pct + ' % ' + t.label.toLowerCase() + ' (' + eur0(t.importe) + ')').join(' · ') + '. Tu visita técnica (' + eur0(S.visita.importe) + ') ya está descontada como pago a cuenta.', 'En breve te confirmaremos la fecha de inicio de obra.'], 'Presupuesto aceptado ✔. Te confirmo pronto la fecha de inicio. Aquí tienes tu panel:', { sec:'pagos' });
 }
-function aceptarOk() { aceptarInterno($('#ac-n').value.trim()); guardar(); cerrarSheet(); ir('inicio'); render(); toast('¡Presupuesto aceptado! Gracias por tu confianza.'); }
 function abrirPedirCambios() { sheet(head('Pedir cambios al presupuesto') + '<label class="field"><span>¿Qué te gustaría cambiar?</span><textarea id="pc-t" placeholder="Ej.: prefiero porcelánico en la cocina y quitar el radiador del salón"></textarea></label><button class="btn pri blk" onclick="enviarPedirCambios()">Enviar a mi reformista</button>'); }
 function enviarPedirCambios() { const t = $('#pc-t').value.trim(); if (!t) { toast('Cuéntanos qué quieres cambiar'); return; } S.chat.push({ f:ahora(S), autor:'cliente', t:'Quiero pedir cambios en el presupuesto: ' + t }); ev('Has pedido cambios en el presupuesto', 'cliente'); guardar(); cerrarSheet(); toast('Enviado. Recibirás una nueva versión del presupuesto.'); render(); }
 function abrirRechazo() { sheet(head('No me interesa') + '<p class="muted" style="margin-bottom:10px">Lamentamos que no encaje. ¿Nos cuentas el motivo? Nos ayuda a mejorar.</p>' + ['Lo he encontrado más barato', 'Voy a esperar más adelante', 'He elegido a otro profesional', 'Otro motivo'].map((m, i) => '<label class="chk"><input type="radio" name="rz" value="' + m + '" ' + (i === 0 ? 'checked' : '') + '> ' + m + '</label>').join('') + '<button class="btn dng blk" style="margin-top:10px" onclick="rechazoOk()">Confirmar</button>'); }
@@ -552,12 +784,12 @@ function enviarCambioObra() { const t = $('#po-t').value.trim(); if (!t) { toast
 function aceptarCambio(id) { const c = S.obra.cambios.find(x => x.id === id); c.estado = 'aceptado'; ev('Has aceptado el cambio «' + c.concepto + '»', 'cliente'); guardar(); render(); toast('Cambio aceptado. Se incluirá en la próxima adenda.'); }
 function abrirDesacuerdo(id) { sheet(head('No estoy de acuerdo') + '<p class="muted" style="margin-bottom:10px">No se hará nada sin tu visto bueno. Cuéntanos qué te preocupa.</p><label class="field"><span>Tu comentario</span><textarea id="ds-t" placeholder="Ej.: me parece caro / quiero ver otra opción"></textarea></label><button class="btn dng blk" onclick="desacuerdoOk(\'' + id + '\')">Enviar</button>'); }
 function desacuerdoOk(id) { const c = S.obra.cambios.find(x => x.id === id); c.estado = 'en_desacuerdo'; c.comentario = $('#ds-t').value.trim(); ev('No estás de acuerdo con el cambio «' + c.concepto + '»', 'cliente'); guardar(); cerrarSheet(); render(); toast('Tu reformista se pondrá en contacto contigo.'); }
-function abrirFirmaAdenda(id) { const a = S.obra.adendas.find(x => x.id === id); sheet(head('Firmar la adenda ' + a.id) + a.cambios.map(cid => { const c = S.obra.cambios.find(x => x.id === cid); return '<div class="kv"><span>' + esc(c.concepto) + '</span><b>' + eur(conIva(c.importe)) + '</b></div>'; }).join('') + '<div class="kv" style="border:none"><b>Total adenda</b><b>' + eur(conIva(a.delta)) + '</b></div><label class="chk"><input type="checkbox" id="fa-c" onchange="faCheck()"> Acepto estos trabajos y su importe.</label><label class="field"><span>Tu nombre completo</span><input id="fa-n" value="' + esc(S.cliente.nombre) + '" oninput="faCheck()"></label><button class="btn ok blk" id="fa-b" disabled onclick="firmarAdendaOk(\'' + id + '\')">✍️ Firmar adenda</button>'); }
-function faCheck() { $('#fa-b').disabled = !($('#fa-c').checked && $('#fa-n').value.trim().length > 3); }
+function abrirFirmaAdenda(id) { const a = S.obra.adendas.find(x => x.id === id); sheet(head('Firmar la adenda ' + a.id) + a.cambios.map(cid => { const c = S.obra.cambios.find(x => x.id === cid); return '<div class="kv"><span>' + esc(c.concepto) + '</span><b>' + eur(conIva(c.importe)) + '</b></div>'; }).join('') + '<div class="kv" style="border:none"><b>Total adenda</b><b>' + eur(conIva(a.delta)) + '</b></div><label class="chk"><input type="checkbox" id="fa-c" onchange="faCheck()"> Acepto estos trabajos y su importe.</label><label class="field"><span>Tu nombre completo (como en tu facturación)</span><input id="fa-n" value="' + esc(nombreFirmaDef()) + '" oninput="faCheck()"><small class="muted" id="fa-m" style="color:var(--danger)"></small></label><button class="btn ok blk" id="fa-b" disabled onclick="firmarAdendaOk(\'' + id + '\')">✍️ Firmar adenda</button>'); }
+const normN = t => String(t || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/\s+/g, ' ').trim();
+// G10: el nombre tecleado debe coincidir (sin tildes ni mayúsculas) con el nombre de facturación
+function faCheck() { const esperado = nombreFirmaDef(); const ok = $('#fa-c').checked && $('#fa-n').value.trim().length > 3 && normN($('#fa-n').value) === normN(esperado); $('#fa-b').disabled = !ok; const m = $('#fa-m'); if (m) m.textContent = ok || !$('#fa-n').value.trim() ? '' : 'El nombre debe coincidir con el de tu facturación (' + esperado + ').'; }
 function firmarAdendaOk(id) { const a = S.obra.adendas.find(x => x.id === id); a.estado = 'firmada'; a.firma = { nombre:$('#fa-n').value.trim(), f:ahora(S) }; a.cambios.forEach(cid => { S.obra.cambios.find(x => x.id === cid).estado = 'consolidado'; }); ev('Has firmado la adenda ' + a.id + ' (' + eur0(conIva(a.delta)) + ')', 'cliente'); guardar(); cerrarSheet(); render(); toast('Adenda firmada. Quedará reflejada en tu total.'); }
 function abrirComoPagar(f) { sheet(head('Cómo pagar') + '<div class="card" style="text-align:center"><div class="lbl">Importe a pagar</div><div class="big">' + eur(f) + '</div></div><div class="kv"><span>Titular</span><b>' + esc(S.reformista.empresa) + '</b></div><div class="kv"><span>IBAN</span><b id="ib">' + esc(S.reformista.iban) + '</b></div><div class="kv"><span>Concepto</span><b>' + S.ref + ' ' + esc(S.cliente.nombre.split(' ')[0]) + '</b></div><div class="muted" style="margin:8px 0 12px">También puedes pagar por Bizum o en efectivo acordándolo con tu reformista.</div><button class="btn blk" onclick="navigator.clipboard&&navigator.clipboard.writeText(\'' + esc(S.reformista.iban) + '\');toast(\'IBAN copiado\')">Copiar IBAN</button><button class="btn pri blk" style="margin-top:10px" onclick="abrirAvisoPago(' + f + ')">Ya he pagado: avisar</button>'); }
-function abrirAvisoPago(f) { sheet(head('Avisar de un pago') + '<label class="field"><span>Importe pagado (€)</span><input id="ap-i" inputmode="decimal" value="' + (f || '') + '"></label><label class="field"><span>Medio</span><select id="ap-m"><option>Transferencia</option><option>Bizum</option><option>Efectivo</option></select></label><label class="field"><span>Fecha</span><input id="ap-f" type="date" value="' + new Date().toISOString().slice(0, 10) + '"></label><button class="btn pri blk" onclick="avisoPagoOk()">Avisar a mi reformista</button><div class="muted" style="margin-top:8px">Tu reformista confirmará el pago y aparecerá en tus movimientos.</div>'); }
-function avisoPagoOk() { const i = num($('#ap-i').value); if (!(i > 0)) { toast('Indica el importe'); return; } S.chat.push({ f:ahora(S), autor:'cliente', t:'He realizado un pago de ' + eur(i) + ' por ' + $('#ap-m').value + ' (' + $('#ap-f').value + '). ¿Puedes confirmarlo?' }); ev('Has avisado de un pago de ' + eur0(i), 'cliente'); guardar(); cerrarSheet(); toast('Avisado. Tu reformista lo confirmará.'); render(); }
 function abrirRemate() { sheet(head('Añadir un remate') + '<label class="field"><span>¿Qué hay que arreglar?</span><textarea id="rm-t" placeholder="Ej.: rozadura en la puerta del dormitorio 2"></textarea></label><label class="chk"><input type="checkbox" id="rm-f" checked> Adjuntar una foto (demo)</label><button class="btn pri blk" onclick="remateOk()">Añadir remate</button>'); }
 function remateOk(itemId, texto) { const t = texto || $('#rm-t').value.trim(); if (!t) { toast('Describe el remate'); return; } const f = itemId ? false : $('#rm-f').checked; const r = { id:uid('r'), texto:t, estado:'abierto', foto:f, autor:'cliente', itemId:itemId || null, f:ahora(S) }; S.obra.remates.push(r); if (f) S.obra.fotos.push({ id:uid('f'), src:fotoSvg('Remate: ' + t.slice(0, 22), 20), cap:'Remate: ' + t, f:ahora(S) }); ev('Has indicado un remate: ' + t, 'cliente'); guardar(); if (!itemId) { cerrarSheet(); toast('Remate enviado a tu reformista.'); render(); } }
 function itemOk(id) { const i = S.obra.cierre.items.find(x => x.id === id); i.estado = 'ok'; i.nota = ''; guardar(); render(); }
@@ -577,7 +809,6 @@ function ffCheck() { $('#ff-b').disabled = !($('#ff-n').value.trim().length > 3 
 function firmaFinalOk() { const firma = $('#sig').toDataURL('image/png'); cerrarObra($('#ff-n').value.trim(), firma); guardar(); cerrarSheet(); ir('entrega'); render(); toast('¡Obra cerrada! Tu acta ya está disponible.'); }
 function cerrarObra(nombre, firma) { S.obra.cierre.conformidad = { f:ahora(S), nombre, firma }; S.fase = 'cerrada'; ev('Has firmado tu conformidad: obra cerrada', 'cliente'); avisar('cerrada', 'Obra cerrada · acta y garantía · ' + S.ref, ['Gracias por tu conformidad. Tu obra ha quedado cerrada.', 'Ya tienes disponible el acta de entrega y la información de la garantía en tu panel.'], 'Obra cerrada ✔ Gracias por confiar en nosotros. Tu acta y garantía están en tu panel:', { sec:'entrega' }); }
 function enviarValoracion() { S.valoracion = { n:UI.estrellas, t:($('#val-t') || { value:'' }).value.trim() }; ev('Has valorado el servicio con ' + UI.estrellas + ' estrellas', 'cliente'); guardar(); render(); toast('¡Gracias por tu valoración!'); }
-function enviarChat() { const t = $('#chat-t').value.trim(); if (!t) return; S.chat.push({ f:ahora(S), autor:'cliente', t }); guardar(); render(); const c = $('#chat'); if (c) c.scrollTop = c.scrollHeight; toast('Mensaje enviado'); }
 
 // ═══════════════════════════════════════════════════════
 // 10. SIMULADOR DEL REFORMISTA (lo que haría desde su panel)
@@ -661,7 +892,7 @@ function simStage(n) {
   if (n >= 4) { simHacerVisita(); }
   if (n >= 5) { aceptarInterno('Laura Martín'); simPago(); simIniciarObra(); simHito(); simHito(); simHito(); simCambio(); simCambio(); S.obra.cambios[0].estado = 'aceptado'; simAdenda(); S.obra.solicitudes.push({ id:uid('s'), texto:'Me gustaría un enchufe más en la cocina', estado:'abierta', f:ahora(S) }); simPago(); }
   if (n >= 6) { S.obra.cambios.forEach(c => { if (c.estado === 'pendiente_cliente') c.estado = 'aceptado'; }); simAdenda(); S.obra.adendas.forEach(a => { if (a.estado === 'por_firmar') { a.estado = 'firmada'; a.firma = { nombre:'Laura Martín', f:ahora(S) }; a.cambios.forEach(id => { S.obra.cambios.find(c => c.id === id).estado = 'consolidado'; }); } }); S.obra.solicitudes.forEach(s => { s.estado = 'valorada'; s.respuesta = 'Hecho'; }); simTerminar(); }
-  if (n >= 7) { S.obra.cierre.items.forEach(i => { i.estado = 'ok'; }); while (simPago(true)) { } cerrarObra('Laura Martín', SIG_DEMO); }
+  if (n >= 7) { S.obra.cierre.items.forEach(i => { i.estado = 'ok'; }); while (simPago(true)) { } /* R-14: el atajo solo deja el checklist listo; la conformidad la firma el cliente en «Entrega» */ }
   guardar(); location.hash = '#/c/' + S.token + '/inicio'; render();
 }
 function abrirSim() {
@@ -682,10 +913,10 @@ window.__tests = function () {
     const v1 = S.versiones[0]; const t1 = totalV(v1);
     a('el caso de ejemplo tiene 8 estancias y un total razonable', v1.est.length === 8 && t1 > 20000 && t1 < 60000);
     a('el total incluye margen e IVA', Math.abs(t1 - fin(v1.est.reduce((s, e) => s + subEst(e), 0))) < 0.01 && K > 1.47 && K < 1.48);
-    a('estimación: horquilla ±12 %', Math.round(t1 * 0.88) < t1 && Math.round(t1 * 1.12) > t1);
-    avisoPrimero(); a('el primer aviso incluye rango, datos pedidos y tabla por estancias', S.avisos[0].parrafos.join(' ').includes('estimado') && S.avisos[0].tabla.length === 8 && S.avisos[0].parrafos.some(p => p.includes('NIF')));
+    a('R-03 estimación V1: horquilla ±5 % redondeada hacia fuera', rangoV(v1).lo <= Math.floor(t1 * 0.95) && rangoV(v1).hi >= Math.ceil(t1 * 1.05) && rangoV(v1).hi - rangoV(v1).lo >= Math.round(t1 * 0.1) - 2);
+    avisoPrimero(); a('el primer aviso incluye rango, datos pedidos y tabla por estancias', S.avisos[0].parrafos.join(' ').includes('estimado') && S.avisos[0].tabla.length === 8 && S.avisos[0].parrafos.some(p => p.includes('ubicación exacta')));
     a('el enlace privado lleva el token', linkPanel(S).includes('#/c/' + S.token) && S.token.length >= 10);
-    a('pendientes iniciales: completar datos', pendientes(S).some(p => p.t === 'Completa tus datos'));
+    a('pendientes iniciales: completar datos', pendientes(S).some(p => p.t === 'Completa los datos de tu vivienda'));
     a('stepper: recibida = paso 0, cerrada = paso 6', stepIdx('recibida') === 0 && stepIdx('cerrada') === 6);
     simPropVisita(); a('proponer visita crea V2 y 4 huecos', S.versiones.length === 2 && S.visita.franjas.length === 4 && S.fase === 'visita_propuesta' && pendientes(S).some(p => p.sec === 'visita'));
     a('no se puede hacer la visita antes de que el cliente elija día', simHacerVisita() === false);
@@ -731,7 +962,7 @@ render();
   const cli = (k, d) => { try { const p = up(); if (p) p.cli(k, d || {}); } catch (e) { console.error(e); } };
 
   P.S = () => S;
-  P.sinLeer = () => (S && S.avisos) ? S.avisos.filter(a => !a.leido).length : 0;
+  P.sinLeer = () => (S && S.avisos) ? S.avisos.filter(a => !a.leido).length + mensajesSinLeer() : 0;
   P.tieneCaso = () => !!(S && S.proto);
   P.irCorreo = () => { if (S && S.avisos.length) { UI.avisoSel = null; location.hash = '#/correo'; render(); } };
   P.irPanel = (s) => { if (S) { location.hash = '#/c/' + S.token + '/' + (s || 'inicio'); render(); } };
@@ -757,20 +988,16 @@ render();
   };
   const ultChat = () => { const c = S.chat.filter(m => m.autor === 'cliente'); return c.length ? c[c.length - 1].t : ''; };
   wrap('confirmarVisita', (idx) => { if (idx != null) cli('elegirFranja', { idx }); }, () => UI.slot);
-  wrap('reprogramar', (_, i) => cli('reprogramar', { idx: i }));
+  wrap('reprogramar', (_, i) => cli('reprogramar', { idx: i, aceptaRetencion: !!UI.rpRet }));
   wrap('enviarOtraFecha', () => cli('mensaje', { t: ultChat(), kind: 'otra_fecha' }));
-  wrap('aceptarOk', () => { if (S.aceptacion) cli('aceptar', { nombre: S.aceptacion.nombre }); });
   wrap('enviarPedirCambios', () => cli('pedirCambios', { t: ultChat() }));
   wrap('rechazoOk', () => { if (S.rechazo) cli('rechazar', { motivo: S.rechazo.motivo }); });
   wrap('enviarCambioObra', () => { const s = S.obra.solicitudes[S.obra.solicitudes.length - 1]; if (s) cli('solicitudObra', { texto: s.texto }); });
   wrap('aceptarCambio', (_, id) => cli('aceptarCambio', { id }));
   wrap('desacuerdoOk', (_, id) => { const c = S.obra.cambios.find(x => x.id === id); cli('desacuerdo', { id, comentario: c && c.comentario }); });
-  wrap('firmarAdendaOk', (_, id) => cli('firmarAdenda', { id }));
-  wrap('avisoPagoOk', () => cli('mensaje', { t: ultChat(), kind: 'aviso_pago' }));
+  wrap('firmarAdendaOk', (pre, id) => cli('firmarAdenda', { id, nombre: pre.nombre, acepto: pre.acepto }), () => ({ nombre: ($('#fa-n') || {}).value || '', acepto: !!($('#fa-c') || {}).checked }));
   wrap('remateOk', (_, itemId, texto) => { const r = S.obra.remates[S.obra.remates.length - 1]; if (r) cli('remate', { texto: r.texto, itemId: r.itemId, localId: r.id }); });
-  wrap('cerrarObra', (_, nombre) => cli('conformidad', { nombre }));
-  wrap('enviarChat', () => { const c = S.chat[S.chat.length - 1]; if (c && c.autor === 'cliente') cli('mensaje', { t: c.t, kind: 'chat' }); });
-  wrap('guardarDatos', () => cli('datos', { datos: S.datos.map(d => ({ id: d.id, label: d.label, valor: d.tipo === 'fotos' ? d.valor.length : d.valor, tipo: d.tipo })) }));
+  wrap('cerrarObra', (_, nombre, firma) => cli('conformidad', { nombre, firma: !!firma, checklistCompleto: !!(S.obra.cierre && S.obra.cierre.items.every(i => i.estado === 'ok')) }));
   wrap('enviarValoracion', () => cli('valoracion', { n: S.valoracion && S.valoracion.n, t: S.valoracion && S.valoracion.t }));
 
   // ── Aplicar la vista proyectada desde el admin ──
@@ -790,7 +1017,7 @@ render();
     const o = nuevo ? null : {
       fase: N.fase, ver: N.versiones.map(v => v.id), hitos: N.obra.hitos.map(h => h.id + ':' + h.estado),
       camb: N.obra.cambios.map(c => c.id), ad: N.obra.adendas.map(a => a.id), rem: N.obra.remates.map(r => r.id + ':' + r.estado),
-      sol: N.obra.solicitudes.map(s => s.id + ':' + s.estado), cob: N.cobros.length, franjas: N.visita.franjas.length
+      sol: N.obra.solicitudes.map(s => s.id + ':' + s.estado), cob: N.cobros.length, franjas: N.visita.franjas.length, avp: (N.avisosPago || []).map(a => a.id + ':' + a.estado)
     };
     const prevVers = nuevo ? [] : N.versiones;
     S = N;
@@ -800,6 +1027,8 @@ render();
     N.fase = V.fase;
     N.versiones = V.versiones;
     N.visita = V.visita;
+    const dr = (N.dv && (N.dv._draftFotos !== undefined || N.dv._draftPermiso !== undefined)) ? { _draftFotos: N.dv._draftFotos, _draftPermiso: N.dv._draftPermiso } : {};
+    N.dv = Object.assign({}, V.datosVivienda, dr.hasOwnProperty('_draftFotos') ? dr : {}); N.fiscal = V.fiscal; N.fiscalEval = V.fiscalEval; N.req = V.requisitos || {}; N.avisosPago = V.avisosPago || []; N.pago = V.pago || N.pago; N.horquillaPct = V.horquillaPct; N.tipoVivienda = V.tipoVivienda;
     N.aceptacion = V.aceptacion;
     N.plan = V.plan && V.plan.length ? V.plan : N.plan;
     N.cobros = V.cobros;
@@ -819,8 +1048,8 @@ render();
       // remates resueltos → vuelven a revisión
       ob.remates.forEach(r => { if (r.estado === 'resuelto' && o && (o.rem.indexOf(r.id + ':abierto') >= 0) && r.itemId) { const it = ob.cierre.items.find(i => i.id === r.itemId); if (it && it.estado === 'problema') { it.estado = 'pendiente'; it.nota = 'Resuelto por tu reformista: vuelve a revisarlo'; } } });
     } else ob.cierre = null;
-    // mensajes del reformista
-    N.chat = N.chat.filter(m => !m.adm).concat((V.mensajes || []).map(m => ({ f: m.f, autor: 'reformista', t: m.t, adm: true }))).sort((a, b) => a.f - b.f);
+    // conversación completa (R-10): llega de caso.mensajes del admin, con adjuntos y estado de lectura
+    N.chat = (V.mensajes || []).map(m => ({ id: m.id, f: m.f, autor: m.autor, t: m.t, adjuntos: m.adjuntos || [], tipo: m.tipo, leido: m.leido }));
 
     // ── eventos y avisos automáticos (como los enviaría el sistema) ──
     if (nuevo) {
@@ -860,13 +1089,18 @@ render();
         avisar('terminada', 'Tu obra está terminada · revisión final · ' + N.ref, ['¡Hemos terminado! Recorre tu vivienda con calma y revisa cada estancia desde tu panel.', 'Indica los remates que veas y, cuando todo esté bien, firma tu conformidad: así damos la obra por cerrada.'], 'Tu obra está terminada 🎉 Haz la revisión final y firma tu conformidad en tu panel:', { sec: 'entrega' });
       }
       if (N.cobros.length > o.cob) N.cobros.slice(o.cob).forEach(c => ev('Pago recibido: ' + c.concepto + ' (' + eur0(c.importe) + ')', 'reformista'));
+      (N.avisosPago || []).forEach(a => { const antes = (o.avp || []).find(x => x.startsWith(a.id + ':')); if (antes && antes !== a.id + ':' + a.estado) {
+        if (a.estado === 'confirmado') { ev('Tu reformista ha confirmado tu pago de ' + eur0(a.importe), 'reformista'); avisar('pago_ok', 'Pago confirmado · ' + N.ref, ['Tu reformista ha confirmado el pago de ' + eur(a.importe) + (a.tipo === 'visita' ? ' (visita técnica)' : '') + '. ¡Gracias!'], 'Pago de ' + eur0(a.importe) + ' confirmado ✔', { sec: a.tipo === 'visita' ? 'visita' : 'pagos' }); }
+        if (a.estado === 'rechazado') { ev('Tu reformista no ha podido confirmar tu pago: ' + a.motivo, 'reformista'); avisar('pago_rech', 'No hemos podido confirmar tu pago · ' + N.ref, ['No hemos podido confirmar tu pago de ' + eur(a.importe) + ': ' + a.motivo, 'Puedes subir otro justificante desde tu panel.'], 'No he podido confirmar tu pago de ' + eur0(a.importe) + ': ' + a.motivo + ' ¿Puedes subir otro justificante?', { sec: a.tipo === 'visita' ? 'visita' : 'pagos' }); } } });
+      if (o.fase === 'visita_confirmada' && N.fase === 'visita_propuesta') { ev('Se ha liberado tu hueco de visita: vuelve a elegir fecha', 'sistema'); avisar('visita', 'Hemos liberado tu hueco de visita · ' + N.ref, ['No hemos recibido el justificante del pago a tiempo, así que hemos liberado el día reservado.', 'No pasa nada: puedes volver a elegir uno de los huecos disponibles.'], 'Hemos liberado tu hueco de visita (sin justificante a tiempo). Elige otro día en tu panel:', { sec: 'visita' }); }
       if (o.fase !== 'cerrada' && N.fase === 'cerrada' && !(ob.cierre && ob.cierre.conformidad && ob.cierre.conformidad.firma !== SIG_DEMO)) {
         avisar('cerrada', 'Obra cerrada · acta y garantía · ' + N.ref, ['Tu obra ha quedado cerrada.', 'Ya tienes disponible el acta de entrega y la información de la garantía en tu panel.'], 'Obra cerrada ✔ Gracias por confiar en nosotros. Tu acta y garantía están en tu panel:', { sec: 'entrega' });
       }
     }
     guardar();
     if (nuevo) { location.hash = '#/correo'; }
-    try { render(); } catch (e) { console.error('render cliente', e); }
+    const ae = document.activeElement; const escribiendo = ae && ae.closest && ae.closest('[data-keep]') && /^(INPUT|TEXTAREA|SELECT)$/.test(ae.tagName);
+    if (!escribiendo) { try { render(); } catch (e) { console.error('render cliente', e); } }
     return true;
   };
 
