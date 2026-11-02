@@ -252,12 +252,12 @@ function datosLite(c) {
   const cl = db.clientes.find(x => x.id === c.clienteId) || {};
   const nums = c.versiones.map(v => parseInt(String(v.id).replace(/\D/g, ''), 10) || 0);
   const sig = (c.borrador && c.borrador.v3id) || ('V' + (Math.max.apply(null, nums) + 1));
-  const bo = c.borrador && c.borrador.origen === 'lite' ? { snap: c.borrador.snap, lineas: c.borrador.lineas, rev: c.borrador.rev || 0, por: c.borrador.por, actualizadoAt: c.borrador.actualizadoAt, v3id: c.borrador.v3id, neg: c.borrador.negociacion, ajustes: c.borrador.ajustes, hitosPlan: c.borrador.hitosPlan, planCobros: c.borrador.planCobros } : null;
+  const bo = c.borrador && c.borrador.origen === 'lite' ? { snap: c.borrador.snap, lineas: c.borrador.lineas, rev: c.borrador.rev || 0, por: c.borrador.por, actualizadoAt: c.borrador.actualizadoAt, v3id: c.borrador.v3id, neg: c.borrador.negociacion, ajustes: c.borrador.ajustes, hitosPlan: c.borrador.hitosPlan, planCobros: c.borrador.planCobros, tabiques: c.borrador.tabiques, medidas: c.borrador.medidas, general: c.borrador.general } : null;
   const dir = a.direccionDe ? a.direccionDe(c) : ((cl.zona ? cl.zona + ' · ' : '') + (c.vivienda.cp || ''));
   return {
     clave: c.id + ':' + vig.id, casoId: c.id, ref: c.id, cliente: { nombre: cl.nombre, tel: cl.tel || '', email: cl.email || '' }, direccion: dir || ((cl.zona ? cl.zona + ' · ' : '') + (c.vivienda.cp || '')), m2Total: c.vivienda.m2,
     tipoTxt: (c.solicitud.tipoObra === 'reforma_integral' ? 'Reforma integral' : 'Reforma') + ' · ' + (c.vivienda.m2 || '') + ' m²', ajustes: { margen: cfg.margen != null ? cfg.margen : 22, iva: cfg.iva != null ? cfg.iva : 21 },
-    v2id: vig.id, v3id: sig, est: estLite(c, vig), versiones: versionesLite(c), estadoDatos: a.estadoDatosCliente(c, cfg), borrador: bo,
+    v2id: vig.id, v3id: sig, est: estLite(c, vig), versiones: versionesLite(c), medidas: c.visita.medidas || {}, estadoDatos: a.estadoDatosCliente(c, cfg), borrador: bo,
     cfg: { hitos: a.hitosDeCaso(c, cfg), planCobros: a.normalizarPlan(a.planDeCaso(c, cfg)), negociacionDef: Object.assign({ validezDias: cfg.validezDias || 30 }, cfg.negociacionDef || {}), fotoObligatoriaHito: cfg.fotoObligatoriaHito !== false, margen: cfg.margen },
     solicitud: { notas: c.solicitud.notasCliente || '', calidad: c.solicitud.calidad, materiales: ((c.solicitud.detalle || {}).materiales) || null }
   };
@@ -349,7 +349,7 @@ Proto.obraVista = function (id) {
   const iva = a.ivaDe(c); const pendSin = r2(pend.reduce((s, x) => s + x.importe, 0)); const prox = plan.find(t => t.estado !== 'cobrado') || null;
   const regs = (c.obra.cambios || []).filter(x => x.estado === 'registrado' && !x.adendaId);
   return {
-    id: c.id, cliente: cl.nombre, direccion: a.direccionDe(c), estado: c.estado, progreso: a.calcularProgreso(c), salud: (c.obra.hitos || []).length ? a.saludObra(c, cfg, a.hoy()) : null, inicio: c.obra.inicio,
+    id: c.id, cliente: cl.nombre, tel: cl.tel || '', direccion: a.direccionDe(c), estado: c.estado, progreso: a.calcularProgreso(c), salud: (c.obra.hitos || []).length ? a.saludObra(c, cfg, a.hoy()) : null, inicio: c.obra.inicio,
     pendienteConformidad: a.pendienteConformidad(c), margen: cfg.margen, ivaPct: iva, fotoObligatoriaHito: cfg.fotoObligatoriaHito !== false, espacios: (c.solicitud.espacios || []).filter(e => e.id !== 'gen').map(e => ({ id: e.id, nombre: e.nombre || e.tipo })),
     hitos: (c.obra.hitos || []).map(h => ({ id: h.id, nombre: h.nombre, dias: h.diasEstimados, estado: h.estado, fechaReal: h.fechaReal || null, fechaPrevista: h.fechaFinPrevista || h.fechaPrevista || null, nota: h.nota || '', fotos: (h.fotos || []).map(f => f.adjuntoId).filter(Boolean), nFotos: (h.fotos || []).length,
       desbloquea: (plan.find(t => t.cuando === 'hito:' + h.nombre && t.estado !== 'cobrado') || null) && { label: plan.find(t => t.cuando === 'hito:' + h.nombre && t.estado !== 'cobrado').label, importe: plan.find(t => t.cuando === 'hito:' + h.nombre && t.estado !== 'cobrado').importe } })),

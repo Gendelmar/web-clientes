@@ -1116,6 +1116,20 @@ function calcularMedidas(m){
   return { m2_suelo, m2_techo, m2_pared, ml_rodapie };
 }
 
+// R-19/R-20 · superficie y paredes (apéndice A.1 y A.2): la misma fórmula que usa el lite
+function superficieAnchoLargo(ancho, largo){ return r((Number(ancho)||0) * (Number(largo)||0)); }
+function calcularParedes(p){
+  p = p || {}; const ancho = Number(p.ancho)||0, largo = Number(p.largo)||0, alto = Number(p.alto)||0;
+  const perimetro = r(2 * (ancho + largo)); const brutas = r(perimetro * alto);
+  const huecos = r((p.huecos||[]).reduce((s,h) => s + (Number(h.ancho)||0) * (Number(h.alto)||0), 0)); const netas = r(Math.max(0, brutas - huecos));
+  const rp = p.reparto || { modo:'altura', hAlic:0, Lt:0 }; const ac = p.acabados || { alic:true, pint:true }; let alic, pint;
+  if (ac.alic && !ac.pint){ alic = netas; pint = 0; } else if (!ac.alic && ac.pint){ alic = 0; pint = netas; }
+  else if (rp.modo === 'pct'){ const pc = clamp(Number(rp.pct)||0, 0, 100) / 100; alic = r(netas * pc); pint = r(netas * (1 - pc)); }
+  else { const Lt = clamp(Number(rp.Lt)||0, 0, perimetro), ha = clamp(Number(rp.hAlic)||0, 0, alto); const alicB = Lt * alto + (perimetro - Lt) * ha, pintB = (perimetro - Lt) * (alto - ha); const den = alicB + pintB; const cuota = den > 0 ? alicB / den : 0;
+    alic = r(Math.max(0, alicB - huecos * cuota)); pint = r(Math.max(0, pintB - huecos * (1 - cuota))); }
+  return { perimetro, brutas, huecos, netas, alic, pint, pctAlic: netas > 0 ? r(alic / netas * 100) : 0, pctPint: netas > 0 ? r(pint / netas * 100) : 0 };
+}
+
 // 4.13 — Cantidad estimada de una partida (sin medidas reales usa aproximación)
 function cantidadEstimada(base, m2, medidas){
   if (base === 'fijo' || base === 'ud') return 1;
@@ -1900,7 +1914,8 @@ function adjuntosDemo(){
   const pdf = (id, txt, caso, nombre) => ({ id, nombre:nombre || (txt + '.pdf'), tipo:'application/pdf', casoId:caso, origen:'demo', data:pdfSimulado(txt) });
   return [img('ADJ-D1', 'Justificante senal', 150, 'REF-0010', 'transferencia_senal.svg'), pdf('ADJ-D2', 'Justificante pago a cuenta', 'REF-0009', 'justificante_banco.pdf'), img('ADJ-D3', 'Captura borrosa', 20, 'REF-0011', 'captura_pago.svg'),
     img('ADJ-D4', 'Transferencia senal', 160, 'REF-0009', 'senal_30.svg'), pdf('ADJ-D5', 'Pago instalaciones', 'REF-0009', 'pago_instalaciones.pdf'), img('ADJ-D6', 'Transferencia senal', 170, 'REF-0008', 'senal_30.svg'),
-    img('ADJ-D7', 'Transferencia senal', 140, 'REF-0012', 'senal_30.svg'), img('ADJ-D8', 'Foto extra salon', 40, 'REF-0006', 'salon_extra.svg')];
+    img('ADJ-D7', 'Transferencia senal', 140, 'REF-0012', 'senal_30.svg'), img('ADJ-D8', 'Foto extra salon', 40, 'REF-0006', 'salon_extra.svg'),
+    img('ADJ-D9', 'Demolicion cocina', 25, 'REF-0010', 'demolicion.svg'), img('ADJ-D10', 'Cuadro electrico antiguo', 350, 'REF-0010', 'cuadro.svg')];
 }
 const dniDe = n => String(n).padStart(8, '0') + LETRAS_DNI[n % 23];
 
@@ -2222,6 +2237,43 @@ function crearDBInicial(){
   caso('REF-0012').fiscal = nuevoFiscal({ tipo:'empresa', razonSocial:'Alcobendas Inversiones S.L.', cif:'B12345674', nombre:'Francisco López', domicilio:{ calle:'Paseo de la Chopera', numero:'88', cp:'28100', localidad:'Alcobendas' }, usoVivienda:'no', completos:true });
   Object.values(casos).forEach(c => { if (c.fiscal) c.fiscal.completos = evaluarFiscal(c.fiscal, c).ok; });
 
+  // R-23/R-28/R-34 · obra con plan de cobros e hitos personalizados, incidencias y cambios en distintos estados
+  (function(){
+    const c10 = caso('REF-0010'); const nombres = ['Demolición','Instalaciones eléctricas','Albañilería','Alicatado y solados','Pintura y carpintería','Remates y limpieza']; const dias = [2,4,4,5,4,2];
+    c10.obra.hitosPlan = nombres.map((n,i) => ({ nombre:n, diasEstimados:dias[i] }));
+    c10.obra.hitos = nombres.map((n,i) => ({ id:'H'+(i+1), nombre:n, diasEstimados:dias[i], estado:['hecho','en_curso'][i] || 'pendiente', fechaReal:i === 0 ? rel(-6) : null, fotos:i === 0 ? [{ id:'hf1', adjuntoId:'ADJ-D9', momento:'durante', fecha:rel(-6) }] : [], nota:i === 0 ? 'Demolición terminada; aparece el cuadro antiguo.' : '' }));
+    replanificarHitos(c10.obra);
+    c10.planCobros = [{ label:'Señal al aceptar', pct:40, cuando:'aceptacion' }, { label:'En instalaciones eléctricas', pct:20, cuando:'hito:Instalaciones eléctricas' }, { label:'A la entrega', pct:40, cuando:'entrega' }];
+    c10.obra.incidencias = [
+      { id:'I1', fecha:rel(-2), tipo:'dano', texto:'La instalación eléctrica existente no cumple la normativa: hay que rehacer el cuadro antes de seguir.', fotos:['ADJ-D10'], gravedad:'alta', bloquea:true, diasRetraso:3, visibleCliente:true, estado:'abierta', cambioId:'C1', resolucion:'', voz:false },
+      { id:'I2', fecha:rel(-5), tipo:'acceso', texto:'El portero no deja bajar escombros por el ascensor en horario de mañana.', fotos:[], gravedad:'media', bloquea:false, diasRetraso:0, visibleCliente:true, estado:'resuelta', cambioId:null, resolucion:'Se pactó con la comunidad bajar los escombros por la tarde.', resueltaAt:rel(-4), voz:false }
+    ];
+    const c9 = caso('REF-0009'); c9.obra.cambios.push({ id:'C4', fecha:rel(-12), tipo:'cliente', concepto:'Cambio de color del alicatado del baño 2', importe:300, estado:'retirado', motivoRetiro:'El cliente prefiere mantener el color original', resolucion:{ accion:'retirar', nota:'El cliente prefiere mantener el color original', fecha:rel(-10) }, aprobacion:'telefono', bloqueaObra:false, urgente:false, foto:false, nota:'', adendaId:null, avisoCliente:{ enviadoAt:rel(-12), desacuerdo:false, resueltoAt:rel(-10) } },
+      { id:'C5', fecha:rel(-8), tipo:'alcance', concepto:'Remate extra de rodapié en pasillo (cortesía)', importe:0, estado:'consolidado', cortesia:true, resolucion:{ accion:'ajustar', nota:'Lo asume el reformista', fecha:rel(-7) }, aprobacion:'presencial', bloqueaObra:false, urgente:false, foto:false, nota:'', adendaId:null, avisoCliente:{ enviadoAt:rel(-8), desacuerdo:false } });
+    c10.obra.cambios.push({ id:'C2', fecha:rel(-1), tipo:'alcance', concepto:'Cambiar todas las tomas de la cocina a doble USB', importe:300, estado:'en_desacuerdo', comentarioCliente:'Me parece caro para lo que es', aprobacion:'telefono', bloqueaObra:false, urgente:false, foto:false, nota:'', adendaId:null, avisoCliente:{ enviadoAt:rel(-1), desacuerdo:true } });
+  })();
+  // R-21 · borrador de la V3 guardado desde el lite (REF-0006: V1 y V2 enviadas; tabique compartido y paredes con reparto alicatado / pintura)
+  (function(){
+    const c6 = caso('REF-0006'); const v1 = c6.versiones[0]; v1.estado = 'sustituida'; v1.enviadaAt = rel(-8);
+    const v2 = mkVersion({ id:'V2', tipo:'revisada', calidad:'premium', nivel:'alta', creadaAt:rel(-6), enviadaAt:rel(-6), estado:'vigente', espacios:c6.solicitud.espacios }); c6.versiones.push(v2);
+    c6.solicitud.espacios.forEach((e, i) => { e.nombre = ['Salón-comedor','Cocina','Baño principal','Dormitorio'][i] || e.tipo; });
+    const lineas = clonarLineas(v2.lineas); const med = { largo:2.4, ancho:1.6, alto:2.5, huecos:[{ tipo:'puerta', ancho:0.8, alto:2 }], reparto:{ modo:'altura', hAlic:1.5, Lt:0 }, aplicada:true, origen:'lite' };
+    const g = calcularMedidas(med); const P = calcularParedes({ ancho:1.6, largo:2.4, alto:2.5, huecos:med.huecos, reparto:med.reparto, acabados:{ alic:true, pint:true } });
+    lineas.forEach(l => { if (l.espacioId !== 'e3' || l.bloqueada) return; if (l.base === 'm2_suelo' || l.base === 'm2_techo') l.cantidad = g.m2_suelo; else if (l.base === 'm2_pared') l.cantidad = P.netas; else return; l.subtotal = r(l.cantidad * l.precio); });
+    const tab = { id:'tb_demo1', espacioId:'e2', contiguaId:'e1', longitud:3, alto:2.5, m2:7.5, accion:'demoler_levantar', material:'pladur', trabajoId:null, reponer:true };
+    lineas.push({ id:uid('L'), liteId:'t_demo1', key:'chk_humedades', concepto:'Tratamiento de humedades · baño', espacioId:'e3', unidad:'ud', base:'fijo', cantidad:1, precio:380, subtotal:380, tipo:'extra', origen:'visita', bloqueada:false, nota:'Humedad en la pared del fondo' });
+    lineas.push({ id:uid('L'), liteId:'t_demo2', key:'tabique_pladur', concepto:'Tabique de pladur compartido (cocina–salón)', espacioId:'e2', unidad:'m²', base:'m2_pared', cantidad:7.5, precio:32, subtotal:240, tipo:'mo', origen:'visita', bloqueada:true, nota:'Tabique compartido con el salón', tabiqueId:'tb_demo1' });
+    const neg = { descuentoModo:'pct', descuento:3, validezDias:30, plazoSemanas:8, imprevistosPct:0, redondeo:50, condiciones:'Incluye la retirada de escombros.' };
+    const tot = calcularTotalesNeg(lineas, 21, cfg.margen, cfg.minimo, neg);
+    c6.visita.medidas = { e3:med }; c6.visita.tabiques = [tab];
+    c6.borrador = { origen:'lite', v3id:'V3', basadoEn:'V2', lineas, ivaPct:21, margenPct:cfg.margen, ajustes:{ margen:cfg.margen, iva:21 }, negociacion:neg, medidas:c6.visita.medidas, tabiques:[tab],
+      hitosPlan:[{ id:'h1', nombre:'Demolición', dias:3, diasEstimados:3 }, { id:'h2', nombre:'Instalaciones', dias:5, diasEstimados:5 }, { id:'h3', nombre:'Albañilería', dias:6, diasEstimados:6 }, { id:'h4', nombre:'Remates y limpieza', dias:3, diasEstimados:3 }],
+      planCobros:[{ label:'Al aceptar', pct:35, cuando:'aceptacion' }, { label:'En instalaciones', pct:25, cuando:'hito:Instalaciones' }, { label:'A la entrega', pct:40, cuando:'entrega' }],
+      notas:['Baño principal: humedad en la pared del fondo'], general:'El cliente quiere tirar el tabique entre cocina y salón.', fotos:[], respuestas:[], quitados:{}, totales:tot, pendienteEnvio:true, snap:null, rev:2, por:'lite', actualizadoAt:rel(0) + 'T09:40:00.000Z' };
+    c6.interno.proximaAccion = 'Terminar y enviar el borrador V3 al cliente';
+    c6.eventos.push({ fecha:rel(0), tipo:'version', texto:'Borrador V3 guardado desde la visita (pendiente de enviar) · ' + fmtEur(tot.total), autor:'reformista' });
+  })();
+
   // Mensajes: los eventos «mensaje» antiguos pasan a caso.mensajes[] y se añaden hilos con no leídos de cada lado
   casos.forEach(migrarMensajes);
   const iso = (d, h) => d + 'T' + (h || '10:00') + ':00.000Z';
@@ -2240,7 +2292,7 @@ function crearDBInicial(){
   // Avisos de pago (2 pendientes —imagen y PDF—, 1 rechazado) y movimientos con justificante
   const c10 = caso('REF-0010'), c9 = caso('REF-0009'), c11 = caso('REF-0011');
   const avisos = [
-    { id:'ap_d1', casoId:'REF-0010', tipo:'plan', tipoMov:'senal', importe:r(c10.aceptacion.importe * 0.30), medio:'transferencia', fecha:rel(-1), tramo:'Señal 30% al aceptar', concepto:'Señal 30% al aceptar', adjuntoId:'ADJ-D1', estado:'pendiente', creadoAt:iso(rel(-1), '19:30'), nota:'', motivo:'' },
+    { id:'ap_d1', casoId:'REF-0010', tipo:'plan', tipoMov:'senal', importe:r(c10.aceptacion.importe * 0.40), medio:'transferencia', fecha:rel(-1), tramo:'Señal al aceptar', concepto:'Señal al aceptar', adjuntoId:'ADJ-D1', estado:'pendiente', creadoAt:iso(rel(-1), '19:30'), nota:'', motivo:'' },
     { id:'ap_d2', casoId:'REF-0009', tipo:'plan', tipoMov:'hito', importe:2000, medio:'transferencia', fecha:rel(0), tramo:'A la entrega', concepto:'Pago a cuenta de la entrega', adjuntoId:'ADJ-D2', estado:'pendiente', creadoAt:iso(rel(0), '08:55'), nota:'Pago a cuenta', motivo:'' },
     { id:'ap_d3', casoId:'REF-0011', tipo:'plan', tipoMov:'final', importe:r(totalVigente(c11).total * 0.20), medio:'bizum', fecha:rel(-2), tramo:'A la entrega', concepto:'Pago a cuenta de la entrega', adjuntoId:'ADJ-D3', estado:'rechazado', creadoAt:iso(rel(-2), '16:00'), nota:'', motivo:'La captura no se lee bien. ¿Puedes subir otro justificante?', rechazadoAt:iso(rel(-2), '17:10') } ];
   const asocia = (casoId, tipo, adj, extra) => { const m = cobros.find(x => x.casoId === casoId && x.tipo === tipo); if (m){ m.justificanteId = adj; Object.assign(m, extra || {}); } };
@@ -2258,6 +2310,9 @@ function crearDBInicial(){
   nt('REF-0009', 'solicitud_cambio', 'Solicitud de cambio del cliente: «¿Podríamos cambiar el color del alicatado del baño 2?»', rel(-1), '17:50');
   nt('REF-0010', 'mensaje', 'Mensaje urgente del cliente sobre el cuadro eléctrico', rel(0), '09:06');
   nt('REF-0011', 'remate', 'El cliente ha listado el remate «Retocar pintura en salón»', rel(-3), '13:00');
+  nt('REF-0006', 'borrador', 'Borrador V3 de REF-0006 guardado desde la visita (pendiente de enviar)', rel(0), '09:41');
+  nt('REF-0010', 'incidencia', 'Incidencia I1 en REF-0010: la instalación eléctrica no cumple la normativa', rel(-2), '17:20');
+  nt('REF-0010', 'duda_cambio', 'El cliente tiene dudas sobre el cambio C2 («Cambiar todas las tomas de la cocina a doble USB»): me parece caro', rel(-1), '11:05');
   nt('REF-0004', 'sistema', 'Datos de vivienda pendientes: falta el permiso del propietario (inquilino)', rel(-4), '09:00');
   const notificaciones = db0.notificaciones;
 
@@ -2958,7 +3013,7 @@ function __testsImpl(){
   a('caso 9: firmado = aceptada + adendas firmadas × (1+iva)', tv9.firmado === r(c9.aceptacion.importe + r(450*1.21)));
   a('caso 9: provisional = cambios registrados × (1+iva)', tv9.provisional === r((200+120)*1.21));
   a('caso 9: desviación % = (firmado+provisional−aceptada)/aceptada', Math.abs(tv9.desviacionPct - r((tv9.total - tv9.aceptada)/tv9.aceptada*100)) < 0.011);
-  a('caso 10: provisional = 1.200 × 1,21 y sin adendas firmadas', tv10.provisional === r(1200*1.21) && tv10.adendasFirmadas === 0);
+  a('caso 10: provisional = (1.200 + 300 en duda) × 1,21 y sin adendas firmadas', tv10.provisional === r(1500*1.21) && tv10.adendasFirmadas === 0);
   a('caso 9: progreso ≈ 60 %', calcularProgreso(c9) > 0.55 && calcularProgreso(c9) < 0.65);
   a('caso 10: salud bloqueada', saludObra(c10, DB.cfg, hoy()) === 'bloqueada');
   a('caso 12: cerrada con saldo pendiente (cerrada ≠ cobrada)', c12.estado==='cerrada' && estadoEconomico(c12, DB.cobros).saldo > 0 && estadoEconomico(c12, DB.cobros).estado === 'parcial');

@@ -505,13 +505,19 @@ function desgloseArbol(est, aj) {
 
 // R-18/R-28 · reconciliación de un borrador editado en el admin con el estado del lite (por id de línea)
 function mezclarAdminLineas(S0, lineas) {
-  const porLite = new Map((lineas || []).filter(l => l.liteId).map(l => [l.liteId, l]));
+  lineas = lineas || []; const usadas = new Set(); const porLite = new Map(lineas.filter(l => l.liteId).map(l => [l.liteId, l])); const porId = new Map(lineas.map(l => [l.id, l]));
+  const clave = (l, esp) => esp + '|' + (l.key || l.k) + '|' + (l.tipo || l.tl || 'mo');
+  const porClave = new Map(); lineas.forEach(l => { const k = clave(l, l.espacioId); if (!porClave.has(k)) porClave.set(k, []); porClave.get(k).push(l); });
   S0.est.forEach(e => {
-    e.trabajos = e.trabajos.filter(t => { const l = porLite.get(t.id); if (!l) { if (t.origen === 'visita') return false; t.quitado = true; return true; } t.cant = l.cantidad; t.precio = l.precio; t.l = l.concepto; if (l.bloqueada) t.manual = true; t.quitado = false; return true; });
+    e.trabajos = e.trabajos.filter(t => {
+      let l = porLite.get(t.id) || (t.lineaId && porId.get(t.lineaId)); if (!l) { const c = (porClave.get(clave(t, e.id)) || []).filter(x => !usadas.has(x)); l = c[0]; }
+      if (!l) { if (t.origen === 'visita') return false; t.quitado = true; return true; }
+      usadas.add(l); t.cant = l.cantidad; t.precio = l.precio; t.l = l.concepto; if (l.bloqueada) t.manual = true; if (l.nota) t.nota = l.nota; if (l.tabiqueId) t.tab = l.tabiqueId; t.quitado = false; return true;
+    });
   });
-  (lineas || []).filter(l => !l.liteId).forEach(l => {
+  lineas.filter(l => !usadas.has(l)).forEach(l => {
     const e = S0.est.find(x => x.id === l.espacioId) || S0.est[0]; if (!e) return;
-    e.trabajos.push({ id: uid('t'), k: l.key, key: l.key, l: l.concepto, u: l.unidad, b: 'fijo', bk: l.base, tl: l.tipo || 'mo', cant: l.cantidad, precio: l.precio, origen: 'visita', confirmado: false, quitado: false, manual: true, nota: l.nota || '', base: null, det: null });
+    e.trabajos.push({ id: l.liteId || uid('t'), k: l.key, key: l.key, l: l.concepto, u: l.unidad, b: 'fijo', bk: l.base, tl: l.tipo || 'mo', cant: l.cantidad, precio: l.precio, origen: 'visita', confirmado: false, quitado: false, manual: true, nota: l.nota || '', base: null, det: null, tab: l.tabiqueId || null, ver: null });
   });
   return S0;
 }
@@ -895,7 +901,7 @@ function programarSync() {
 }
 function guardarBorrador(manual, forzar) {
   const p = UP(); if (!p || !S.casoId) { if (manual) { guardarYa(); toast('Borrador guardado en este dispositivo (sin conexión con el admin)'); } return; }
-  clearTimeout(syncT); const d = pack(); d.snap = snapshot(); d.forzar = !!forzar; d.silencioso = !manual;
+  clearTimeout(syncT); const d = pack(); d.snap = snapshot(); d.forzar = !!forzar; d.silencioso = true;
   const rs = p.lite('borrador', d);
   if (rs && rs.conflicto) { S.sync = { ok: false, conflicto: true, at: Date.now() }; pintaSync(); sheetConflicto(rs); return rs; }
   if (rs && rs.ok) { S.borradorRev = rs.rev; ultimoHash = hashStr(JSON.stringify(pack())); S.sync = { ok: true, at: Date.now() }; S.v3.pendienteEnvio = true; pintaSync(); if (manual) { guardarYa(); toast('Borrador ' + S.v3.id + ' guardado y sincronizado con el admin'); render(); } else guardar(); }
@@ -1119,7 +1125,7 @@ function cardNegociacion(ro) {
     '<label class="field"><span>Condiciones especiales (aparecen en el presupuesto)</span><textarea id="neg-cond" ' + d + ' oninput="negVivo(\'condiciones\',this.value)" placeholder="Ej.: el precio incluye la retirada de escombros">' + esc(n.condiciones) + '</textarea></label></div>';
 }
 function cardDesglose() {
-  const arbol = desgloseArbol(S.est, S.ajustes); const dl = v => v ? '<small class="' + (v > 0 ? 'dlt-up' : 'dlt-dn') + '"> ' + (v > 0 ? '+' : '−') + eur0(Math.abs(v)) + '</small>' : '';
+  const arbol = desgloseArbol(S.est, S.ajustes); const dl = v => Math.abs(v) >= 0.5 ? '<small class="' + (v > 0 ? 'dlt-up' : 'dlt-dn') + '"> ' + (v > 0 ? '+' : '−') + eur0(Math.abs(v)) + '</small>' : '';
   return '<div class="card" id="card-desglose"><h3>Desglose del presupuesto</h3><div class="muted" style="margin-bottom:8px">Importes con margen e IVA. Entre paréntesis, la diferencia frente a la ' + esc(S.v2.id) + '.</div>' +
     arbol.map(e => '<details class="tree"><summary><b>' + esc(e.nombre) + '</b><span>' + eur0(e.subtotal) + dl(e.delta) + '</span></summary>' + e.trabajos.map(t => '<details class="tree t2"><summary>' + esc(t.nombre) + '<span>' + eur0(t.subtotal) + dl(t.delta) + '</span></summary>' + t.partidas.map(p => '<div class="tree-p"><span>' + esc(p.tipo) + ': ' + esc(p.l) + '<small> · ' + fmtNum(p.cant) + ' ' + esc(p.u) + ' × ' + eur(p.precio) + '</small></span><b>' + eur(p.subtotal) + '</b></div>').join('') + '</details>').join('') + '</details>').join('') +
     '<details class="tree" style="margin-top:6px"><summary>Resumen compacto por estancias<span></span></summary>' + S.est.map(e => '<div class="kv"><span>' + (e.revisada ? '✅ ' : '⏳ ') + esc(e.nombre) + ' <span class="muted">· ' + e.fotos.length + ' 📷 · ' + e.comentarios.length + ' 💬</span></span><b>' + eur0(finalDe(subEst(e), S.ajustes)) + '</b></div>').join('') + '</details></div>';
@@ -1289,9 +1295,9 @@ async function cmGuardar() {
   if (!rs.ok) $('#cm-ok').disabled = false;
 }
 function sheetCambioOk(rs, concepto) {
-  const o = OB(); const tel = String((S.caso && S.ui.obra && o ? '' : '')).replace(/\D/g, ''); void tel;
+  const o = OB(); const tel = String((o && o.tel) || '').replace(/\D/g, '');
   sheet('<h3>Cambio ' + esc(rs.id) + ' anotado</h3><p class="muted" style="margin:6px 0 10px">Aviso informativo para el cliente (el cliente nunca fija el precio):</p><textarea class="msgbox" id="cm-msg" aria-label="Mensaje al cliente">' + esc(rs.msg) + '</textarea>' +
-    '<div class="row" style="margin:8px 0"><button class="btn sp" onclick="window.open(\'https://wa.me/?text=\'+encodeURIComponent($(\'#cm-msg\').value),\'_blank\',\'noopener\')">💬 WhatsApp</button><button class="btn sp" onclick="copiarTexto($(\'#cm-msg\').value)">📋 Copiar</button></div>' +
+    '<div class="row" style="margin:8px 0"><button class="btn sp" onclick="window.open(\'https://wa.me/' + (tel ? '34' + tel : '') + '?text=\'+encodeURIComponent($(\'#cm-msg\').value),\'_blank\',\'noopener\')">💬 WhatsApp</button><button class="btn sp" onclick="copiarTexto($(\'#cm-msg\').value)">📋 Copiar</button></div>' +
     '<div class="info">Umbral de adenda: ' + esc(rs.umbralTexto) + '.</div>' + (rs.disparadores.length ? '<div class="warn" id="cm-trig">⚠ <b>Disparador de adenda:</b> ' + rs.disparadores.map(esc).join('; ') + '.' + (rs.tope ? ' <b>Adenda inmediata recomendada.</b>' : '') + '</div>' : '<div class="muted">Sin disparadores de adenda activos.</div>') +
     '<div class="row"><button class="btn sp" onclick="cerrarSheet()">Cerrar</button>' + (rs.puedeAdenda ? '<button class="btn pri sp" onclick="cerrarSheet();obraTab(\'cuenta\')">Ir a la cuenta</button>' : '') + '</div>');
 }
@@ -1341,7 +1347,7 @@ function header() {
   else if (v === 'obra') { back = b('Obras', "S.ui.view='home';guardar();render()"); title = 'Obra'; sub = S.ui.obra || ''; }
   const obraMode = S.ui.modo === 'obra' && v === 'home';
   return '<header class="top">' + back + '<div class="tt"><b>' + esc(title) + '</b><small>' + esc(sub) + '</small></div>' +
-    (obraMode || v === 'obra' ? '<span class="ver env">Obra</span>' : '<span class="ver ' + (enviada ? 'env' : '') + '">' + (enviada ? esc(S.v3.id) + ' enviada' : esc(S.v2.id) + ' → ' + esc(S.v3.id)) + '</span>') + '<span class="saves"><span id="sv" class="save' + (saveErr ? ' err' : '') + '">' + (saveErr ? 'Sin guardar' : (savedAt ? 'Guardado ' + hhmm(savedAt) : '')) + '</span><span id="sy" class="save" title="Estado de la sincronización con el admin">' + etiquetaSync() + '</span></span></header>';
+    (obraMode || v === 'obra' ? '<span class="ver env">Obra</span>' : '<span class="ver ' + (enviada ? 'env' : '') + '">' + (enviada ? esc(S.v3.id) + ' enviada' : esc(S.v2.id) + ' → ' + esc(S.v3.id)) + '</span>') + '<span class="saves"><span id="sv" class="save' + (saveErr ? ' err' : '') + '">' + (saveErr ? 'Sin guardar' : (savedAt ? 'Guardado ' + hhmm(savedAt) : '')) + '</span><span id="sy" class="save" title="Estado de la sincronización con el admin">' + (S.ui.modo === 'obra' ? '' : etiquetaSync()) + '</span></span></header>';
 }
 function render() {
   const v = S.ui.view; document.body.dataset.view = v;
@@ -1380,7 +1386,7 @@ function render() {
   P.cargar = function (V, forzar) {
     const est = V.est.map(e => ({
       id: e.id, tipo: e.tipo, tipoAdm: e.tipoAdm, nombre: e.nombre, m2: e.m2, m2Est: e.m2, med: null, detalle: e.detalle || null, revisada: false, origenEst: 'cliente', comentarios: [], fotos: [],
-      trabajos: e.lineas.map(l => ({ id: uid('t'), k: l.k, key: l.key || l.k, l: l.l, u: l.u, b: 'fijo', bk: l.bk || 'fijo', tl: l.tl || 'mo', det: l.det || null, cant: l.cant, precio: l.precio, origen: 'cliente', confirmado: false, quitado: false, manual: !!l.manual, nota: l.nota || '', base: { cant: l.cant, precio: l.precio }, ver: null }))
+      trabajos: e.lineas.map(l => ({ id: uid('t'), k: l.k, key: l.key || l.k, l: l.l, u: l.u, b: 'fijo', bk: l.bk || 'fijo', tl: l.tl || 'mo', det: l.det || null, cant: l.cant, precio: l.precio, origen: 'cliente', confirmado: false, quitado: false, manual: !!l.manual, nota: l.nota || '', base: { cant: l.cant, precio: l.precio }, ver: null, lineaId: l.lineaId || null }))
     }));
     const antes = S && S.ui ? S.ui : {};
     let N = {
@@ -1393,6 +1399,13 @@ function render() {
       tabiques: [], ui: { view: 'home', room: null, modo: forzar ? 'visita' : (antes.modo || 'visita'), obra: antes.obra || null, obraTab: antes.obraTab || 'hitos' }
     };
     const tot = totalesDe(N.est, N.ajustes); N.v2 = { id: V.v2id, total: tot.total, subtotal: tot.subtotal, fecha: Date.now() - 86400000 };
+    if (V.borrador && !V.borrador.snap) {
+      const bo = V.borrador; const meds = V.medidas || bo.medidas || {};
+      N.est.forEach(e => { const m = meds[e.id]; if (m && m.aplicada !== false) { e.med = { ancho: m.ancho || 0, largo: m.largo || 0, alto: m.alto || 0, huecos: (m.huecos || []).map(h => ({ id: uid('hu'), tipo: h.tipo, ancho: h.ancho, alto: h.alto })), reparto: m.reparto || null, activa: true }; if (m.ancho > 0 && m.largo > 0) e.m2 = superficie(m.ancho, m.largo); } });
+      N.tabiques = (bo.tabiques || []).map(t => Object.assign({}, t)); if (bo.hitosPlan && bo.hitosPlan.length) N.hitosPlan = bo.hitosPlan.map(h => ({ id: uid('h'), nombre: h.nombre, dias: h.dias || h.diasEstimados }));
+      if (bo.planCobros && bo.planCobros.length) N.planCobros = bo.planCobros.map(t => ({ id: uid('p'), label: t.label, pct: t.pct, cuando: t.cuando })); if (bo.neg) N.neg = Object.assign({}, NEG_DEF, bo.neg, { plazoManual: bo.neg.plazoSemanas || null }); if (bo.ajustes) N.ajustes = Object.assign({}, bo.ajustes);
+      mezclarAdminLineas(N, bo.lineas); N.general = bo.general || ''; N.borradorRev = bo.rev; N.v3.id = bo.v3id || N.v3.id; N.v3.pendienteEnvio = true;
+    }
     if (V.borrador && V.borrador.snap) {
       const sn = JSON.parse(JSON.stringify(V.borrador.snap)); sn.versiones = N.versiones; sn.estadoDatos = N.estadoDatos; sn.protoKey = N.protoKey; sn.casoId = N.casoId; sn.hist = []; sn.ui = N.ui; sn.sincro = true; sn.v2 = sn.v2 || N.v2;
       if (V.borrador.por === 'admin') mezclarAdminLineas(sn, V.borrador.lineas);
