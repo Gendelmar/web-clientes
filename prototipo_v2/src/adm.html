@@ -576,8 +576,6 @@ input[type=search]{padding:7px 10px;border:1px solid var(--border);border-radius
       <button class="nav-btn"        id="nb-obras"          onclick="navegarA('obras',this)"><span class="nav-icon">🏗</span>Obras</button>
       <button class="nav-btn"        id="nb-agenda"         onclick="navegarA('agenda',this)"><span class="nav-icon">📅</span>Agenda</button>
       <button class="nav-btn"        id="nb-mensajes"       onclick="navegarA('mensajes',this)"><span class="nav-icon">💬</span>Mensajes<span class="nav-bubble" id="nbb-mensajes" style="display:none"></span></button>
-      <button class="nav-btn"        id="nb-clientes"       onclick="navegarA('clientes',this)"><span class="nav-icon">👥</span>Clientes</button>
-      <button class="nav-btn"        id="nb-cobros"         onclick="navegarA('cobros',this)"><span class="nav-icon">💶</span>Cobros</button>
       <button class="nav-btn"        id="nb-catalogo"       onclick="navegarA('catalogo',this)"><span class="nav-icon">📦</span>Catálogo</button>
       <button class="nav-btn"        id="nb-configuracion"  onclick="navegarA('configuracion',this)"><span class="nav-icon">⚙</span>Configuración</button>
     </nav>
@@ -593,8 +591,6 @@ input[type=search]{padding:7px 10px;border:1px solid var(--border);border-radius
     <div class="apage"        id="pg-obras"></div>
     <div class="apage"        id="pg-agenda"></div>
     <div class="apage"        id="pg-mensajes"></div>
-    <div class="apage"        id="pg-clientes"></div>
-    <div class="apage"        id="pg-cobros"></div>
     <div class="apage"        id="pg-catalogo"></div>
     <div class="apage"        id="pg-configuracion"></div>
   </main>
@@ -607,8 +603,6 @@ input[type=search]{padding:7px 10px;border:1px solid var(--border);border-radius
   <button class="mn-btn"        id="mn-obras"         onclick="navegarA('obras',document.getElementById('nb-obras'))"><span class="mn-icon">🏗</span>Obras</button>
   <button class="mn-btn"        id="mn-agenda"        onclick="navegarA('agenda',document.getElementById('nb-agenda'))"><span class="mn-icon">📅</span>Agenda</button>
   <button class="mn-btn"        id="mn-mensajes"      onclick="navegarA('mensajes',document.getElementById('nb-mensajes'))"><span class="mn-icon">💬</span>Mensajes<span class="nav-bubble mnb" id="mnb-mensajes" style="display:none"></span></button>
-  <button class="mn-btn"        id="mn-clientes"      onclick="navegarA('clientes',document.getElementById('nb-clientes'))"><span class="mn-icon">👥</span>Clientes</button>
-  <button class="mn-btn"        id="mn-cobros"        onclick="navegarA('cobros',document.getElementById('nb-cobros'))"><span class="mn-icon">💶</span>Cobros</button>
   <button class="mn-btn"        id="mn-catalogo"      onclick="navegarA('catalogo',document.getElementById('nb-catalogo'))"><span class="mn-icon">📦</span>Catálogo</button>
   <button class="mn-btn"        id="mn-configuracion" onclick="navegarA('configuracion',document.getElementById('nb-configuracion'))"><span class="mn-icon">⚙</span>Config.</button>
 </nav>
@@ -668,11 +662,13 @@ function uid(p){ return (p||'id') + '_' + Math.random().toString(36).slice(2,8);
 // SECCIÓN 2: CONFIGURACIÓN POR DEFECTO
 // ═══════════════════════════════════════════════════════
 const CFG_DEFAULT = {
-  empresa:{ nombre:'Anatoliy Reformas', email:'admin@anatoliyreformas.es', tel:'+34 600 000 000', cif:'B-00000000', logoTexto:'Anatoliy', colorAccent:'#c96f28' },
+  empresa:{ nombre:'Anatoliy Reformas', email:'admin@anatoliyreformas.es', tel:'+34 600 000 000', cif:'B-00000000', logoTexto:'Anatoliy', colorAccent:'#c96f28', firma:'Un saludo, Anatoliy' },
   textos:{ condiciones:'Presupuesto válido durante el plazo indicado. Los importes incluyen mano de obra y materiales salvo indicación. Cualquier trabajo adicional se acordará por escrito mediante cambio o adenda.', clausulaAjuste:'Presupuesto orientativo sin visita técnica. El importe puede ajustarse tras comprobar medidas y estado real.' },
   motivosDescarte:['Fuera de la zona de servicio','Importe demasiado bajo','Tipo de obra que no hacemos','Sin respuesta del cliente','Agenda completa','Otro'],
   cobros:{ medios:['efectivo','bizum','transferencia','pasarela'], iban:'ES00 0000 0000 0000 0000 0000', titular:'Anatoliy Reformas S.L.', bizum:'600 000 000', justificanteObligatorio:{ transferencia:true, bizum:true, efectivo:false } },
   exigirSenalParaIniciar: true,
+  cobrarCambiosFirmados: 'siguiente', fotoObligatoriaHito: true,
+  negociacionDef: { validezDias: 30, imprevistosPct: 0, redondeo: 0, descuentoModo: 'pct', descuento: 0 },
   viviendaObligatorios:['ubicacion','regimen','anioConstruccion','inicio','habitada'],
   relojes:{ recordatorio1:2, recordatorio2:5, propuesta1:3, propuesta2:7, avisoCaducidad:5 },
   pantalla:{ densidad:'normal', ordenBandeja:'prioridad', fecha:'larga', espacioMoneda:false, colBandeja:{ barras:true, chips:true, acciones:true, importe:true } },
@@ -1159,19 +1155,24 @@ function recalcularBorrador(caso, cfg){
 
 // 4.16 — Disparadores de adenda (spec 6.10)
 function cambiosPendientes(caso){ return (caso.obra?.cambios||[]).filter(c => c.estado === 'registrado' || c.estado === 'en_desacuerdo'); }
-function umbralAdendaEur(caso, cfg){
-  const base = caso.aceptacion?.importe || (caso.versiones||[]).find(v=>v.estado==='aceptada')?.totales?.total || 0;
-  return (cfg.adendaModo === 'eur') ? (cfg.adendaUmbralEur||0) : r(base * (cfg.adendaUmbral||5) / 100);
+// R-33 · UNA sola función de umbral (sin IVA) usada por el disparo, el aviso y cualquier indicador
+function ivaAceptado(caso){ const v = (caso.versiones||[]).find(v => v.id === caso.aceptacion?.versionId); return v?.ivaPct != null ? v.ivaPct : 21; }
+function umbralAdenda(caso, cfg){
+  const iva = ivaAceptado(caso);
+  const importe = caso.aceptacion?.importe || (caso.versiones||[]).find(v=>v.estado==='aceptada')?.totales?.total || 0;
+  const modo = cfg.adendaModo === 'eur' ? 'eur' : 'pct';
+  const sinIva = modo === 'eur' ? r(cfg.adendaUmbralEur||0) : r(importe / (1 + iva/100) * (cfg.adendaUmbral||5) / 100);
+  return { sinIva, conIva: r(sinIva * (1 + iva/100)), ivaPct: iva, modo };
 }
+function umbralAdendaEur(caso, cfg){ return umbralAdenda(caso, cfg).sinIva; }
+function textoUmbral(caso, cfg){ const u = umbralAdenda(caso, cfg); return fmtEur(u.sinIva) + ' sin IVA (' + fmtEur(u.conIva) + ' con IVA)'; }
 function debeGenerarAdenda(caso, cfg, contexto){
   contexto = contexto || {};
   const triggers = [];
   const pend = cambiosPendientes(caso);
-  const ivaPct = ((caso.versiones||[]).find(v => v.id === caso.aceptacion?.versionId)?.ivaPct || 21) / 100;
   if (!pend.length && contexto.contexto !== 'manual') return triggers;
-  const importeTotal = caso.aceptacion?.importe || (caso.versiones||[]).find(v=>v.estado==='aceptada')?.totales?.total || 0;
   const suma = r(pend.reduce((s,c) => s + (c.importe||0), 0));
-  const um = (cfg.adendaModo === 'eur') ? (cfg.adendaUmbralEur||0) : (importeTotal / (1 + ivaPct) * (cfg.adendaUmbral||5) / 100);
+  const um = umbralAdenda(caso, cfg).sinIva;
   if (pend.length && suma > 0 && um > 0 && suma >= um) triggers.push('umbral');
   if (pend.some(c => (c.importe||0) >= (cfg.adendaTopeIndividual||1000))) triggers.push('tope');
   if (contexto.contexto === 'hito' && pend.length && cfg.adendaPorHito !== false) triggers.push('hito');
@@ -1204,6 +1205,9 @@ function saludObra(caso, cfg, ahora){
     if (horasEntre(antiguo.fecha, ahora) > 24) return 'bloqueada';
     return 'en_riesgo';
   }
+  const incs = (caso.obra?.incidencias || []).filter(i => i.estado === 'abierta');
+  if (incs.some(i => i.bloquea)) return 'bloqueada';
+  if (incs.some(i => i.gravedad === 'alta')) return 'en_riesgo';
   const hitos = caso.obra?.hitos || [];
   if (hitos.some(h => h.estado !== 'hecho' && (h.fechaFinPrevista || h.fechaPrevista) && diasEntre(h.fechaFinPrevista || h.fechaPrevista, ahora) > 0)) return 'en_riesgo';
   if (caso.aceptacion){
@@ -1509,7 +1513,7 @@ function conversaciones(db){
   return db.casos.map(c => { const ms = (c.mensajes || []).slice().sort((a, b) => String(a.fecha).localeCompare(String(b.fecha))); return { caso:c, ultimo:ms[ms.length - 1] || null, noLeidos:mensajesNoLeidos(c, 'adm'), avisoPago:ms.some(m => m.tipo === 'aviso_pago') || avisosPendientes(db, c.id).length > 0, n:ms.length }; })
     .filter(x => x.n > 0).sort((a, b) => String(b.ultimo.fecha).localeCompare(String(a.ultimo.fecha)));
 }
-const NOTIF_TIPOS = { datos_vivienda:'Datos de la vivienda', discrepancia:'Discrepancia', franja:'Franja elegida', pago_visita:'Pago de la visita', justificante:'Justificante por confirmar', aceptacion:'Aceptación', solicitud_cambio:'Solicitud de cambio', duda_cambio:'Duda sobre un cambio', firma_adenda:'Firma de adenda', remate:'Remate', conformidad:'Conformidad', mensaje:'Mensaje', recordatorio:'Recordatorio', caducidad:'Caducidad', reserva:'Reserva de visita', sistema:'Aviso del sistema', fiscal:'Datos de facturación', valoracion:'Valoración' };
+const NOTIF_TIPOS = { datos_vivienda:'Datos de la vivienda', discrepancia:'Discrepancia', franja:'Franja elegida', pago_visita:'Pago de la visita', justificante:'Justificante por confirmar', aceptacion:'Aceptación', solicitud_cambio:'Solicitud de cambio', duda_cambio:'Duda sobre un cambio', firma_adenda:'Firma de adenda', remate:'Remate', conformidad:'Conformidad', mensaje:'Mensaje', recordatorio:'Recordatorio', caducidad:'Caducidad', reserva:'Reserva de visita', sistema:'Aviso del sistema', incidencia:'Incidencia en obra', borrador:'Borrador de la visita', fiscal:'Datos de facturación', valoracion:'Valoración' };
 function notificar(db, casoId, tipo, texto, o){
   o = o || {}; db.notificaciones = db.notificaciones || [];
   if (o.clave && db.notificaciones.some(n => n.clave === o.clave)) return null;
@@ -2264,11 +2268,15 @@ function replanificarHitos(obra){
   });
   return obra;
 }
+function hitosDeCaso(caso, cfg){ // R-23: hitos propios del caso (caso.obra.hitosPlan) o los de la configuración
+  const hp = caso.obra && caso.obra.hitosPlan; if (hp && hp.length) return hp.map(h => ({ nombre:h.nombre, diasEstimados:Math.max(1, Math.round(Number(h.diasEstimados != null ? h.diasEstimados : h.dias)||3)) }));
+  return (cfg.hitosTipo||[]).map((n,i) => ({ nombre:n, diasEstimados:DIAS_HITO_DEF[i]||3 }));
+}
 function iniciarObra(caso, cfg, fechaInicio){
   if (!puedeTransitar(caso, 'en_obra')) throw new Error('La obra solo puede iniciarse desde «Aceptada»');
   caso.obra = caso.obra || {};
   caso.obra.inicio = fechaInicio || hoy();
-  caso.obra.hitos = (cfg.hitosTipo||[]).map((n,i) => ({ id:'H'+(i+1), nombre:n, diasEstimados:DIAS_HITO_DEF[i]||3, estado:'pendiente', fechaReal:null, fotos:[] }));
+  caso.obra.hitos = hitosDeCaso(caso, cfg).map((h,i) => ({ id:'H'+(i+1), nombre:h.nombre, diasEstimados:h.diasEstimados, estado:'pendiente', fechaReal:null, fotos:[] }));
   ['cambios','adendas','fotos','solicitudesCambio','remates'].forEach(k => caso.obra[k] = caso.obra[k] || []);
   replanificarHitos(caso.obra);
   transitar(caso, 'en_obra', { autor:'reformista', texto:'Obra iniciada el ' + fmtFecha(caso.obra.inicio) });
@@ -2278,7 +2286,8 @@ function marcarHito(caso, hitoId, estado, opciones){
   opciones = opciones || {};
   const h = (caso.obra.hitos||[]).find(x => x.id === hitoId); if (!h) return null;
   h.estado = estado;
-  if (estado === 'hecho'){ h.fechaReal = opciones.fecha || hoy(); for (let i=0;i<(opciones.fotos||0);i++) (h.fotos = h.fotos||[]).push({ id:uid('hf'), url:'hito-simulado.jpg', momento:'durante', fecha:h.fechaReal }); }
+  if (estado === 'hecho'){ h.fechaReal = opciones.fecha || hoy(); for (let i=0;i<(opciones.fotos||0);i++) (h.fotos = h.fotos||[]).push({ id:uid('hf'), url:'hito-simulado.jpg', momento:'durante', fecha:h.fechaReal });
+    (opciones.adjuntos||[]).forEach(aid => (h.fotos = h.fotos||[]).push({ id:uid('hf'), adjuntoId:aid, momento:opciones.momento||'durante', fecha:h.fechaReal })); if (opciones.nota) h.nota = String(opciones.nota).trim(); }
   else h.fechaReal = null;
   (caso.eventos = caso.eventos||[]).push({ fecha:hoy(), tipo:'obra', texto:'Hito «' + h.nombre + '» → ' + estado.replace('_',' '), autor:'reformista' });
   return h;
@@ -2288,9 +2297,43 @@ function registrarCambio(caso, d){
   caso.obra.cambios = caso.obra.cambios || [];
   const ch = { id:nuevoIdSeq(caso.obra.cambios,'C'), fecha:hoy(), tipo:d.tipo||'imprevisto', concepto:d.concepto||'Cambio', importe:r(Number(d.importe)||0), foto:!!d.foto, nota:d.nota||'', aprobacion:d.aprobacion||'presencial',
     bloqueaObra:!!d.bloqueaObra, urgente:!!d.urgente, estado:'registrado', adendaId:null, avisoCliente:{ enviadoAt:hoy(), desacuerdo:false } };
+  if (d.modo){ ch.modoImporte = d.modo; if (d.coste != null) ch.coste = r(Number(d.coste)||0); if (d.partidas) ch.partidas = d.partidas.map(p => ({ nombre:p.nombre, cant:Number(p.cant)||0, precio:Number(p.precio)||0 })); }
+  if (d.origen) ch.origen = d.origen; if (d.incidenciaId) ch.incidenciaId = d.incidenciaId; if (d.fotoId) ch.fotoId = d.fotoId; if (d.fotos) ch.fotos = d.fotos.slice();
   caso.obra.cambios.push(ch);
   (caso.eventos = caso.eventos||[]).push({ fecha:hoy(), tipo:'cambio', texto:'Cambio ' + ch.id + ' registrado: ' + ch.concepto + ' (' + fmtEur(ch.importe) + ' sin IVA)' + (ch.bloqueaObra?' · bloquea la obra':''), autor:'reformista' });
   return ch;
+}
+// R-28 · incidencias de obra
+const TIPO_INCIDENCIA = { retraso:'Retraso', dano:'Daño o imprevisto', material:'Material no disponible', acceso:'Acceso o comunidad', seguridad:'Seguridad', otro:'Otro' };
+const GRAVEDAD_LBL = { baja:'Baja', media:'Media', alta:'Alta' };
+function registrarIncidencia(caso, d){
+  caso.obra.incidencias = caso.obra.incidencias || [];
+  const dias = Math.max(0, Math.round(Number(d.diasRetraso)||0));
+  const inc = { id:nuevoIdSeq(caso.obra.incidencias, 'I'), fecha:hoy(), tipo:TIPO_INCIDENCIA[d.tipo] ? d.tipo : 'otro', texto:String(d.texto||'').trim(), fotos:(d.fotos||[]).slice(), gravedad:GRAVEDAD_LBL[d.gravedad] ? d.gravedad : 'baja', bloquea:!!d.bloquea, diasRetraso:dias, visibleCliente:d.visibleCliente !== false, estado:'abierta', cambioId:d.cambioId||null, resolucion:'', voz:!!d.voz };
+  if (!inc.texto) throw new Error('Describe la incidencia');
+  caso.obra.incidencias.push(inc);
+  if (dias > 0 && (caso.obra.hitos||[]).length){ const h = caso.obra.hitos.find(x => x.estado !== 'hecho') || caso.obra.hitos[caso.obra.hitos.length-1]; h.diasEstimados = Math.max(1, Math.round(h.diasEstimados||1) + dias); replanificarHitos(caso.obra); }
+  (caso.eventos = caso.eventos||[]).push({ fecha:hoy(), tipo:'obra', texto:'Incidencia ' + inc.id + ' (' + TIPO_INCIDENCIA[inc.tipo] + ', gravedad ' + inc.gravedad + '): ' + inc.texto + (dias ? ' · +' + dias + ' día(s) de retraso' : '') + (inc.bloquea ? ' · bloquea la obra' : ''), autor:'reformista' });
+  const db = dbActual(); if (db) notificar(db, caso.id, 'incidencia', 'Incidencia ' + inc.id + ' en ' + caso.id + ': ' + inc.texto.slice(0, 90), { clave:'inc:' + caso.id + ':' + inc.id });
+  return inc;
+}
+function resolverIncidencia(caso, id, nota){
+  const inc = (caso.obra.incidencias||[]).find(x => x.id === id); if (!inc || inc.estado !== 'abierta') return null;
+  inc.estado = 'resuelta'; inc.resolucion = String(nota||'').trim(); inc.resueltaAt = hoy();
+  (caso.eventos = caso.eventos||[]).push({ fecha:hoy(), tipo:'obra', texto:'Incidencia ' + id + ' resuelta' + (inc.resolucion ? ': ' + inc.resolucion : ''), autor:'reformista' });
+  const db = dbActual(); if (db) (db.notificaciones||[]).forEach(n => { if (n.clave === 'inc:' + caso.id + ':' + id && !n.resuelta){ n.resuelta = true; n.resueltaAt = ahoraISO(); } });
+  return inc;
+}
+// R-29 · alta de un cambio con el formulario rápido (lo usan el lite y el modal del admin)
+function altaCambioRapido(c, d, cfg){
+  cfg = cfg || DB.cfg; d = d || {}; const concepto = String(d.concepto||'').trim();
+  if (!concepto) throw new Error('Indica el concepto del cambio');
+  const imp = importeCambioRapido(d.modo, d, cfg.margen); if (!imp.importe) throw new Error('Indica un importe distinto de 0');
+  const ch = registrarCambio(c, { tipo:d.tipo, concepto, importe:imp.importe, modo:imp.modo, coste:imp.coste, partidas:imp.partidas, aprobacion:d.aprobacion, bloqueaObra:d.bloquea, urgente:d.urgente, foto:!!(d.fotoId || (d.fotos||[]).length), fotoId:d.fotoId, fotos:d.fotos, nota:d.nota, origen:d.origen, incidenciaId:d.incidenciaId });
+  if (d.solicitudId){ const sc = (c.obra.solicitudesCambio||[]).find(x => x.id === d.solicitudId); if (sc){ sc.estado = 'valorada'; sc.cambioId = ch.id; } }
+  if (d.incidenciaId){ const inc = (c.obra.incidencias||[]).find(x => x.id === d.incidenciaId); if (inc) inc.cambioId = ch.id; }
+  const iva = ivaDe(c); const msg = fillTpl(PLANTILLAS_MSG.aviso_cambio, varsDe(c, { concepto:ch.concepto, importe:fmtEur(ch.importe*(1+iva/100)) }));
+  return { ch, msg, trig:debeGenerarAdenda(c, cfg, {}), umbral:umbralAdenda(c, cfg), tv:totalVigente(c) };
 }
 function marcarDesacuerdo(caso, cambioId){
   const ch = (caso.obra.cambios||[]).find(x => x.id === cambioId); if (!ch || ch.estado === 'consolidado') return null;
@@ -2298,11 +2341,29 @@ function marcarDesacuerdo(caso, cambioId){
   (caso.eventos = caso.eventos||[]).push({ fecha:hoy(), tipo:'cliente', texto:'El cliente NO está de acuerdo con el cambio ' + ch.id + ': ' + ch.concepto, autor:'cliente' });
   return ch;
 }
-function resolverDesacuerdo(caso, cambioId, accion, nuevoImporte){
+// R-34 · ajustar / retirar / mantener (con nota) y aviso al cliente con la plantilla «cambio_resuelto»
+function textoResolucion(ch, accion, nota){
+  if (accion === 'ajustar') return ch.importe === 0 ? 'lo asumo yo como cortesía (0 €)' : 'he ajustado el importe a ' + fmtEur(ch.importe) + ' (sin IVA)';
+  if (accion === 'retirar') return 'lo retiro de tu cuenta' + (nota ? ' (' + nota + ')' : '');
+  return 'se mantiene el importe de ' + fmtEur(ch.importe) + ' (sin IVA): ' + (nota || '');
+}
+function resolverDesacuerdo(caso, cambioId, accion, nuevoImporte, nota){
   const ch = (caso.obra.cambios||[]).find(x => x.id === cambioId); if (!ch || ch.estado !== 'en_desacuerdo') return null;
-  if (accion === 'ajustar') ch.importe = r(Number(nuevoImporte)||0);
-  ch.estado = 'registrado'; ch.avisoCliente = Object.assign({}, ch.avisoCliente, { desacuerdo:false, resueltoAt:hoy() });
-  (caso.eventos = caso.eventos||[]).push({ fecha:hoy(), tipo:'cambio', texto:'Desacuerdo del cambio ' + ch.id + ' resuelto (' + (accion==='ajustar'?'importe ajustado a ' + fmtEur(ch.importe):'se mantiene') + ')', autor:'reformista' });
+  nota = String(nota||'').trim();
+  if (!['ajustar','retirar','mantener'].includes(accion)) throw new Error('Opción no válida: ajustar, retirar o mantener');
+  if (accion === 'mantener' && !nota) throw new Error('Mantener el importe exige una nota con la explicación');
+  ch.importeAnterior = ch.importe;
+  if (accion === 'ajustar'){
+    ch.importe = r(Number(nuevoImporte)||0);
+    if (ch.importe === 0){ ch.cortesia = true; ch.estado = 'consolidado'; } else ch.estado = 'registrado';
+  } else if (accion === 'retirar'){ ch.estado = 'retirado'; ch.motivoRetiro = nota || 'Retirado tras la duda del cliente'; ch.bloqueaObra = false; }
+  else { ch.estado = 'registrado'; ch.notaMantener = nota; }
+  ch.resolucion = { accion, nota, fecha:hoy(), importeAnterior:ch.importeAnterior };
+  ch.avisoCliente = Object.assign({}, ch.avisoCliente, { desacuerdo:false, resueltoAt:hoy() });
+  (caso.eventos = caso.eventos||[]).push({ fecha:hoy(), tipo:'cambio', texto:'Duda del cambio ' + ch.id + ' resuelta: ' + ({ ajustar:'importe ajustado a ' + fmtEur(ch.importe), retirar:'cambio retirado', mantener:'se mantiene el importe' })[accion] + (nota ? ' · ' + nota : ''), autor:'reformista' });
+  const db = dbActual();
+  try { const cli = db && db.clientes.find(x => x.id === caso.clienteId); const msg = fillTpl(PLANTILLAS_MSG.cambio_resuelto, varsDe(caso, { concepto:ch.concepto, motivo:textoResolucion(ch, accion, nota) }));
+    escribirMensaje(caso, { autor:'reformista', texto:msg, tipo:'sistema', sinEvento:true }); void cli; } catch (e) {}
   return ch;
 }
 function crearAdenda(caso, cambioIds, motivo){
@@ -2341,23 +2402,58 @@ function puedeCerrarObra(caso, cfg, modo){
   return { ok:true, motivo:'' };
 }
 
-// ── Cobros ──────────────────────────────────────────────
+// R-29 · importe de un cambio rápido en tres modos (función pura; la usan el lite y el modal del admin)
+function importeCambioRapido(modo, datos, margenPct){
+  datos = datos || {}; const m = Number(margenPct); const mg = isFinite(m) ? m : 0;
+  if (modo === 'coste_margen'){ const coste = r(Number(datos.coste)||0); return { importe:r(coste * (1 + mg/100)), coste, margenEur:r(coste * mg/100), modo }; }
+  if (modo === 'partidas'){ const ps = (datos.partidas||[]).filter(p => (Number(p.cant)||0) !== 0); const coste = r(ps.reduce((s,p) => s + (Number(p.cant)||0) * (Number(p.precio)||0), 0)); return { importe:r(coste * (1 + mg/100)), coste, margenEur:r(coste * mg/100), modo, partidas:ps }; }
+  return { importe:r(Number(datos.importe)||0), coste:null, margenEur:null, modo:'final' };
+}
+function catalogoCambios(db){
+  const out = Object.keys(TRAB).map(k => ({ id:'t:'+k, tipo:'trabajo', nombre:TRAB[k].label, unidad:(TRAB[k].base==='ud'||TRAB[k].base==='fijo') ? 'ud' : 'm²', precio:r((TRAB[k].mo||0) + (TRAB[k].mat||0)) }));
+  ((db && db.catalogo) || []).forEach(p => out.push({ id:p.id, tipo:'producto', nombre:p.nombre, unidad:p.unidad||'ud', precio:precioProducto(p) }));
+  return out;
+}
+
+// R-32 · plan de cobros: el último tramo es «el resto»; los cambios firmados van al siguiente tramo aún no cobrado
+function planDeCaso(caso, cfg){ return (caso && caso.planCobros && caso.planCobros.length) ? caso.planCobros : ((cfg && cfg.planCobros) || []); }
+function normalizarPlan(plan){
+  const p = (plan||[]).map(t => ({ label:t.label, pct:Number(t.pct)||0, cuando:t.cuando||'entrega' }));
+  if (!p.length) return p;
+  const suma = r(p.slice(0,-1).reduce((s,t) => s + t.pct, 0)); p[p.length-1].pct = r(Math.max(0, 100 - suma));
+  return p;
+}
+function validarPlan(plan, hitos){
+  const errores = []; const p = plan||[]; const nombres = new Set((hitos||[]).map(h => typeof h === 'string' ? h : h.nombre));
+  if (!p.length) errores.push('El plan necesita al menos un tramo');
+  const suma = r(p.slice(0,-1).reduce((s,t) => s + (Number(t.pct)||0), 0));
+  if (suma > 100) errores.push('Los tramos intermedios suman ' + suma + ' %: no pueden superar el 100 %');
+  p.forEach(t => { if (String(t.cuando).startsWith('hito:') && !nombres.has(String(t.cuando).slice(5))) errores.push('El tramo «' + t.label + '» depende del hito «' + String(t.cuando).slice(5) + '», que ya no existe: reasígnalo'); });
+  return { ok:!errores.length, errores };
+}
 function planCobros(caso, cfg, cobros){
-  const base = caso.aceptacion ? caso.aceptacion.importe : 0;
-  const pagado = calcularCobrado(caso, cobros);
-  const hitos = caso.obra?.hitos || [];
-  const entregado = ['terminada','en_remates','cerrada'].includes(caso.estado);
-  let acum = 0; const tramos = [];
-  (cfg.planCobros||[]).forEach(t => {
-    const importe = r(base * t.pct / 100); acum = r(acum + importe);
+  const plan = normalizarPlan(planDeCaso(caso, cfg)); const n = plan.length; if (!n) return [];
+  const tv = totalVigente(caso); const acept = tv.aceptada; const firmado = tv.firmado; const cambios = r(tv.adendasFirmadas);
+  const modo = (cfg && cfg.cobrarCambiosFirmados) || 'siguiente'; const pagado = calcularCobrado(caso, cobros);
+  const hitos = caso.obra?.hitos || []; const entregado = ['terminada','en_remates','cerrada'].includes(caso.estado);
+  const tr = plan.map((t,i) => ({ label:t.label, pct:t.pct, cuando:t.cuando, base: i < n-1 ? r(acept * t.pct / 100) : null, resto: i === n-1, cambios:0 }));
+  if (cambios > 0 && n > 1 && modo === 'siguiente'){ // al siguiente tramo intermedio sin cobrar; si no queda ninguno, los absorbe el último (resto)
+    let rem = pagado, dest = -1; for (let i = 0; i < n-1; i++){ if (rem + 0.005 >= tr[i].base) rem = r(rem - tr[i].base); else { dest = i; break; } }
+    if (dest >= 0) tr[dest].cambios = cambios;
+  } else if (cambios > 0 && modo === 'al_firmar') tr.splice(tr.length - 1, 0, { label:'Cambios firmados', pct:null, cuando:'firma', base:cambios, resto:false, cambios:0, extra:true });
+  let acum = 0;
+  tr.forEach(t => {
+    t.importe = t.resto ? r(Math.max(0, firmado - acum)) : r(t.base + t.cambios); acum = r(acum + t.importe); t.acumulado = acum;
     let alcanzado = false;
     if (t.cuando === 'aceptacion') alcanzado = !!caso.aceptacion;
     else if (String(t.cuando).startsWith('hito:')) alcanzado = hitos.some(h => h.nombre === String(t.cuando).slice(5) && h.estado === 'hecho');
     else if (t.cuando === 'entrega') alcanzado = entregado;
+    else if (t.cuando === 'firma') alcanzado = true;
     const cubierto = pagado + 0.005 >= acum;
-    tramos.push({ label:t.label, pct:t.pct, cuando:t.cuando, importe, acumulado:acum, estado: cubierto ? 'cobrado' : (alcanzado ? 'debido' : 'pendiente'), falta: cubierto ? 0 : r(Math.min(importe, acum - pagado)) });
+    t.estado = cubierto ? 'cobrado' : (alcanzado ? 'debido' : 'pendiente'); t.falta = cubierto ? 0 : r(Math.min(t.importe, acum - pagado));
+    t.incluyeCambios = t.resto ? (modo === 'al_firmar' ? 0 : Math.max(0, r(t.importe - r(acept * t.pct / 100)))) : (t.cambios || 0);
   });
-  return tramos;
+  return tr;
 }
 function proximoTramo(caso, cfg, cobros){ return planCobros(caso, cfg, cobros).find(t => t.estado !== 'cobrado') || null; }
 function cobrosPendientesDebidos(caso, cfg, cobros){ return planCobros(caso, cfg, cobros).filter(t => t.estado === 'debido'); }
@@ -2772,7 +2868,7 @@ function __testsImpl(){
   marcarDesacuerdo(co, 'C1');
   firmarAdenda(co, ad1.id);
   a('firmar adenda: un cambio en desacuerdo NO se consolida', co.obra.cambios[0].estado === 'en_desacuerdo' && ad1.cambios.length === 0 && ad1.delta === 0);
-  resolverDesacuerdo(co, 'C1', 'ajustar', 80); resolverDesacuerdo(co, 'C2', 'mantener');
+  resolverDesacuerdo(co, 'C1', 'ajustar', 80); resolverDesacuerdo(co, 'C2', 'mantener', null, 'Es el precio acordado');
   a('resolver desacuerdo: vuelve a registrado (importe ajustado)', co.obra.cambios[0].estado === 'registrado' && co.obra.cambios[0].importe === 80 && co.obra.cambios[1].estado === 'registrado');
   const ad2 = crearAdenda(co, ['C1','C2'], 'cierre'); firmarAdenda(co, ad2.id);
   a('firmar adenda: consolida los cambios y el total no cambia', co.obra.cambios.every(x => x.estado === 'consolidado') && ad2.delta === 130 && totalVigente(co).provisional === 0 && totalVigente(co).adendasFirmadas === r(130*1.21));
@@ -3136,7 +3232,7 @@ function varsDe(caso, extra){
   const cli = clienteDe(caso); const v = caso.versiones.find(x=>x.estado==='vigente') || caso.versiones[0];
   const tv = totalVigente(caso);
   return Object.assign({
-    cliente: (cli.nombre||'').split(' ')[0], reformista: DB.cfg.empresa.nombre, ref: caso.id,
+    cliente: (cli.nombre||'').split(' ')[0], reformista: DB.cfg.empresa.nombre, firma: DB.cfg.empresa.firma || '', ref: caso.id,
     franjas: (caso.visita?.franjasOfrecidas||[]).map(f => fmtFechaCorta(f.fecha)+' '+f.franja).join(', '),
     enlace: 'anatoliyreformas.es/c/'+caso.enlace.token, politicaVisita: textoPoliticaVisita(caso),
     importe: v?.totales?.total ? fmtEur(v.totales.total) : '—',
@@ -3283,7 +3379,11 @@ function nombreTipoObra(t){ return ({reforma_integral:'Reforma integral', reform
 // ── Navegación ──
 const RENDERERS = {};
 let paginaActual = 'resumen';
+// R-35: Cobros vive dentro de Obras y Clientes dentro de Presupuestos (los enlaces antiguos redirigen)
+const REDIR_NAV = { cobros:['obras','cobros'], clientes:['presupuestos','clientes'] };
+function subDest(nombre){ return document.getElementById('sub-' + nombre) || document.createElement('div'); }
 function navegarA(nombre, btn){
+  if (REDIR_NAV[nombre]){ const d = REDIR_NAV[nombre]; if (d[0] === 'obras') obrasTab = d[1]; else presuTab = d[1]; nombre = d[0]; btn = null; }
   paginaActual = nombre;
   document.querySelectorAll('.apage').forEach(p => p.classList.remove('active'));
   document.getElementById('pg-' + nombre)?.classList.add('active');
@@ -3329,7 +3429,7 @@ function casoCardHtml(caso, prio){
 // ═══════════════════════════════════════════════════════
 // SECCIÓN 9: PRESUPUESTOS (bandeja · seguimiento · por estado · archivo)
 // ═══════════════════════════════════════════════════════
-let presuTab = 'bandeja';
+let presuTab = 'bandeja', obrasTab = 'lista';
 let bandejaSort = 'prioridad';
 let bandejaF = { estado:'', zona:'', tipo:'', soloFotos:false, q:'' };
 const porqueAbierto = {};
@@ -3354,10 +3454,12 @@ RENDERERS.presupuestos = function(){
   else if (presuTab==='seguimiento') cuerpo = cuerpoSeguimiento();
   else if (presuTab==='estado') cuerpo = cuerpoPorEstado();
   else if (presuTab==='archivo') cuerpo = cuerpoArchivo();
+  else if (presuTab==='clientes') cuerpo = '<div id="sub-clientes"></div>';
   document.getElementById('pg-presupuestos').innerHTML =
     '<div class="page-hdr"><div><div class="page-title">Presupuestos</div><div class="page-sub">Gestión de pedidos y propuestas</div></div></div>' +
-    '<div class="tabs">' + tab('bandeja','Bandeja',nBandeja) + tab('seguimiento','Seguimiento',nSeg) + tab('estado','Por estado') + tab('archivo','Archivo',nArch) + '</div>' +
+    '<div class="tabs">' + tab('bandeja','Bandeja',nBandeja) + tab('seguimiento','Seguimiento',nSeg) + tab('estado','Por estado') + tab('archivo','Archivo',nArch) + tab('clientes','Clientes',DB.clientes.length) + '</div>' +
     cuerpo;
+  if (presuTab === 'clientes') RENDERERS.clientes();
 };
 
 function cuerpoBandeja(){
@@ -3647,14 +3749,15 @@ function renderFicha(){
   const cli = clienteDe(c); const prio = scorePrioridad(c,DB.cfg,hoy()); const eco = estadoEconomico(c,DB.cobros);
   const ac = accionSiguiente(c,DB.cfg);
   const ecoBadge = ['aceptada','en_obra','en_remates','terminada','cerrada'].includes(c.estado) ? ' · <span style="color:' + (eco.saldo>0?'var(--danger)':'var(--ok)') + '">Saldo ' + fmtEur(eco.saldo) + '</span>' : '';
-  const tabs = ['resumen','presupuesto','visita','obra','cobros','historial'];
-  const tabLbl = {resumen:'Resumen',presupuesto:'Presupuesto',visita:'Visita',obra:'Obra',cobros:'Cobros',historial:'Historial'};
+  if (_fichaTab === 'cobros') _fichaTab = 'cuenta';
+  const tabs = ['resumen','presupuesto','visita','obra','cuenta','historial'];
+  const tabLbl = {resumen:'Resumen',presupuesto:'Presupuesto',visita:'Visita',obra:'Obra',cuenta:'Cuenta',historial:'Historial'};
   let cuerpo='';
   if (_fichaTab==='resumen') cuerpo=fichaResumen(c,prio);
   else if (_fichaTab==='presupuesto') cuerpo=fichaPresupuesto(c);
   else if (_fichaTab==='visita') cuerpo=fichaVisita(c);
   else if (_fichaTab==='obra') cuerpo=fichaObra(c);
-  else if (_fichaTab==='cobros') cuerpo=fichaCobros(c);
+  else if (_fichaTab==='cuenta') cuerpo=fichaCuenta(c);
   else if (_fichaTab==='historial') cuerpo=fichaHistorial(c);
   const html =
     '<div class="modal-title">' + escH(cli.nombre) + ' <span style="font-size:13px;color:var(--muted)">· ' + c.id + '</span></div>' +
@@ -4431,7 +4534,7 @@ function enviarBorradorComoVersion(c, tipo){
 const SALUD_LBL = { al_dia:'Al día', en_riesgo:'En riesgo', bloqueada:'Bloqueada' };
 const SALUD_BADGE = { al_dia:'b-ok', en_riesgo:'b-warn', bloqueada:'b-err' };
 const TRIGGER_TXT = { umbral:'Los cambios sin consolidar alcanzan el umbral de adenda', tope:'Un cambio individual supera el tope configurado (adenda inmediata)', hito:'Se ha marcado un hito con cambios pendientes', cobro:'Vas a registrar un cobro con cambios pendientes', manual:'Adenda lanzada manualmente', cierre:'Intentas terminar la obra con cambios pendientes (obligatoria)', bloqueante:'Hay un cambio que bloquea la obra', solicitud_cliente:'El cliente la ha solicitado' };
-const TIPO_CAMBIO = { imprevisto:'Imprevisto', cliente:'Petición del cliente', material_cliente:'Material aportado por el cliente', alcance:'Cambio de alcance' };
+const TIPO_CAMBIO = { alcance:'Cambio de alcance', material:'Cambio de material', material_cliente:'Material aportado por el cliente', imprevisto:'Imprevisto', cliente:'Pedido del cliente' };
 const APROB_LBL = { telefono:'Teléfono', presencial:'Presencial', enlace:'Enlace' };
 const ESTADOS_OBRA = ['aceptada','en_obra','terminada','en_remates','cerrada'];
 let _cbFn = null;
@@ -4451,7 +4554,13 @@ function miniBarra(pct, color){ return '<div class="prog-bar" style="min-width:7
 
 // ── Lista de obras ──
 let obrasF = { estado:'', salud:'', saldo:'' };
+function obrasCabeceraTabs(){
+  const pend = DB.casos.filter(c => ESTADOS_OBRA.includes(c.estado) && c.aceptacion).reduce((s, c) => s + Math.max(0, estadoEconomico(c, DB.cobros).saldo), 0);
+  const nConf = avisosPendientes(DB).length; const t = (k, l, n) => '<button class="tab ' + (obrasTab===k?'active':'') + '" onclick="obrasTab=\'' + k + '\';RENDERERS.obras()">' + l + (n!=null?'<span class="tab-n">' + n + '</span>':'') + '</button>';
+  return '<div class="page-hdr"><div><div class="page-title">Obras</div><div class="page-sub">De aceptadas a cerradas · cuenta y cobros de cada obra' + (pend > 0.005 ? ' · pendiente de cobro ' + fmtEur0(pend) : '') + '</div></div></div><div class="tabs">' + t('lista','Obras') + t('cobros','Cobros y movimientos', nConf || null) + '</div>';
+}
 RENDERERS.obras = function(){
+  if (obrasTab === 'cobros'){ document.getElementById('pg-obras').innerHTML = obrasCabeceraTabs() + '<div id="sub-cobros"></div>'; RENDERERS.cobros(); return; }
   let casos = DB.casos.filter(c => ESTADOS_OBRA.includes(c.estado));
   const info = casos.map(c => ({ c, salud: c.obra?.hitos?.length ? saludObra(c, DB.cfg, hoy()) : null, eco: estadoEconomico(c, DB.cobros), prog: calcularProgreso(c) }));
   let items = info.filter(x => (!obrasF.estado || x.c.estado === obrasF.estado) && (!obrasF.salud || x.salud === obrasF.salud) && (!obrasF.saldo || (obrasF.saldo === 'con' ? x.eco.saldo > 0.005 : x.eco.saldo <= 0.005)));
@@ -4467,11 +4576,10 @@ RENDERERS.obras = function(){
       '<td style="font-size:12px">' + (ph ? escH(ph.nombre) + '<br><span style="color:var(--muted)">' + fmtFechaCorta(ph.fechaFinPrevista || ph.fechaPrevista) + '</span>' : '—') + '</td>' +
       '<td style="font-size:11px;color:var(--muted)">' + (uf ? '<div class="mv-thumb" style="width:64px;height:48px;aspect-ratio:auto;font-size:9px">' + escH(uf.hito || uf.momento || 'Foto') + '</div>' + fmtFechaCorta(uf.fecha) : '—') + '</td></tr>';
   }).join('');
-  document.getElementById('pg-obras').innerHTML =
-    '<div class="page-hdr"><div><div class="page-title">Obras</div><div class="page-sub">De aceptadas a cerradas · ' + info.length + ' en total</div></div></div>' +
+  document.getElementById('pg-obras').innerHTML = obrasCabeceraTabs() +
     '<div class="stat-grid">' + statCard(activas.length, 'Obras en curso', 'En ejecución o remates', 'up') + statCard(info.filter(x => x.salud === 'bloqueada').length, 'Bloqueadas', 'Requieren decisión', info.some(x => x.salud === 'bloqueada') ? 'dn' : 'up') + statCard(fmtEur0(info.reduce((s,x) => s + x.eco.total, 0)), 'Total vigente', 'Suma de obras', 'up') + statCard(fmtEur0(info.reduce((s,x) => s + Math.max(0, x.eco.saldo), 0)), 'Saldo pendiente', 'Por cobrar', 'dn') + '</div>' +
     (avisosPendientes(DB).length ? cobrosPorConfirmarHtml() : '') +
-    '<div class="ctrl-row">' + sel('estado','Todos los estados',ESTADOS_OBRA.map(e => [e, ESTADO_LABEL[e]])) + sel('salud','Toda salud',[['al_dia','Al día'],['en_riesgo','En riesgo'],['bloqueada','Bloqueada']]) + sel('saldo','Cualquier saldo',[['con','Con saldo'],['sin','Sin saldo']]) + '<span class="bandeja-count">' + items.length + ' obra(s)</span></div>' +
+    '<div class="ctrl-row">' + sel('estado','Todos los estados',ESTADOS_OBRA.map(e => [e, ESTADO_LABEL[e]])) + sel('salud','Toda salud',[['al_dia','Al día'],['en_riesgo','En riesgo'],['bloqueada','Bloqueada']]) + sel('saldo','Cualquier saldo',[['con','Pendiente de cobro'],['sin','Sin saldo']]) + '<span class="bandeja-count">' + items.length + ' obra(s)</span><button class="abtn abtn-ghost abtn-sm" onclick="obrasTab=\'cobros\';cobrosTab=\'mov\';RENDERERS.obras()">Ver todos los movimientos</button></div>' +
     (items.length ? '<div class="table-wrap"><table><thead><tr><th>Cliente</th><th>Estado</th><th>Progreso</th><th>Salud</th><th>Total vs cobrado</th><th>Próximo hito</th><th>Última foto</th></tr></thead><tbody>' + rows + '</tbody></table></div>' : '<div class="section-card" style="text-align:center;color:var(--muted)">No hay obras con estos filtros.</div>');
 };
 
@@ -4486,7 +4594,7 @@ function fichaObra(c){
       (!rqI.ok ? '<div class="mv-aviso" style="font-size:13px;font-weight:400">⛔ Te falta: ' + escH(textoFaltan(rqI)) + '. <button class="abtn abtn-ghost abtn-sm" onclick="cobroModal(\'' + c.id + '\',{tipo:\'senal\',concepto:\'Señal al aceptar\'})">Registrar cobro</button>' + (avisosPendientes(DB, c.id).length ? ' <span style="font-size:12px">Hay un aviso de pago por confirmar en la pestaña Cobros.</span>' : '') + '</div><label class="check-q"><input type="checkbox" id="ob-igual" onchange="document.getElementById(\'ob-nota-w\').style.display=this.checked?\'\':\'none\'"> Iniciar igualmente (exige una nota)</label><div class="inl-field" id="ob-nota-w" style="display:none"><label>Nota</label><input id="ob-nota" placeholder="Por qué se inicia sin la señal confirmada"></div>' : '') +
       '<div class="inl-field"><label>Fecha de inicio</label><input type="date" id="ob-inicio" value="' + hoy() + '"></div><div style="margin-top:12px"><button class="abtn abtn-primary" onclick="obraIniciar()">Iniciar obra</button></div></div>';
   }
-  h += obraAvisos(c) + obraHitos(c, ro) + obraGaleria(c, ro) + obraCambios(c, ro) + obraSolicitudes(c) + obraAdendas(c, ro) + obraRemates(c, ro) + obraCierre(c);
+  h += obraAvisos(c) + obraHitos(c, ro) + obraIncidencias(c, ro) + obraGaleria(c, ro) + obraRemates(c, ro) + obraCierre(c);
   return h;
 }
 function obraAvisos(c){
@@ -4522,7 +4630,7 @@ function obraHitos(c, ro){
     '<td><input value="' + escH(h.nombre) + '" ' + (ro?'disabled':'') + ' onchange="hitoEdit(\'' + h.id + '\',\'nombre\',this.value)"></td>' +
     '<td style="width:60px"><input class="num" type="number" min="1" value="' + h.diasEstimados + '" ' + (ro?'disabled':'') + ' onchange="hitoEdit(\'' + h.id + '\',\'dias\',this.value)"></td>' +
     '<td style="width:130px"><input type="date" value="' + (h.fechaFinPrevista||h.fechaPrevista||'') + '" ' + (ro?'disabled':'') + ' onchange="hitoEdit(\'' + h.id + '\',\'fecha\',this.value)"></td>' +
-    '<td><span class="etiq-chip etiq-' + (h.estado==='hecho'?'ok':h.estado==='en_curso'?'info':'warn') + '">' + h.estado.replace('_',' ') + '</span>' + (h.fechaReal ? '<div style="font-size:10px;color:var(--muted)">' + fmtFechaCorta(h.fechaReal) + '</div>' : '') + ((h.fotos||[]).length ? '<div style="font-size:10px">📷 ' + h.fotos.length + '</div>' : '') + '</td>' +
+    '<td><span class="etiq-chip etiq-' + (h.estado==='hecho'?'ok':h.estado==='en_curso'?'info':'warn') + '">' + h.estado.replace('_',' ') + '</span>' + (h.fechaReal ? '<div style="font-size:10px;color:var(--muted)">' + fmtFechaCorta(h.fechaReal) + '</div>' : '') + ((h.fotos||[]).length ? '<div style="font-size:10px">📷 ' + h.fotos.length + '</div><div class="mv-thumbs" style="grid-template-columns:repeat(auto-fill,minmax(48px,1fr));margin-top:4px">' + h.fotos.filter(f => f.adjuntoId).map(f => fotoThumbHtml(f, 'foto')).join('') + '</div>' : '') + (h.nota ? '<div style="font-size:10px;color:var(--muted)">📝 ' + escH(h.nota) + '</div>' : '') + '</td>' +
     '<td style="white-space:nowrap">' + (ro ? '' : '<button class="abtn abtn-ghost abtn-sm" onclick="hitoEstado(\'' + h.id + '\',\'en_curso\')">En curso</button> <button class="abtn abtn-primary abtn-sm" onclick="hitoHechoModal(\'' + h.id + '\')">Hecho</button> ' +
       '<span style="cursor:pointer" onclick="hitoMover(\'' + h.id + '\',-1)">▲</span> <span style="cursor:pointer" onclick="hitoMover(\'' + h.id + '\',1)">▼</span> <span style="cursor:pointer;color:var(--danger)" onclick="hitoBorrarAsk(\'' + h.id + '\')">✕</span>') + '</td></tr>').join('');
   return '<details class="ob-det" open><summary>Hitos (' + hs.filter(x=>x.estado==='hecho').length + '/' + hs.length + ')</summary><table class="lineas-tbl"><thead><tr><th>Hito</th><th>Días</th><th>Fecha prevista</th><th>Estado</th><th></th></tr></thead><tbody>' + rows + '</tbody></table>' +
@@ -4555,6 +4663,21 @@ function hitoHechoOk(hid){
   renderPaginaActual(); renderFicha(); avisos.forEach(a => toast(a));
 }
 
+// R-28 · Incidencias de la obra
+let incF = 'abiertas';
+function obraIncidencias(c, ro){
+  const todas = c.obra.incidencias || []; const lista = todas.filter(i => incF === 'todas' || i.estado === 'abierta');
+  const ab = todas.filter(i => i.estado === 'abierta').length;
+  return '<details class="ob-det" id="ob-incidencias" ' + (ab ? 'open' : '') + '><summary>Incidencias (' + ab + ' abiertas de ' + todas.length + ')' + (todas.some(i => i.estado === 'abierta' && i.bloquea) ? ' · <span style="color:var(--danger)">bloquea la obra</span>' : '') + '</summary>' +
+    '<div class="ctrl-row"><select onchange="incF=this.value;renderFicha()"><option value="abiertas"' + (incF==='abiertas'?' selected':'') + '>Solo abiertas</option><option value="todas"' + (incF==='todas'?' selected':'') + '>Todas</option></select></div>' +
+    (lista.length ? lista.map(i => '<div class="tl-item" style="align-items:flex-start"><div style="flex:1"><b>' + i.id + '</b> · ' + escH(TIPO_INCIDENCIA[i.tipo] || i.tipo) + ' <span class="badge ' + (i.gravedad==='alta'?'b-err':i.gravedad==='media'?'b-warn':'b-mute') + '">' + (GRAVEDAD_LBL[i.gravedad]||i.gravedad) + '</span>' + (i.bloquea ? ' <span class="badge b-err">bloquea</span>' : '') + (i.diasRetraso ? ' <span class="badge b-warn">+' + i.diasRetraso + ' d</span>' : '') + (i.visibleCliente ? '' : ' <span class="badge b-mute">interna</span>') +
+      '<div style="font-size:13px">' + escH(i.texto) + '</div><div class="tl-autor">' + fmtFecha(i.fecha) + ' · ' + (i.estado === 'abierta' ? 'abierta' : 'resuelta' + (i.resolucion ? ': ' + escH(i.resolucion) : '')) + (i.cambioId ? ' · cambio ' + i.cambioId : '') + '</div>' +
+      ((i.fotos||[]).length ? '<div class="bub-adj" style="margin-top:4px">' + i.fotos.map(f => adjChipHtml(f)).join('') + '</div>' : '') + '</div>' +
+      (!ro && i.estado === 'abierta' ? '<div style="display:flex;flex-direction:column;gap:4px"><button class="abtn abtn-primary abtn-sm" onclick="incResolverModal(\'' + i.id + '\')">Resolver</button>' + (!i.cambioId ? '<button class="abtn abtn-ghost abtn-sm" onclick="registrarCambioModal(\'' + c.id + '\',{concepto:\'' + escH(i.texto.replace(/'/g, ' ')).slice(0, 80) + '\',tipo:\'imprevisto\'})">Convertir en cambio</button>' : '') + '</div>' : '') + '</div>').join('') : '<div style="font-size:12px;color:var(--muted)">Sin incidencias' + (incF === 'abiertas' && todas.length ? ' abiertas' : '') + '.</div>') + '</details>';
+}
+function incResolverModal(id){ openModal('<div class="modal-title">Resolver la incidencia ' + id + '</div><div class="inl-field"><label>Resolución</label><input id="inc-nota" placeholder="Cómo se ha resuelto"></div><div style="margin-top:14px;display:flex;gap:8px;justify-content:flex-end"><button class="abtn abtn-ghost" onclick="renderFicha()">Cancelar</button><button class="abtn abtn-primary" onclick="incResolverOk(\'' + id + '\')">Marcar resuelta</button></div>'); }
+function incResolverOk(id){ const c = _fc(); const nota = (document.getElementById('inc-nota') || {}).value; resolverIncidencia(c, id, nota); toast('Incidencia resuelta'); renderPaginaActual(); renderFicha(); }
+
 // Galería
 let obraFoto = { momento:'', espacio:'' };
 function obraGaleria(c, ro){
@@ -4563,7 +4686,12 @@ function obraGaleria(c, ro){
   return '<details class="ob-det"><summary>Galería (' + fotos.length + ')</summary><div class="ctrl-row"><select onchange="obraFoto.momento=this.value;renderFicha()"><option value="">Antes / durante / después</option>' + ['antes','durante','despues'].map(m => '<option value="' + m + '"' + (obraFoto.momento===m?' selected':'') + '>' + m + '</option>').join('') + '</select>' +
     '<select onchange="obraFoto.espacio=this.value;renderFicha()"><option value="">Todas las estancias</option>' + esp.map(e => '<option value="' + e.id + '"' + (obraFoto.espacio===e.id?' selected':'') + '>' + escH(e.nombre||e.tipo) + '</option>').join('') + '</select>' +
     (ro ? '' : '<select id="gf-mom"><option value="durante">durante</option><option value="antes">antes</option><option value="despues">después</option></select><select id="gf-esp">' + esp.map(e => '<option value="' + e.id + '">' + escH(e.nombre||e.tipo) + '</option>').join('') + '</select><button class="abtn abtn-primary abtn-sm" onclick="obraSubirFoto()">📷 Subir foto</button>') + '</div>' +
-    '<div class="mv-thumbs">' + (fotos.map(f => { const e = esp.find(x => x.id === f.espacioId); return '<div class="mv-thumb">' + escH(f.hito || f.momento || 'foto') + (e ? ' · ' + escH(e.nombre||e.tipo) : '') + '<br>' + fmtFechaCorta(f.fecha) + '</div>'; }).join('') || '<span style="font-size:12px;color:var(--muted)">Sin fotos con este filtro.</span>') + '</div></details>';
+    '<div class="mv-thumbs">' + (fotos.map(f => { const e = esp.find(x => x.id === f.espacioId); return fotoThumbHtml(f, (f.hito || f.momento || 'foto') + (f.hito && f.momento ? ' · ' + f.momento : '') + (e ? ' · ' + (e.nombre||e.tipo) : '') + ' · ' + fmtFechaCorta(f.fecha)); }).join('') || '<span style="font-size:12px;color:var(--muted)">Sin fotos con este filtro.</span>') + '</div></details>';
+}
+function fotoThumbHtml(f, etiqueta){
+  const u = f.adjuntoId ? Adj.url(f.adjuntoId) : null;
+  if (u) return '<button type="button" class="mv-thumb" style="background:#333 center/cover no-repeat url(' + u + ');border:none;cursor:pointer" onclick="justificanteVer(\'' + f.adjuntoId + '\',\'renderFicha()\')" aria-label="Ver foto: ' + escH(etiqueta) + '"><span style="background:rgba(0,0,0,.55);padding:1px 4px;border-radius:4px">' + escH(etiqueta) + '</span></button>';
+  return '<div class="mv-thumb">' + escH(etiqueta) + '</div>';
 }
 function obraSubirFoto(){ const c = _fc(); c.obra.fotos.push({ id:uid('of'), fecha:hoy(), url:'foto-simulada.jpg', momento:document.getElementById('gf-mom').value, espacioId:document.getElementById('gf-esp').value }); toast('Foto añadida a la galería'); renderFicha(); }
 
@@ -4571,52 +4699,78 @@ function obraSubirFoto(){ const c = _fc(); c.obra.fotos.push({ id:uid('of'), fec
 function obraCambios(c, ro){
   const cs = c.obra.cambios||[]; const iva = ivaDe(c);
   const rows = cs.map(ch => {
-    const pend = ch.estado !== 'consolidado';
+    const pend = ch.estado !== 'consolidado' && ch.estado !== 'retirado';
     return '<tr><td><b>' + ch.id + '</b><div style="font-size:10px;color:var(--muted)">' + fmtFechaCorta(ch.fecha) + '</div></td><td>' + escH(ch.concepto) + '<div style="font-size:10px;color:var(--muted)">' + (TIPO_CAMBIO[ch.tipo]||ch.tipo||'') + ' · ' + (APROB_LBL[ch.aprobacion]||'') + (ch.foto?' · 📷':'') + '</div>' + (ch.partidaPausada ? '<div class="etiq-chip etiq-bad">partida pausada pendiente de aprobación</div>' : '') + '</td>' +
-      '<td style="text-align:right"><b>' + fmtEur(ch.importe) + '</b><div style="font-size:10px;color:var(--muted)">' + fmtEur(ch.importe * (1 + iva/100)) + ' c/IVA</div></td>' +
-      '<td><span class="badge ' + (ch.estado==='consolidado'?'b-ok':ch.estado==='en_desacuerdo'?'b-err':'b-warn') + '">' + ch.estado.replace('_',' ') + '</span>' + (ch.bloqueaObra && !ch.resuelto && pend ? ' <span class="badge b-err">bloquea</span>' : '') + (ch.urgente ? ' <span class="badge b-warn">urgente</span>' : '') + '</td>' +
+      '<td style="text-align:right"' + (ch.estado === 'retirado' ? ' class="retirado"' : '') + '><b' + (ch.estado === 'retirado' ? ' style="text-decoration:line-through"' : '') + '>' + fmtEur(ch.importe) + '</b><div style="font-size:10px;color:var(--muted)">' + fmtEur(ch.importe * (1 + iva/100)) + ' c/IVA</div></td>' +
+      '<td><span class="badge ' + (ch.estado==='consolidado'?'b-ok':ch.estado==='en_desacuerdo'?'b-err':ch.estado==='retirado'?'b-mute':'b-warn') + '">' + ch.estado.replace('_',' ') + '</span>' + (ch.cortesia ? ' <span class="badge b-info">cortesía</span>' : '') + (ch.estado==='retirado' && ch.motivoRetiro ? '<div style="font-size:10px;color:var(--muted)">' + escH(ch.motivoRetiro) + '</div>' : '') + (ch.notaMantener ? '<div style="font-size:10px;color:var(--muted)">Se mantiene: ' + escH(ch.notaMantener) + '</div>' : '') + (ch.bloqueaObra && !ch.resuelto && pend ? ' <span class="badge b-err">bloquea</span>' : '') + (ch.urgente ? ' <span class="badge b-warn">urgente</span>' : '') + '</td>' +
       '<td style="white-space:nowrap">' + (ro || !pend ? '' :
         '<a class="abtn abtn-ghost abtn-sm" target="_blank" rel="noopener" href="' + waLink(clienteDe(c).tel, fillTpl(PLANTILLAS_MSG.aviso_cambio, varsDe(c, { concepto:ch.concepto, importe:fmtEur(ch.importe*(1+iva/100)) }))) + '">Aviso</a> ' +
         (ch.bloqueaObra && !ch.resuelto ? '<button class="abtn abtn-primary abtn-sm" onclick="cambioResolverBloqueo(\'' + ch.id + '\')">Resolver bloqueo</button> ' : '') +
-        (ch.estado === 'en_desacuerdo' ? '<button class="abtn abtn-primary abtn-sm" onclick="desacuerdoModal(\'' + ch.id + '\')">Resolver desacuerdo</button>' : '<button class="abtn abtn-ghost abtn-sm" title="Simula la respuesta del cliente" onclick="cambioSimDesacuerdo(\'' + ch.id + '\')">Simular desacuerdo</button>')) + '</td></tr>';
+        (ch.estado === 'en_desacuerdo' ? '<button class="abtn abtn-primary abtn-sm" onclick="desacuerdoModal(\'' + ch.id + '\')">Resolver duda</button>' : '<button class="abtn abtn-ghost abtn-sm" title="Simula la respuesta del cliente" onclick="cambioSimDesacuerdo(\'' + ch.id + '\')">Simular desacuerdo</button>')) + '</td></tr>';
   }).join('');
   const pend = cambiosPendientes(c); const sum = r(pend.reduce((s,x) => s + x.importe, 0));
   return '<details class="ob-det" open><summary>Cambios (' + cs.length + ') · pendientes ' + fmtEur(sum) + ' sin IVA</summary>' +
     (cs.length ? '<div style="overflow-x:auto"><table class="lineas-tbl"><thead><tr><th>#</th><th>Concepto</th><th style="text-align:right">Importe</th><th>Estado</th><th></th></tr></thead><tbody>' + rows + '</tbody></table></div>' : '<div style="font-size:12px;color:var(--muted)">Sin cambios registrados.</div>') +
     (ro ? '' : '<div style="margin-top:10px"><button class="abtn abtn-primary abtn-sm" onclick="registrarCambioModal(\'' + c.id + '\')">+ Registrar cambio</button></div>') + '</details>';
 }
-let _rc = { casoId:null, pre:{} };
-function registrarCambioModal(casoId, pre){ _rc = { casoId, pre:pre||{} }; const c = DB.casos.find(x => x.id === casoId); const p = _rc.pre; const iva = ivaDe(c);
+let _rc = { casoId:null, pre:{}, modo:'final', partidas:[] };
+function rcResultado(){
+  const v = id => (document.getElementById(id) || {}).value; const c = DB.casos.find(x => x.id === _rc.casoId); const iva = ivaDe(c);
+  const d = { importe:v('rc-importe'), coste:v('rc-coste'), partidas:_rc.partidas };
+  const imp = importeCambioRapido(_rc.modo, d, DB.cfg.margen); const el = document.getElementById('rc-res');
+  if (el) el.innerHTML = '<b>' + fmtEur(imp.importe) + '</b> sin IVA · ' + fmtEur(imp.importe * (1 + iva/100)) + ' con IVA ' + iva + ' %' + (imp.margenEur != null ? '<div style="font-size:11px;color:var(--muted)">Coste ' + fmtEur(imp.coste) + ' + margen ' + DB.cfg.margen + ' % (' + fmtEur(imp.margenEur) + ')</div>' : '');
+  return imp;
+}
+function rcModo(m){ _rc.modo = m; ['final','coste_margen','partidas'].forEach(k => { const e = document.getElementById('rc-m-' + k); if (e) e.style.display = k === m ? '' : 'none'; }); rcResultado(); }
+function rcPartidasHtml(){
+  const cat = catalogoCambios(DB);
+  return _rc.partidas.map((p, i) => '<div class="inl-field" style="flex-wrap:wrap"><input style="flex:2;min-width:150px" value="' + escH(p.nombre) + '" placeholder="Trabajo o producto" oninput="_rc.partidas[' + i + '].nombre=this.value"><input type="number" step="0.01" style="max-width:80px" value="' + p.cant + '" aria-label="Cantidad" oninput="_rc.partidas[' + i + '].cant=Number(this.value)||0;rcResultado()"><input type="number" step="0.01" style="max-width:90px" value="' + p.precio + '" aria-label="Precio unitario" oninput="_rc.partidas[' + i + '].precio=Number(this.value)||0;rcResultado()"><button class="abtn abtn-ghost abtn-sm" onclick="rcPartidaDel(' + i + ')" aria-label="Quitar partida">✕</button></div>').join('') +
+    '<div class="inl-field"><label>Añadir del catálogo</label><select id="rc-cat" onchange="rcPartidaAdd(this.value)"><option value="">Elegir trabajo o producto…</option>' + cat.map(x => '<option value="' + x.id + '">' + escH(x.nombre) + ' · ' + fmtEur(x.precio) + '/' + escH(x.unidad) + '</option>').join('') + '</select><button class="abtn abtn-ghost abtn-sm" onclick="rcPartidaAdd(\'\')">+ Libre</button></div>';
+}
+function rcPartidaAdd(id){ const x = id ? catalogoCambios(DB).find(y => y.id === id) : null; _rc.partidas.push({ nombre:x ? x.nombre : '', cant:1, precio:x ? x.precio : 0 }); document.getElementById('rc-partidas').innerHTML = rcPartidasHtml(); rcResultado(); }
+function rcPartidaDel(i){ _rc.partidas.splice(i, 1); document.getElementById('rc-partidas').innerHTML = rcPartidasHtml(); rcResultado(); }
+function registrarCambioModal(casoId, pre){ _rc = { casoId, pre:pre||{}, modo:'final', partidas:[] }; const c = DB.casos.find(x => x.id === casoId); const p = _rc.pre;
   openModal('<div class="modal-title">Registrar cambio · ' + escH(clienteDe(c).nombre) + '</div>' +
+    '<div class="inl-field"><label>Concepto *</label><input id="rc-concepto" value="' + escH(p.concepto||'') + '" placeholder="Qué cambia"></div>' +
     '<div class="inl-field"><label>Tipo</label><select id="rc-tipo">' + Object.entries(TIPO_CAMBIO).map(([k,v]) => '<option value="' + k + '"' + (p.tipo===k?' selected':'') + '>' + v + '</option>').join('') + '</select></div>' +
-    '<div class="inl-field"><label>Concepto</label><input id="rc-concepto" value="' + escH(p.concepto||'') + '" placeholder="Qué cambia"></div>' +
-    '<div class="inl-field"><label>Importe sin IVA (con margen; negativo si resta)</label><input id="rc-importe" type="number" step="0.01" value="' + (p.importe||'') + '" oninput="document.getElementById(\'rc-civa\').textContent=fmtEur((Number(this.value)||0)*' + (1+iva/100) + ')"></div>' +
-    '<div class="inl-field"><label>Con IVA ' + iva + ' %</label><span id="rc-civa" style="flex:1">' + fmtEur(0) + '</span></div>' +
-    '<div class="inl-field"><label>Cómo se aprobó</label><select id="rc-aprob">' + Object.entries(APROB_LBL).map(([k,v]) => '<option value="' + k + '">' + v + '</option>').join('') + '</select></div>' +
+    '<div class="inl-field" role="radiogroup" aria-label="Cómo fijas el importe"><label>Importe *</label><label class="check-q"><input type="radio" name="rc-modo" checked onchange="rcModo(\'final\')"> Precio final sin IVA</label><label class="check-q"><input type="radio" name="rc-modo" onchange="rcModo(\'coste_margen\')"> Coste + margen</label><label class="check-q"><input type="radio" name="rc-modo" onchange="rcModo(\'partidas\')"> Por partidas</label></div>' +
+    '<div id="rc-m-final"><div class="inl-field"><label>Precio final sin IVA</label><input id="rc-importe" type="number" step="0.01" value="' + (p.importe||'') + '" placeholder="Negativo si resta" oninput="rcResultado()"></div></div>' +
+    '<div id="rc-m-coste_margen" style="display:none"><div class="inl-field"><label>Tu coste (sin margen)</label><input id="rc-coste" type="number" step="0.01" oninput="rcResultado()"></div></div>' +
+    '<div id="rc-m-partidas" style="display:none"><div id="rc-partidas">' + rcPartidasHtml() + '</div></div>' +
+    '<div class="porque" id="rc-res" style="margin:8px 0"></div>' +
+    '<details class="ob-det"><summary>Más opciones</summary><div class="inl-field"><label>Cómo se aprobó</label><select id="rc-aprob">' + Object.entries(APROB_LBL).map(([k,v]) => '<option value="' + k + '">' + v + '</option>').join('') + '</select></div>' +
     '<label class="check-q"><input type="checkbox" id="rc-bloquea"> ¿Bloquea la obra?</label><label class="check-q"><input type="checkbox" id="rc-urgente"> ¿Urgente?</label><label class="check-q"><input type="checkbox" id="rc-foto"> Con foto adjunta</label>' +
-    '<div class="inl-field"><label>Nota</label><input id="rc-nota" placeholder="Nota o transcripción de audio"></div>' +
-    '<div style="margin-top:14px;display:flex;gap:8px;justify-content:flex-end"><button class="abtn abtn-ghost" onclick="renderFicha()">Cancelar</button><button class="abtn abtn-primary" onclick="confirmarRC()">Registrar y avisar al cliente</button></div>'); }
+    '<div class="inl-field"><label>Nota</label><input id="rc-nota" placeholder="Nota o transcripción de audio"></div></details>' +
+    '<div style="margin-top:14px;display:flex;gap:8px;justify-content:flex-end"><button class="abtn abtn-ghost" onclick="renderFicha()">Cancelar</button><button class="abtn abtn-primary" onclick="confirmarRC()">Registrar y avisar al cliente</button></div>'); rcResultado(); }
+function avisoCambioHtml(rs, c){
+  const trig = rs.trig;
+  return '<p style="font-size:13px;color:var(--muted)">Aviso informativo para el cliente (el cliente nunca fija el precio):</p>' + msgBloque(rs.msg, clienteDe(c).tel) +
+    '<div class="porque" style="font-size:12px;margin:8px 0">Umbral de adenda: ' + textoUmbral(c, DB.cfg) + ' · pendiente ' + fmtEur(cambiosPendientes(c).reduce((s,x) => s + x.importe, 0)) + ' sin IVA.</div>' +
+    (trig.length ? '<div class="mv-aviso" style="font-size:13px">⚠ <b>Disparador de adenda:</b> ' + trig.map(t => escH(TRIGGER_TXT[t]||t)).join('; ') + '.' + (trig.includes('tope') ? ' <b>Adenda inmediata recomendada.</b>' : '') + '</div>' : '');
+}
 function confirmarRC(){
   const c = DB.casos.find(x => x.id === _rc.casoId); const v = id => document.getElementById(id);
-  const concepto = v('rc-concepto').value.trim(); const importe = Number(v('rc-importe').value);
-  if (!concepto){ toast('Indica el concepto','err'); return; } if (!importe){ toast('Indica un importe distinto de 0','err'); return; }
-  const ch = registrarCambio(c, { tipo:v('rc-tipo').value, concepto, importe, aprobacion:v('rc-aprob').value, bloqueaObra:v('rc-bloquea').checked, urgente:v('rc-urgente').checked, foto:v('rc-foto').checked, nota:v('rc-nota').value });
-  if (_rc.pre.solicitudId){ const sc = c.obra.solicitudesCambio.find(x => x.id === _rc.pre.solicitudId); if (sc){ sc.estado = 'valorada'; sc.cambioId = ch.id; } }
-  const trig = debeGenerarAdenda(c, DB.cfg, {}); const iva = ivaDe(c);
-  const msg = fillTpl(PLANTILLAS_MSG.aviso_cambio, varsDe(c, { concepto:ch.concepto, importe:fmtEur(ch.importe*(1+iva/100)) }));
+  let rs;
+  try { rs = altaCambioRapido(c, { modo:_rc.modo, concepto:v('rc-concepto').value, tipo:v('rc-tipo').value, importe:v('rc-importe').value, coste:v('rc-coste').value, partidas:_rc.partidas, aprobacion:v('rc-aprob').value, bloquea:v('rc-bloquea').checked, urgente:v('rc-urgente').checked, fotoId:v('rc-foto').checked ? 'adjunta' : null, nota:v('rc-nota').value, solicitudId:_rc.pre.solicitudId, origen:'admin' }); }
+  catch (e) { toast(e.message, 'err'); return; }
   renderPaginaActual();
-  openModal('<div class="modal-title">Cambio ' + ch.id + ' registrado</div><p style="font-size:13px;color:var(--muted)">Aviso informativo para el cliente (el cliente nunca fija el precio):</p>' + msgBloque(msg, clienteDe(c).tel) +
-    (trig.length ? '<div class="mv-aviso" style="font-size:13px">⚠ <b>Disparador de adenda:</b> ' + trig.map(t => escH(TRIGGER_TXT[t]||t)).join('; ') + '.' + (trig.includes('tope') ? ' <b>Adenda inmediata recomendada.</b>' : '') + '</div>' : '') +
-    '<div style="margin-top:14px;text-align:right"><button class="abtn abtn-primary" onclick="renderFicha()">Volver a la obra</button></div>');
-  if (trig.length) toast('Disparador de adenda activo: ' + trig[0]);
+  openModal('<div class="modal-title">Cambio ' + rs.ch.id + ' registrado</div>' + avisoCambioHtml(rs, c) + '<div style="margin-top:14px;text-align:right"><button class="abtn abtn-primary" onclick="renderFicha()">Volver a la obra</button></div>');
+  if (rs.trig.length) toast('Disparador de adenda activo: ' + rs.trig[0]);
 }
 function cambioResolverBloqueo(id){ const c = _fc(); const ch = c.obra.cambios.find(x => x.id === id); ch.resuelto = true; ch.partidaPausada = false; c.eventos.push({ fecha:hoy(), tipo:'cambio', texto:'Bloqueo del cambio ' + id + ' resuelto: la obra continúa', autor:'reformista' }); toast('Bloqueo resuelto'); renderPaginaActual(); renderFicha(); }
 function cambioSimDesacuerdo(id){ const c = _fc(); marcarDesacuerdo(c, id); toast('El cliente no está de acuerdo con ' + id); renderPaginaActual(); renderFicha(); }
 function desacuerdoModal(id){ const c = _fc(); const ch = c.obra.cambios.find(x => x.id === id);
-  openModal('<div class="modal-title">Resolver desacuerdo · ' + id + '</div><p style="font-size:13px;margin-bottom:10px">' + escH(ch.concepto) + ' · ' + fmtEur(ch.importe) + '</p><div class="inl-field"><label>Nuevo importe sin IVA</label><input id="da-imp" type="number" step="0.01" value="' + ch.importe + '"></div><div class="inl-field"><label>Nota (obligatoria para mantener)</label><input id="da-nota" placeholder="Por qué se mantiene el importe"></div><p style="font-size:12px;color:var(--muted)">Hasta que lo resuelvas no se puede consolidar ni terminar la obra.</p>' +
-    '<div style="margin-top:14px;display:flex;gap:8px;justify-content:flex-end"><button class="abtn abtn-ghost" onclick="renderFicha()">Cancelar</button><button class="abtn abtn-ghost" onclick="desacuerdoOk(\'' + id + '\',\'mantener\')">Mantener importe</button><button class="abtn abtn-primary" onclick="desacuerdoOk(\'' + id + '\',\'ajustar\')">Ajustar importe</button></div>'); }
-function desacuerdoOk(id, accion){ const c = _fc(); const imp = accion === 'ajustar' ? document.getElementById('da-imp').value : null; const nota = ((document.getElementById('da-nota') || {}).value || '').trim();
-  if (!exigir('resolver_duda', c, { datos:{ opcion:accion, nota, importe:imp } })) return; /* A11 */ resolverDesacuerdo(c, id, accion, imp); toast('Desacuerdo resuelto'); renderPaginaActual(); renderFicha(); }
+  openModal('<div class="modal-title">Resolver la duda · ' + id + '</div><p style="font-size:13px;margin-bottom:6px">' + escH(ch.concepto) + ' · ' + fmtEur(ch.importe) + ' sin IVA</p>' + (ch.comentarioCliente ? '<div class="porque" style="margin-bottom:8px">El cliente dice: «' + escH(ch.comentarioCliente) + '»</div>' : '') +
+    '<div class="inl-field" role="radiogroup" aria-label="Qué haces"><label>Qué haces</label><label class="check-q"><input type="radio" name="da-op" value="ajustar" checked onchange="daOp(this.value)"> Ajustar el importe</label><label class="check-q"><input type="radio" name="da-op" value="retirar" onchange="daOp(this.value)"> Retirar el cambio</label><label class="check-q"><input type="radio" name="da-op" value="mantener" onchange="daOp(this.value)"> Mantener</label></div>' +
+    '<div class="inl-field" id="da-w-imp"><label>Nuevo importe sin IVA</label><input id="da-imp" type="number" step="0.01" value="' + ch.importe + '"><span style="font-size:11px;color:var(--muted)">A 0 € lo asumes tú (cortesía registrada)</span></div>' +
+    '<div class="inl-field"><label id="da-lbl-nota">Nota (opcional)</label><input id="da-nota" placeholder="Explicación para el cliente"></div><p style="font-size:12px;color:var(--muted)">En las tres opciones se avisa al cliente con la plantilla «cambio resuelto». Hasta que lo resuelvas no se puede consolidar ni terminar la obra. Un cambio retirado no suma en el total ni en el umbral.</p>' +
+    '<div style="margin-top:14px;display:flex;gap:8px;justify-content:flex-end"><button class="abtn abtn-ghost" onclick="renderFicha()">Cancelar</button><button class="abtn abtn-primary" onclick="desacuerdoOk(\'' + id + '\')">Resolver y avisar al cliente</button></div>'); }
+function daOp(op){ document.getElementById('da-w-imp').style.display = op === 'ajustar' ? '' : 'none'; document.getElementById('da-lbl-nota').textContent = op === 'mantener' ? 'Nota (obligatoria)' : op === 'retirar' ? 'Motivo de la retirada' : 'Nota (opcional)'; }
+function desacuerdoOk(id, accionForzada){ const c = _fc(); const sel = document.querySelector('input[name="da-op"]:checked'); const accion = accionForzada || (sel ? sel.value : 'ajustar');
+  const imp = accion === 'ajustar' ? (document.getElementById('da-imp') || {}).value : null; const nota = ((document.getElementById('da-nota') || {}).value || '').trim();
+  if (!exigir('resolver_duda', c, { datos:{ opcion:accion, nota, motivo:nota || (accion === 'retirar' ? 'Retirado a petición del cliente' : ''), importe:imp } })) return; /* A11 */
+  try { resolverDesacuerdo(c, id, accion, imp, nota || (accion === 'retirar' ? 'Retirado a petición del cliente' : '')); } catch (e) { toast(e.message, 'err'); return; }
+  toast('Duda resuelta y cliente avisado'); renderPaginaActual(); renderFicha(); }
 
 // Solicitudes del cliente
 function obraSolicitudes(c){
@@ -4637,7 +4791,7 @@ function obraAdendas(c, ro){
   const iva = ivaDe(c); const tv = totalVigente(c); const delta = r(regs.filter(x => selIds.includes(x.id)).reduce((s,x) => s + x.importe, 0)); const dIva = r(delta * (1 + iva/100));
   const lista = (c.obra.adendas||[]).map(a => '<div class="tl-item" style="align-items:center"><div style="flex:1"><b>' + a.id + '</b> · ' + escH(a.concepto||'') + ' · ' + fmtEur(a.delta) + ' sin IVA<div class="tl-autor">motivo ' + (a.motivo||'—') + ' · ' + (a.firmadaAt ? 'firmada ' + fmtFecha(a.firmadaAt) : 'enviada ' + fmtFecha(a.enviadaAt)) + '</div></div><span class="badge ' + (a.estado==='firmada'?'b-ok':'b-warn') + '">' + a.estado + '</span>' + (a.estado === 'enviada' ? ' <button class="abtn abtn-ghost abtn-sm" onclick="adendaSimFirma(\'' + a.id + '\')">Simular firma del cliente</button>' : '') + '</div>').join('');
   return '<details class="ob-det" ' + (trig.length || regs.length ? 'open' : '') + '><summary>Adendas (' + (c.obra.adendas||[]).length + ')' + (trig.length ? ' · <span style="color:var(--danger)">' + trig.length + ' disparador(es)</span>' : '') + '</summary>' +
-    (trig.length ? '<div class="mv-aviso" style="font-size:13px">' + trig.map(t => '⚠ ' + escH(TRIGGER_TXT[t]||t)).join('<br>') + '<div style="font-size:11px;font-weight:400;margin-top:4px">Umbral: ' + fmtEur(umbralAdendaEur(c, DB.cfg)) + ' sin IVA · tope individual ' + fmtEur0(DB.cfg.adendaTopeIndividual) + '</div></div>' : '<div style="font-size:12px;color:var(--muted);margin-bottom:6px">Sin disparadores activos (umbral ' + fmtEur(umbralAdendaEur(c, DB.cfg)) + ' sin IVA).</div>') +
+    (trig.length ? '<div class="mv-aviso" style="font-size:13px">' + trig.map(t => '⚠ ' + escH(TRIGGER_TXT[t]||t)).join('<br>') + '<div style="font-size:11px;font-weight:400;margin-top:4px">Umbral: ' + textoUmbral(c, DB.cfg) + ' · tope individual ' + fmtEur0(DB.cfg.adendaTopeIndividual) + '</div></div>' : '<div style="font-size:12px;color:var(--muted);margin-bottom:6px">Sin disparadores activos (umbral ' + textoUmbral(c, DB.cfg) + ').</div>') +
     (lista || '<div style="font-size:12px;color:var(--muted)">Sin adendas.</div>') +
     (ro ? '' : '<div class="section-card" style="margin-top:10px"><div class="section-card-title">Constructor de adenda</div>' +
       (regs.length ? regs.map(x => '<label class="check-q"><input type="checkbox" ' + (selIds.includes(x.id)?'checked':'') + ' onchange="adSel(\'' + x.id + '\',this.checked)"> <b>' + x.id + '</b> ' + escH(x.concepto) + ' · ' + fmtEur(x.importe) + '</label>').join('') : '<div style="font-size:12px;color:var(--muted)">No hay cambios registrados pendientes de consolidar.</div>') +
@@ -4747,8 +4901,8 @@ RENDERERS.cobros = function(){
   else if (cobrosTab === 'mov') cuerpo = cobrosMovimientos();
   else if (cobrosTab === 'proformas') cuerpo = cobrosProformas();
   else cuerpo = cobrosExportar();
-  document.getElementById('pg-cobros').innerHTML =
-    '<div class="page-hdr"><div><div class="page-title">Cobros</div><div class="page-sub">Seguimiento económico de las obras</div></div><button class="abtn abtn-primary" onclick="cobroModal()">+ Registrar cobro</button></div>' +
+  subDest('cobros').innerHTML =
+    '<div class="ctrl-row" style="justify-content:space-between"><span style="font-size:13px;color:var(--muted)">Seguimiento económico de todas las obras</span><button class="abtn abtn-primary" onclick="cobroModal()">+ Registrar cobro</button></div>' +
     '<div class="mv-aviso" style="font-size:12px;font-weight:400;padding:8px 12px;margin:0 0 14px">ℹ ' + AVISO_FACTURAS + '</div>' +
     '<div class="stat-grid">' + statCard(fmtEur0(pendiente), 'Pendiente de cobro', 'Saldo de obras', pendiente > 0 ? 'dn' : 'up') + statCard(fmtEur0(cobradoMes), 'Cobrado este mes', fmtFecha(hoy()).slice(3), 'up') + statCard(info.filter(x => x.eco.saldo > 0.005).length, 'Obras con saldo', 'de ' + info.length + ' obras', 'dn') + '</div>' +
     '<div class="tabs">' + tab('obra','Por obra',info.length) + tab('mov','Movimientos',DB.cobros.length) + tab('proformas','Proformas',(DB.proformas||[]).length) + tab('exportar','Exportar') + '</div>' + cuerpo;
@@ -4844,12 +4998,18 @@ function cobrosExportar(){
     '<p style="font-size:12px;color:var(--muted);margin-top:10px">El paquete para la gestoría descarga el CSV de cobros y el JSON de resumen de la obra. El formato definitivo se decidirá con la gestoría.</p></div>';
 }
 
+// R-35 · pestaña «Cuenta» de la ficha: cambios, adendas, cobros, justificantes y proformas
+function fichaCuenta(c){
+  const ro = c.estado === 'cerrada'; let h = '';
+  if (c.aceptacion && ['en_obra','terminada','en_remates','cerrada'].includes(c.estado)) h += obraCambios(c, ro) + obraSolicitudes(c) + obraAdendas(c, ro);
+  return h + fichaCobros(c);
+}
 // Pestaña Cobros de la ficha
 function fichaCobros(c){
   const eco = estadoEconomico(c, DB.cobros); const movs = cobrosDeCaso(c, DB.cobros).sort((a,b) => String(a.fecha).localeCompare(String(b.fecha)));
   let h = '<div class="section-card"><div class="section-card-title">Estado económico</div><div style="font-size:13px">Total vigente <b>' + fmtEur(eco.total) + '</b> · Cobrado ' + fmtEur(eco.cobrado) + ' · Saldo <b style="color:' + (eco.saldo > 0.005 ? 'var(--danger)' : 'var(--ok)') + '">' + fmtEur(eco.saldo) + '</b> · <span class="badge ' + (eco.estado==='cobrado'?'b-ok':eco.estado==='parcial'?'b-warn':'b-err') + '">' + eco.estado + '</span></div>' +
     (c.aceptacion ? '<div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap"><button class="abtn abtn-primary abtn-sm" onclick="cobroModal(\'' + c.id + '\')">Registrar cobro</button><button class="abtn abtn-ghost abtn-sm" onclick="planModal(\'' + c.id + '\')">Plan de cobros</button><button class="abtn abtn-ghost abtn-sm" onclick="generarProforma(\'' + c.id + '\')">Generar proforma</button><button class="abtn abtn-ghost abtn-sm" onclick="paqueteGestoria(\'' + c.id + '\')">Paquete gestoría</button></div>' : '') + '</div>';
-  if (c.aceptacion){ const pl = planCobros(c, DB.cfg, DB.cobros); h += '<div class="section-card"><div class="section-card-title">Plan de cobros</div>' + pl.map(t => '<div style="display:flex;justify-content:space-between;font-size:13px;padding:3px 0;border-bottom:1px dashed var(--border)"><span>' + escH(t.label) + ' (' + t.pct + ' %)</span><span>' + fmtEur(t.importe) + ' <span class="badge ' + (t.estado==='cobrado'?'b-ok':t.estado==='debido'?'b-warn':'b-mute') + '">' + t.estado + '</span></span></div>').join('') + '</div>'; }
+  if (c.aceptacion){ const pl = planCobros(c, DB.cfg, DB.cobros); h += '<div class="section-card"><div class="section-card-title">Plan de cobros</div>' + pl.map(t => '<div style="display:flex;justify-content:space-between;font-size:13px;padding:3px 0;border-bottom:1px dashed var(--border)"><span>' + escH(t.label) + (t.pct != null ? ' (' + (t.resto ? 'el resto, ' : '') + t.pct + ' %)' : '') + (t.incluyeCambios > 0.005 ? ' <span class="badge b-info" title="Cambios firmados sumados a este tramo">+ ' + fmtEur(t.incluyeCambios) + ' de cambios firmados</span>' : '') + '</span><span>' + fmtEur(t.importe) + ' <span class="badge ' + (t.estado==='cobrado'?'b-ok':t.estado==='debido'?'b-warn':'b-mute') + '">' + t.estado + '</span></span></div>').join('') + '</div>'; }
   h = cobrosPorConfirmarHtml(c.id) + h;
   h += movs.length ? '<div class="section-card"><div class="section-card-title">Movimientos</div>' + movs.map(m => '<div style="display:flex;justify-content:space-between;font-size:12px;padding:3px 0;border-bottom:1px dashed var(--border);' + (m.estado==='anulado'?'opacity:.5;text-decoration:line-through':'') + '"><span>' + fmtFecha(m.fecha) + ' · ' + escH(m.concepto) + ' · ' + (MEDIO_LBL[m.medio]||'') + (m.tipo==='visita' && m.descontable !== false ? ' <span class="badge b-info">pago a cuenta</span>' : '') + justMovHtml(m) + '</span><b>' + fmtEur(m.importe) + '</b></div>').join('') + (movs.some(m => m.tipo==='visita' && m.descontable !== false) ? '<div style="font-size:11px;color:var(--muted);margin-top:6px">La visita descontable se trata como pago a cuenta: criterio contable pendiente de confirmar con el gestor.</div>' : '') + '</div>' : '<div class="section-card" style="color:var(--muted);font-size:12px">Sin cobros registrados.</div>';
   return h + '<div style="font-size:11px;color:var(--muted)">' + AVISO_FACTURAS + '</div>';
@@ -4892,7 +5052,7 @@ function urgAbrir(casoId, destino){
   if (destino === 'mensajes'){ msgTab = 'conv'; navegarA('mensajes', document.getElementById('nb-mensajes')); msgAbrir(casoId); }
   else if (destino === 'cobros_conf'){ msgTab = 'notif'; navegarA('mensajes', document.getElementById('nb-mensajes')); }
   else if (destino === 'obra') abrirObra(casoId);
-  else if (destino === 'cobros'){ abrirCaso(casoId); _fichaTab = 'cobros'; renderFicha(); }
+  else if (destino === 'cobros'){ abrirCaso(casoId); _fichaTab = 'cuenta'; renderFicha(); }
   else if (destino === 'visita'){ abrirCaso(casoId); _fichaTab = 'visita'; renderFicha(); }
   else abrirCaso(casoId);
 }
@@ -4931,7 +5091,7 @@ RENDERERS.clientes = function(){
   const rows = ls.map(x => { const cl = x.cl; const esDup = dups.some(p => p.includes(cl.id));
     return '<tr onclick="clienteFicha(\'' + cl.id + '\')" style="cursor:pointer"><td><b>' + escH(cl.nombre) + '</b>' + (esDup ? ' <span class="badge b-warn">posible duplicado</span>' : '') + '</td><td style="font-size:12px">' + escH(cl.email) + '<br><span style="color:var(--muted)">' + escH(cl.tel) + '</span></td><td>' + x.casos.length + '</td><td>' + (x.total ? fmtEur0(x.total) : '—') + '</td><td style="font-size:12px">' + (x.ult ? fmtFecha(x.ult) : '—') + '</td></tr>'; }).join('');
   const sel = '<select onchange="clientesSort=this.value;RENDERERS.clientes()">' + [['nombre','Nombre'],['casos','Nº de casos'],['total','Total aceptado'],['contacto','Último contacto']].map(o => '<option value="' + o[0] + '"' + (clientesSort===o[0]?' selected':'') + '>' + o[1] + '</option>').join('') + '</select>';
-  document.getElementById('pg-clientes').innerHTML =
+  subDest('clientes').innerHTML =
     '<div class="page-hdr"><div><div class="page-title">Clientes</div><div class="page-sub">' + DB.clientes.length + ' clientes registrados</div></div><div style="display:flex;gap:8px"><button class="abtn abtn-ghost" title="Demo: llega un pedido de alguien que ya es cliente" onclick="simularPedidoEntrante()">Simular pedido entrante</button><button class="abtn abtn-primary" onclick="clienteNuevoModal()">+ Nuevo cliente</button></div></div>' +
     (dups.length ? '<div class="mv-aviso" style="font-size:13px;font-weight:400">⚠ <b>Posibles duplicados detectados</b> (mismo email o teléfono): ' + dups.map(p => { const a = DB.clientes.find(x => x.id === p[0]), b = DB.clientes.find(x => x.id === p[1]); return '<span style="white-space:nowrap">' + escH(a.nombre) + ' ↔ ' + escH(b.nombre) + ' <button class="abtn abtn-primary abtn-sm" onclick="clienteUnirModal(\'' + p[0] + '\',\'' + p[1] + '\')">Unir</button></span>'; }).join(' · ') + '</div>' : '') +
     '<div class="ctrl-row"><input type="text" placeholder="Buscar por nombre, email o teléfono…" value="' + escH(clientesQ) + '" oninput="clientesQ=this.value;clearTimeout(window._cq);window._cq=setTimeout(RENDERERS.clientes,200)" style="min-width:260px"><span class="ctrl-lbl">Ordenar</span>' + sel + '<span class="bandeja-count">' + ls.length + ' resultado(s)</span></div>' +
@@ -5123,7 +5283,10 @@ function materialesClienteOk(casoId){
 // SECCIÓN 12H: CONFIGURACIÓN
 // ═══════════════════════════════════════════════════════
 const CFG_GRUPOS = [['negocio','Negocio',1],['presupuesto','Presupuesto',1],['visita','Visita',1],['agenda','Agenda',1],['triaje','Triaje',1],['checklist','Checklist',1],['obra','Obra',1],['cobros','Cobros',1],['comunicaciones','Comunicaciones',1],['catalogo','Catálogo',1],['pantalla','Pantalla',1],['privacidad','Privacidad',0],['equipo','Equipo',0]];
-let cfgGrupo = 'negocio';
+// R-36: los diez parámetros esenciales se editan en una sola página; el resto vive en «Avanzado»
+let cfgModo = 'esencial';
+const CFG_AVANZADO = CFG_GRUPOS.filter(g => g[0] !== 'negocio');
+let cfgGrupo = 'presupuesto';
 function cfgGet(path){ return path.split('.').reduce((o,k) => o == null ? o : o[k], DB.cfg); }
 function cfgPut(path, val){ const ps = path.split('.'); let o = DB.cfg; for (let i = 0; i < ps.length - 1; i++) o = o[ps[i]] = o[ps[i]] || {}; o[ps[ps.length-1]] = val; }
 function oscurecerHex(h, f){ const n = parseInt(h.slice(1), 16); const c = x => Math.max(0, Math.min(255, Math.round(x * f))).toString(16).padStart(2,'0'); return '#' + c((n >> 16) & 255) + c((n >> 8) & 255) + c(n & 255); }
@@ -5163,17 +5326,38 @@ function cfgField(path, label, tipo, extra){
   else ctl = '<input type="text" value="' + escH(v==null?'':v) + '" onchange="cfgSet(\'' + path + '\',this.value,\'txt\')">';
   return '<div class="cfg-row"><label>' + label + (extra.ayuda ? '<small>' + extra.ayuda + '</small>' : '') + '</label><div class="cfg-ctl">' + ctl + '</div>' + live + '</div>';
 }
+const CFG_ESENCIAL = [
+  ['negocio', '1. Negocio y zona de trabajo', () => cfgNegocio()],
+  ['presupuesto', '2. Presupuesto', () => cfgField('margen','Margen sobre el subtotal','num',{suf:'%',ayuda:'Recalcula estimaciones y borradores'}) + cfgField('iva','IVA por defecto','num',{suf:'%',ayuda:'Confirmar el criterio con el gestor'}) + cfgField('minimo','Importe mínimo de presupuesto','num',{suf:'€'}) + cfgField('validezDias','Validez de la propuesta','num',{suf:'días'}) + cfgField('horquillaV1Pct','Horquilla de la V1 (±)','num',{suf:'%',ayuda:'Rango de la estimación inicial (V1). La V2 en adelante es un importe exacto'})],
+  ['visita', '3. Visita', () => { const v = DB.cfg.visita; return cfgField('visita.cobra','¿Cobras la visita?','bool') + cfgField('visita.importePorZona.dentro','Importe · dentro de zona','num',{suf:'€'}) + cfgField('visita.importePorZona.limite','Importe · zona límite','num',{suf:'€'}) + cfgField('visita.importePorZona.fuera','Importe · fuera de zona','num',{suf:'€'}) + cfgField('visita.descuento','Descuento si el cliente acepta','sel',{opts:[['no','No se descuenta'],['total','Se descuenta por completo'],['parcial','Se descuenta en parte']]}) + (v.descuento === 'parcial' ? cfgField('visita.descuentoPct','Porcentaje descontable','num',{suf:'%'}) : '') + cfgField('visita.cobroCuando','Cuándo se cobra','sel',{opts:[['al_confirmar','Al confirmar la fecha (con justificante)'],['en_visita','En la visita']]}); }],
+  ['agenda', '4. Disponibilidad de la agenda', () => '<div style="margin:6px 0"><button class="abtn abtn-primary" onclick="agendaTab=\'disp\';navegarA(\'agenda\',document.getElementById(\'nb-agenda\'))">Editar disponibilidad semanal y bloqueos →</button></div>' + cfgField('visita.duracionMin','Duración de la visita','num',{suf:'min'}) + cfgField('visita.trasladoMin','Margen de traslado','num',{suf:'min'})],
+  ['triaje', '5. Plazo de respuesta al cliente', () => cfgField('plazoRespuestaHoras','Plazo de respuesta','num',{suf:'h'})],
+  ['obra', '6. Umbral de adenda', () => cfgField('adendaModo','Umbral expresado en','sel',{opts:[['pct','% de la aceptada'],['eur','Importe fijo sin IVA']]}) + (DB.cfg.adendaModo === 'eur' ? cfgField('adendaUmbralEur','Umbral','num',{suf:'€ sin IVA'}) : cfgField('adendaUmbral','Umbral','num',{suf:'% de la aceptada'})) + '<div class="porque" style="margin-top:6px" id="cfg-umbral-demo">Con una obra aceptada de 12.000 € (IVA 21 %): ' + textoUmbral({ aceptacion:{ importe:12000, versionId:'X' }, versiones:[{ id:'X', ivaPct:21 }] }, DB.cfg) + '</div>'],
+  ['cobros', '7. Plan de cobros y hitos por defecto', () => cfgPlanDefecto() + '<h3>Hitos por defecto</h3>' + cfgField('hitosTipo','Uno por línea (se precargan al iniciar una obra)','lineas',{rows:8})],
+  ['cobros2', '8. Medios de cobro e IBAN', () => cfgMediosIban()],
+  ['comunicaciones', '9. Mensajes: firma y plantillas principales', () => cfgField('empresa.firma','Firma de los mensajes','txt') + TPL_PRINCIPALES.map(tplHtml).join('')],
+  ['presupuesto2', '10. Tipos de obra que haces', () => cfgField('tiposQueHace','Que haces (separados por comas)','csv')]
+];
 RENDERERS.configuracion = function(){
-  const tabs = CFG_GRUPOS.map(g => '<button class="tab ' + (cfgGrupo===g[0]?'active':'') + '" onclick="cfgGrupo=\'' + g[0] + '\';RENDERERS.configuracion()">' + g[1] + (g[0]==='equipo'?'<span class="tab-n">pronto</span>':'') + '</button>').join('');
-  const fn = { negocio:cfgNegocio, presupuesto:cfgPresupuesto, visita:cfgVisita, agenda:cfgAgenda, triaje:cfgTriaje, checklist:cfgChecklist, obra:cfgObra, cobros:cfgCobros, comunicaciones:cfgComunicaciones, catalogo:cfgCatalogo, pantalla:cfgPantalla, privacidad:cfgPrivacidad, equipo:cfgEquipo }[cfgGrupo];
-  const solo = CFG_GRUPOS.find(g => g[0] === cfgGrupo)[2] === 0;
+  const modoBtn = (k, l) => '<button class="tab ' + (cfgModo===k?'active':'') + '" role="tab" aria-selected="' + (cfgModo===k) + '" id="cfg-modo-' + k + '" onclick="cfgModo=\'' + k + '\';RENDERERS.configuracion()">' + l + '</button>';
+  let cuerpo;
+  if (cfgModo === 'esencial'){
+    cuerpo = '<div class="mv-aviso" style="font-size:12px;font-weight:400;margin-top:0">Vista <b>Esencial</b>: los diez parámetros que casi siempre necesitas. Todo lo demás está en <a href="#" onclick="event.preventDefault();cfgModo=\'avanzado\';RENDERERS.configuracion()">Avanzado</a>.</div>' +
+      CFG_ESENCIAL.map(([g, t, fn]) => '<div class="section-card" id="cfg-es-' + g + '"><div class="section-card-title" style="display:flex;justify-content:space-between;gap:8px">' + t + '<button class="abtn abtn-ghost abtn-sm" onclick="cfgRestaurarGrupo(\'' + g.replace(/[0-9]$/, '') + '\')">Restablecer valores por defecto</button></div>' + fn() + '</div>').join('');
+  } else {
+    const tabs = CFG_AVANZADO.map(g => '<button class="tab ' + (cfgGrupo===g[0]?'active':'') + '" onclick="cfgGrupo=\'' + g[0] + '\';RENDERERS.configuracion()">' + g[1] + (g[0]==='equipo'?'<span class="tab-n">pronto</span>':'') + '</button>').join('');
+    if (!CFG_AVANZADO.some(g => g[0] === cfgGrupo)) cfgGrupo = 'presupuesto';
+    const fn = { presupuesto:cfgPresupuesto, visita:cfgVisita, agenda:cfgAgenda, triaje:cfgTriaje, checklist:cfgChecklist, obra:cfgObra, cobros:cfgCobros, comunicaciones:cfgComunicaciones, catalogo:cfgCatalogo, pantalla:cfgPantalla, privacidad:cfgPrivacidad, equipo:cfgEquipo }[cfgGrupo];
+    const solo = CFG_GRUPOS.find(g => g[0] === cfgGrupo)[2] === 0;
+    cuerpo = '<div class="tabs">' + tabs + '</div><div class="section-card"><div style="text-align:right;margin-bottom:6px"><button class="abtn abtn-ghost abtn-sm" onclick="cfgRestaurarGrupo()">Restablecer valores por defecto de este grupo</button></div>' + (solo ? '<div class="mv-aviso" style="font-size:12px;font-weight:400;margin-top:0">Este grupo es solo un formulario en el prototipo (no cambia el comportamiento).</div>' : '') + fn() + '</div>';
+  }
   document.getElementById('pg-configuracion').innerHTML =
-    '<div class="page-hdr"><div><div class="page-title">Configuración</div><div class="page-sub">Los campos marcados <span class="cfg-live">● en vivo</span> cambian el comportamiento sin recargar</div></div><button class="abtn abtn-ghost" onclick="cfgRestaurarGrupo()">Restaurar valores de este grupo</button></div>' +
-    '<div class="tabs">' + tabs + '</div><div class="section-card">' + (solo ? '<div class="mv-aviso" style="font-size:12px;font-weight:400;margin-top:0">Este grupo es solo un formulario en el prototipo (no cambia el comportamiento).</div>' : '') + fn() + '</div>';
+    '<div class="page-hdr"><div><div class="page-title">Configuración</div><div class="page-sub">Los campos marcados <span class="cfg-live">● en vivo</span> cambian el comportamiento sin recargar</div></div></div>' +
+    '<div class="tabs" role="tablist" aria-label="Nivel de configuración">' + modoBtn('esencial', 'Esencial') + modoBtn('avanzado', 'Avanzado') + '</div>' + cuerpo;
 };
-function cfgRestaurarGrupo(){
-  const d = JSON.parse(JSON.stringify(CFG_DEFAULT)); const g = cfgGrupo;
-  const mapa = { negocio:['empresa','zonaTramos'], presupuesto:['margen','iva','minimo','validezDias','importeMinimoUtil','tiposQueHace','tiposBajoInteres','tiposQueNoHace','textos'], visita:['visita'], agenda:[], triaje:['pesosCalidad','umbralesPrioridad','plazoRespuestaHoras','sinVisita','motivosDescarte'], obra:['hitosTipo','adendaModo','adendaUmbral','adendaUmbralEur','adendaTopeIndividual','adendaPorHito','rematesPlazoDias','textoGarantia','textoActa'], cobros:['planCobros','cobros'], comunicaciones:['relojes','diasPausaAuto'], catalogo:['catalogo'], pantalla:['pantalla'], privacidad:['privacidad'] };
+function cfgRestaurarGrupo(grupo){
+  const d = JSON.parse(JSON.stringify(CFG_DEFAULT)); const g = grupo || cfgGrupo;
+  const mapa = { negocio:['empresa','zonaTramos'], presupuesto:['margen','iva','minimo','validezDias','horquillaV1Pct','negociacionDef','importeMinimoUtil','tiposQueHace','tiposBajoInteres','tiposQueNoHace','textos'], visita:['visita','viviendaObligatorios'], agenda:[], triaje:['pesosCalidad','umbralesPrioridad','plazoRespuestaHoras','sinVisita','motivosDescarte'], obra:['hitosTipo','adendaModo','adendaUmbral','adendaUmbralEur','adendaTopeIndividual','adendaPorHito','exigirSenalParaIniciar','fotoObligatoriaHito','rematesPlazoDias','textoGarantia','textoActa'], cobros:['planCobros','cobros','hitosTipo','cobrarCambiosFirmados'], comunicaciones:['relojes','diasPausaAuto'], catalogo:['catalogo'], pantalla:['pantalla'], privacidad:['privacidad'] };
   if (g === 'checklist'){ restablecerGlobales(); } else if (g === 'comunicaciones'){ restablecerGlobales(); (mapa[g]||[]).forEach(k => DB.cfg[k] = d[k]); } else (mapa[g]||[]).forEach(k => DB.cfg[k] = d[k]);
   if (g === 'agenda'){ DB.cfg.agenda = d.agenda; }
   aplicarTema(); aplicarPantalla(); recalcularEstimaciones(DB, null); toast('Grupo restaurado'); RENDERERS.configuracion();
@@ -5187,15 +5371,14 @@ function cfgNegocio(){
 }
 function cfgFieldTramo(k, label){ return '<div class="cfg-row"><label>' + label + '</label><div class="cfg-ctl"><input type="text" value="' + escH((DB.cfg.zonaTramos[k]||[]).join(', ')) + '" onchange="cfgSet(\'zonaTramos.' + k + '\',this.value,\'csv\')"></div><span class="cfg-live">● en vivo</span></div>'; }
 function cfgPresupuesto(){
-  return '<h3>Cálculo</h3>' + cfgField('margen','Margen sobre el subtotal','num',{suf:'%',ayuda:'Recalcula estimaciones y borradores'}) + cfgField('iva','IVA por defecto','num',{suf:'%',ayuda:'Confirmar el criterio con el gestor'}) + cfgField('minimo','Importe mínimo de presupuesto','num',{suf:'€'}) + cfgField('validezDias','Validez de la propuesta','num',{suf:'días'}) + cfgField('horquillaV1Pct','Horquilla de la V1 (±)','num',{suf:'%',ayuda:'Rango de la estimación inicial (V1). La V2 en adelante es un importe exacto'}) + cfgField('importeMinimoUtil','Importe mínimo útil','num',{suf:'€',ayuda:'Por debajo, se sugiere descartar'}) +
-    '<h3>Tipos de obra</h3>' + cfgField('tiposQueHace','Que haces','csv') + cfgField('tiposBajoInteres','De bajo interés','csv') + cfgField('tiposQueNoHace','Que no haces','csv') +
+  return '<h3>Ajustes de la pantalla final de la visita (valores por defecto)</h3>' + cfgField('negociacionDef.validezDias','Validez del presupuesto','num',{suf:'días'}) + cfgField('negociacionDef.imprevistosPct','Imprevistos','num',{suf:'%',ayuda:'0 = sin línea de imprevistos'}) + cfgField('negociacionDef.redondeo','Redondeo del total','sel',{opts:[['0','Ninguno'],['10','A 10 €'],['50','A 50 €'],['100','A 100 €']]}) + cfgField('negociacionDef.descuentoModo','Descuento comercial','sel',{opts:[['pct','En %'],['eur','En €']]}) + cfgField('negociacionDef.descuento','Descuento por defecto','num') +
+    '<h3>Otros</h3>' + cfgField('importeMinimoUtil','Importe mínimo útil','num',{suf:'€',ayuda:'Por debajo, se sugiere descartar'}) +
+    '<h3>Tipos de obra (otros)</h3>' + cfgField('tiposBajoInteres','De bajo interés','csv') + cfgField('tiposQueNoHace','Que no haces','csv') +
     '<h3>Textos</h3>' + cfgField('textos.condiciones','Condiciones del presupuesto','area') + cfgField('textos.clausulaAjuste','Cláusula de ajuste (sin visita)','area');
 }
 function cfgVisita(){
   const v = DB.cfg.visita;
-  return '<h3>Cobro de la visita</h3>' + cfgField('visita.cobra','¿Cobras la visita?','bool') + cfgField('visita.importePorZona.dentro','Importe · dentro de zona','num',{suf:'€'}) + cfgField('visita.importePorZona.limite','Importe · zona límite','num',{suf:'€'}) + cfgField('visita.importePorZona.fuera','Importe · fuera de zona','num',{suf:'€'}) +
-    cfgField('visita.descuento','Descuento si el cliente acepta','sel',{opts:[['no','No se descuenta'],['total','Se descuenta por completo'],['parcial','Se descuenta en parte']]}) + (v.descuento === 'parcial' ? cfgField('visita.descuentoPct','Porcentaje descontable','num',{suf:'%'}) : '') +
-    cfgField('visita.cobroCuando','Cuándo se cobra','sel',{opts:[['al_confirmar','Al confirmar la fecha (con justificante)'],['en_visita','En la visita']]}) + cfgField('visita.reservaPagoHoras','Horas de reserva del hueco a la espera del pago','num',{suf:'h',ayuda:'Pasado el plazo se avisa y, al vencer, se libera el hueco'}) +
+  return '<h3>Reserva del hueco</h3>' + cfgField('visita.reservaPagoHoras','Horas de reserva del hueco a la espera del pago','num',{suf:'h',ayuda:'Pasado el plazo se avisa y, al vencer, se libera el hueco'}) +
     '<h3>Datos de la vivienda obligatorios para elegir fecha</h3>' + [['ubicacion','Ubicación exacta'],['regimen','Propietario o inquilino (con permiso si es inquilino)'],['anioConstruccion','Año de construcción (o «No lo sé»)'],['inicio','Fecha deseada de inicio (o «Sin fecha»)'],['habitada','¿Vivirá en la casa durante la obra?']].map(([k,l]) => '<label class="check-q"><input type="checkbox" ' + ((DB.cfg.viviendaObligatorios||VIV_OBL_DEF).includes(k)?'checked':'') + ' onchange="cfgViviendaObl(\'' + k + '\',this.checked)"> ' + l + '</label>').join('') +
     '<h3>Cancelación y reprogramación</h3>' + cfgField('visita.politica.reprogramarGratisHoras','Reprogramar gratis hasta','num',{suf:'h antes'}) + cfgField('visita.politica.tardia','Si es más tarde','sel',{opts:[['retiene','Retener el cobro y cobrar la nueva visita'],['sin_cargo','Sin cargo adicional']]}) +
     '<div class="porque" style="margin-top:12px"><b>Vista previa del mensaje al proponer visita</b><br>' + escH(textoPoliticaVisita(DB.casos[0])) + '</div>';
@@ -5205,33 +5388,40 @@ function cfgAgenda(){ const v = DB.cfg.visita; return '<h3>Visitas</h3>' + cfgFi
 function cfgTriaje(){
   const pesos = DB.cfg.pesosCalidad; const nombres = ['Importe estimado','Completitud del pedido','Urgencia del cliente','Zona geográfica','Propietario y comunidad','Encaje de presupuesto','Tipo de obra']; const suma = pesos.reduce((s,x) => s + x, 0);
   return '<h3>Pesos de calidad (máximo de cada factor)</h3>' + nombres.map((n,i) => '<div class="cfg-row"><label>' + n + '</label><div class="cfg-ctl"><input type="number" min="0" value="' + pesos[i] + '" onchange="cfgPeso(' + i + ',this.value)"></div><span class="cfg-live">● en vivo</span></div>').join('') + '<div style="font-size:12px;margin:6px 0;color:' + (suma === 100 ? 'var(--ok)' : 'var(--amber)') + '">Suma: ' + suma + (suma === 100 ? ' ✓' : ' (recomendado 100)') + '</div>' +
-    '<h3>Prioridad</h3>' + cfgField('umbralesPrioridad.hoy','«Atender hoy» desde','num',{suf:'puntos'}) + cfgField('umbralesPrioridad.pronto','«Pronto» desde','num',{suf:'puntos'}) + cfgField('plazoRespuestaHoras','Plazo de respuesta','num',{suf:'h'}) +
+    '<h3>Prioridad</h3>' + cfgField('umbralesPrioridad.hoy','«Atender hoy» desde','num',{suf:'puntos'}) + cfgField('umbralesPrioridad.pronto','«Pronto» desde','num',{suf:'puntos'}) +
     '<h3>Presupuesto sin visita</h3>' + cfgField('sinVisita.tipos','Tipos permitidos','csv') + cfgField('sinVisita.hiMax','Importe máximo sin visita','num',{suf:'€'}) + cfgField('sinVisita.fotosMin','Fotos mínimas','num') +
     '<h3>Motivos de descarte</h3>' + cfgField('motivosDescarte','Uno por línea','lineas',{live:true});
 }
 function cfgPeso(i, val){ const n = Number(val); if (isNaN(n) || n < 0){ toast('Peso no válido','err'); return; } DB.cfg.pesosCalidad[i] = n; toast('Guardado · la bandeja se reordena'); RENDERERS.configuracion(); }
 function cfgObra(){
-  return '<h3>Hitos tipo</h3>' + cfgField('hitosTipo','Uno por línea (se precargan al iniciar una obra)','lineas',{rows:8}) +
-    '<h3>Adendas</h3>' + cfgField('adendaModo','Umbral expresado en','sel',{opts:[['pct','% de la aceptada'],['eur','Importe fijo']]}) + (DB.cfg.adendaModo === 'eur' ? cfgField('adendaUmbralEur','Umbral','num',{suf:'€ sin IVA'}) : cfgField('adendaUmbral','Umbral','num',{suf:'% de la aceptada'})) + cfgField('adendaTopeIndividual','Tope de un cambio individual','num',{suf:'€'}) + cfgField('adendaPorHito','Disparar adenda al marcar un hito con cambios pendientes','bool') +
+  return '<h3>Adendas</h3>' + cfgField('adendaTopeIndividual','Tope de un cambio individual','num',{suf:'€'}) + cfgField('adendaPorHito','Disparar adenda al marcar un hito con cambios pendientes','bool') +
     cfgField('exigirSenalParaIniciar','Exigir la señal confirmada para iniciar la obra','bool',{ayuda:'Si está activo, «Iniciar obra» pide la señal o una nota para iniciar igualmente'}) +
+    '<h3>Hitos</h3>' + cfgField('fotoObligatoriaHito','Foto obligatoria al marcar un hito como hecho','bool',{ayuda:'Se aplica también desde el modo Obra del lite'}) +
     '<h3>Cierre</h3>' + cfgField('rematesPlazoDias','Plazo tras el cual se reclama la conformidad','num',{suf:'días',ayuda:'No es un plazo de cierre: la obra solo la cierra el cliente con su conformidad'}) + cfgField('textoGarantia','Texto de la garantía','area') + cfgField('textoActa','Texto del acta de entrega','area');
 }
+function cfgPlanDefecto(){
+  const pl = normalizarPlan(DB.cfg.planCobros); const n = pl.length; const suma = r(pl.slice(0,-1).reduce((s,t) => s + t.pct, 0)); const cuando = ['aceptacion', ...DB.cfg.hitosTipo.map(h => 'hito:' + h), 'entrega'];
+  return '<h3>Plan de cobros por defecto</h3><div style="font-size:12px;color:var(--muted);margin-bottom:6px">El último tramo es siempre «el resto»: absorbe lo que quede del total firmado.</div>' + pl.map((t,i) => '<div class="cfg-row"><label><input type="text" value="' + escH(t.label) + '" onchange="cfgPlan(' + i + ',\'label\',this.value)"></label><div class="cfg-ctl">' + (i === n-1 ? '<span style="min-width:80px;font-weight:600">el resto (' + t.pct + ' %)</span>' : '<input type="number" min="0" value="' + t.pct + '" style="max-width:80px" onchange="cfgPlan(' + i + ',\'pct\',this.value)"><span class="cfg-suf">%</span>') + '<select onchange="cfgPlan(' + i + ',\'cuando\',this.value)">' + cuando.map(c => '<option value="' + c + '"' + (t.cuando===c?' selected':'') + '>' + c.replace('aceptacion','Al aceptar').replace('entrega','A la entrega').replace('hito:','Al completar «') + (c.startsWith('hito:')?'»':'') + '</option>').join('') + '</select>' + (n > 1 ? '<span style="cursor:pointer;color:var(--danger)" onclick="cfgPlanDel(' + i + ')" title="Quitar tramo" role="button">✕</span>' : '') + '</div><span class="cfg-live">● en vivo</span></div>').join('') +
+    '<div style="font-size:12px;margin:6px 0;color:' + (suma <= 100 ? 'var(--ok)' : 'var(--danger)') + '">Tramos intermedios: ' + suma + ' %' + (suma <= 100 ? ' ✓' : ' — no pueden superar el 100 %') + '</div><button class="abtn abtn-ghost abtn-sm" onclick="cfgPlanAdd()">+ Añadir tramo</button>';
+}
+function cfgMediosIban(){
+  return '<h3>Medios de cobro e IBAN</h3><div style="margin-bottom:8px">' + Object.entries(MEDIO_LBL).map(([k,l]) => '<label class="ctrl-check" style="display:inline-flex;margin-right:14px"><input type="checkbox" ' + (DB.cfg.cobros.medios.includes(k)?'checked':'') + ' onchange="cfgMedio(\'' + k + '\',this.checked)"> ' + l + '</label>').join('') + '</div>' +
+    cfgField('cobros.titular','Titular de la cuenta','txt',{live:false}) + cfgField('cobros.iban','IBAN','txt',{live:false,ayuda:'Se muestra al cliente para pagar y en las proformas'}) + cfgField('cobros.bizum','Teléfono de Bizum','txt',{live:false});
+}
 function cfgCobros(){
-  const pl = DB.cfg.planCobros; const suma = pl.reduce((s,t) => s + t.pct, 0); const cuando = ['aceptacion', ...DB.cfg.hitosTipo.map(h => 'hito:' + h), 'entrega'];
-  return '<h3>Medios aceptados</h3><div style="margin-bottom:8px">' + Object.entries(MEDIO_LBL).map(([k,l]) => '<label class="ctrl-check" style="display:inline-flex;margin-right:14px"><input type="checkbox" ' + (DB.cfg.cobros.medios.includes(k)?'checked':'') + ' onchange="cfgMedio(\'' + k + '\',this.checked)"> ' + l + '</label>').join('') + '</div>' +
-    cfgField('cobros.titular','Titular de la cuenta','txt',{live:false}) + cfgField('cobros.iban','IBAN','txt',{live:false,ayuda:'Se muestra al cliente para pagar y en las proformas'}) + cfgField('cobros.bizum','Teléfono de Bizum','txt',{live:false}) +
-    '<h3>Justificante de pago obligatorio</h3><div style="font-size:12px;color:var(--muted);margin-bottom:6px">Sin justificante el cliente no puede enviar el aviso de pago.</div>' + ['transferencia','bizum','efectivo'].map(m => cfgField('cobros.justificanteObligatorio.' + m, MEDIO_LBL[m], 'bool')).join('') +
-    '<h3>Plan de cobros por defecto</h3>' + pl.map((t,i) => '<div class="cfg-row"><label><input type="text" value="' + escH(t.label) + '" onchange="cfgPlan(' + i + ',\'label\',this.value)"></label><div class="cfg-ctl"><input type="number" min="0" value="' + t.pct + '" style="max-width:80px" onchange="cfgPlan(' + i + ',\'pct\',this.value)"><span class="cfg-suf">%</span><select onchange="cfgPlan(' + i + ',\'cuando\',this.value)">' + cuando.map(c => '<option value="' + c + '"' + (t.cuando===c?' selected':'') + '>' + c.replace('aceptacion','Al aceptar').replace('entrega','A la entrega').replace('hito:','Al completar «') + (c.startsWith('hito:')?'»':'') + '</option>').join('') + '</select><span style="cursor:pointer;color:var(--danger)" onclick="cfgPlanDel(' + i + ')">✕</span></div><span class="cfg-live">● en vivo</span></div>').join('') +
-    '<div style="font-size:12px;margin:6px 0;color:' + (suma === 100 ? 'var(--ok)' : 'var(--danger)') + '">Suma de tramos: ' + suma + ' %' + (suma === 100 ? ' ✓' : ' — debe sumar 100 %') + '</div><button class="abtn abtn-ghost abtn-sm" onclick="cfgPlanAdd()">+ Añadir tramo</button>';
+  return '<h3>Justificante de pago obligatorio</h3><div style="font-size:12px;color:var(--muted);margin-bottom:6px">Sin justificante el cliente no puede enviar el aviso de pago.</div>' + ['transferencia','bizum','efectivo'].map(m => cfgField('cobros.justificanteObligatorio.' + m, MEDIO_LBL[m], 'bool')).join('') +
+    '<h3>Cambios firmados</h3>' + cfgField('cobrarCambiosFirmados','Cobrar los cambios firmados','sel',{opts:[['siguiente','Con el siguiente cobro (por defecto)'],['al_firmar','Al firmar (tramo propio)'],['entrega','Al entregar (en el último tramo)']],ayuda:'Lo provisional nunca se cobra'});
 }
 function cfgMedio(k, on){ const m = DB.cfg.cobros.medios; if (on && !m.includes(k)) m.push(k); if (!on) DB.cfg.cobros.medios = m.filter(x => x !== k); if (!DB.cfg.cobros.medios.length) DB.cfg.cobros.medios = [k]; RENDERERS.configuracion(); }
-function cfgPlan(i, k, v){ DB.cfg.planCobros[i][k] = k === 'pct' ? Number(v)||0 : v; toast('Plan de cobros actualizado'); RENDERERS.configuracion(); }
-function cfgPlanDel(i){ DB.cfg.planCobros.splice(i,1); RENDERERS.configuracion(); }
-function cfgPlanAdd(){ DB.cfg.planCobros.push({ pct:0, cuando:'entrega', label:'Nuevo tramo' }); RENDERERS.configuracion(); }
-const VARS_TPL = '{{cliente}} {{reformista}} {{ref}} {{franjas}} {{enlace}} {{importe}} {{total}} {{concepto}} {{fecha}} {{motivo}} {{politicaVisita}}';
+function cfgPlan(i, k, v){ DB.cfg.planCobros[i][k] = k === 'pct' ? Number(v)||0 : v; DB.cfg.planCobros = normalizarPlan(DB.cfg.planCobros); toast('Plan de cobros actualizado'); RENDERERS.configuracion(); }
+function cfgPlanDel(i){ if (DB.cfg.planCobros.length < 2) return; DB.cfg.planCobros.splice(i,1); DB.cfg.planCobros = normalizarPlan(DB.cfg.planCobros); RENDERERS.configuracion(); }
+function cfgPlanAdd(){ const pl = DB.cfg.planCobros; pl.splice(pl.length - 1, 0, { pct:0, cuando:'aceptacion', label:'Nuevo tramo' }); DB.cfg.planCobros = normalizarPlan(pl); RENDERERS.configuracion(); }
+const VARS_TPL = '{{cliente}} {{reformista}} {{firma}} {{ref}} {{franjas}} {{enlace}} {{importe}} {{total}} {{concepto}} {{fecha}} {{motivo}} {{politicaVisita}}';
 const TPL_LBL = { proponer_visita:'Proponer visita', completa_datos:'Completa tus datos y elige fecha', pagar_visita:'Pagar la visita', justificante_rechazado:'Justificante rechazado', recordar_datos:'Recordar datos pendientes', pedir_info:'Pedir fotos o información', recordatorio:'Recordatorio', confirmacion_visita:'Confirmación de visita (24 h antes)', envio_version:'Envío de versión', aviso_cambio:'Aviso de cambio registrado', adenda_firmar:'Adenda para firmar', cambio_resuelto:'Cambio resuelto (ajustado, retirado o mantenido)', incidencia_obra:'Incidencia en obra', cierre_remates:'Cierre y remates', reclamar_conformidad:'Reclamar conformidad', descarte:'Descarte amable' };
+const TPL_PRINCIPALES = ['proponer_visita','completa_datos','envio_version','aviso_cambio'];
+function tplHtml(k){ return '<div class="cfg-row" style="align-items:flex-start"><label>' + TPL_LBL[k] + '</label><div class="cfg-ctl"><textarea rows="3" onchange="cfgPlantilla(\'' + k + '\',this.value)">' + escH(PLANTILLAS_MSG[k]) + '</textarea></div><span class="cfg-live">● en vivo</span></div>'; }
 function cfgComunicaciones(){
-  return '<h3>Plantillas de mensajes</h3><div style="font-size:11px;color:var(--muted);margin-bottom:8px">Variables: ' + VARS_TPL + '</div>' + Object.keys(TPL_LBL).map(k => '<div class="cfg-row" style="align-items:flex-start"><label>' + TPL_LBL[k] + '</label><div class="cfg-ctl"><textarea rows="3" onchange="cfgPlantilla(\'' + k + '\',this.value)">' + escH(PLANTILLAS_MSG[k]) + '</textarea></div><span class="cfg-live">● en vivo</span></div>').join('') +
+  return '<h3>Plantillas de mensajes</h3><div style="font-size:11px;color:var(--muted);margin-bottom:8px">Variables: ' + VARS_TPL + '</div>' + Object.keys(TPL_LBL).filter(k => !TPL_PRINCIPALES.includes(k)).map(k => '<div class="cfg-row" style="align-items:flex-start"><label>' + TPL_LBL[k] + '</label><div class="cfg-ctl"><textarea rows="3" onchange="cfgPlantilla(\'' + k + '\',this.value)">' + escH(PLANTILLAS_MSG[k]) + '</textarea></div><span class="cfg-live">● en vivo</span></div>').join('') +
     '<h3>Recordatorios y plazos (días)</h3>' + cfgField('relojes.recordatorio1','Datos y visita: 1.er recordatorio','num',{suf:'día'}) + cfgField('relojes.recordatorio2','Datos y visita: 2.º recordatorio (último)','num',{suf:'día'}) + cfgField('diasPausaAuto','Pausa automática si no responde','num',{suf:'día'}) +
     cfgField('relojes.propuesta1','Propuesta enviada: 1.er recordatorio','num',{suf:'día'}) + cfgField('relojes.propuesta2','Propuesta enviada: 2.º recordatorio','num',{suf:'día'}) + cfgField('relojes.avisoCaducidad','Aviso antes de caducar','num',{suf:'días antes'});
 }
