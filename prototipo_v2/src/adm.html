@@ -792,6 +792,74 @@ function calcularTotales(lineas, ivaPct, margenPct, minimo){
   return { subtotal, margen, base, iva, total, minimoAplicado };
 }
 
+// R-24 · totales con los ajustes de negociación de la pantalla final del lite (descuento, imprevistos, redondeo)
+function calcularTotalesNeg(lineas, ivaPct, margenPct, minimo, neg){
+  neg = neg || {};
+  const subtotal = r((lineas||[]).reduce((s,l) => s + (l.subtotal != null ? l.subtotal : r((l.cantidad||0)*(l.precio||0))), 0));
+  const margen = r(subtotal * (margenPct||0) / 100); const base0 = r(subtotal + margen);
+  const imprevistos = r(base0 * (Number(neg.imprevistosPct)||0) / 100); const bruto = r(base0 + imprevistos);
+  const dto = Math.max(0, Number(neg.descuento)||0);
+  const descuento = neg.descuentoModo === 'eur' ? r(Math.min(bruto, dto)) : r(bruto * Math.min(100, dto) / 100);
+  const base = r(bruto - descuento); const iva = r(base * (ivaPct||0) / 100); const totalBruto = r(base + iva);
+  const R = Number(neg.redondeo)||0; let total = R ? r(Math.round(totalBruto / R) * R) : totalBruto; const ajusteRedondeo = r(total - totalBruto);
+  const minimoAplicado = !!minimo && total < minimo; if (minimoAplicado) total = r(minimo);
+  const beneficioAntes = r(bruto - subtotal), beneficio = r(base - subtotal);
+  return { subtotal, margen, imprevistos, descuento, base, iva, ajusteRedondeo, total, minimoAplicado, coste:subtotal, beneficioAntes, beneficio, beneficioPct: subtotal > 0 ? r(beneficio / subtotal * 100) : 0, beneficioAntesPct: subtotal > 0 ? r(beneficioAntes / subtotal * 100) : 0 };
+}
+// R-21 · conversión del borrador del lite en líneas del admin (conserva el id de línea si ya existía)
+function lineasDeLite(caso, d, previas){
+  const porLiteId = new Map((previas || []).filter(l => l.liteId).map(l => [l.liteId, l])); const lineas = []; const quitados = {};
+  (d.est || []).forEach(e => (e.trabajos || []).forEach(t => {
+    if (t.quitado){ if (t.origen !== 'visita'){ (quitados[e.id] = quitados[e.id] || {})[t.key || t.k] = t.nota || 'Quitado en la visita'; } return; }
+    const prev = porLiteId.get(t.id); const precio = r(t.precio), cant = r(t.cant);
+    lineas.push({ id: (prev && prev.id) || uid('L'), liteId:t.id, key:t.key || t.k, concepto:t.l, espacioId:e.id, unidad:t.u || 'ud', base:t.bk || 'fijo', cantidad:cant, precio, subtotal:r(precio * cant), tipo:t.tl || 'mo', origen:t.origen === 'visita' ? 'visita' : 'calculo', bloqueada:!!t.manual, nota:t.nota || '', tabiqueId:t.tab || undefined });
+  }));
+  return { lineas, quitados };
+}
+// R-23/R-24 · el plan de cobros, los hitos y los ajustes de negociación viajan con la versión enviada y pasan a ser los del caso
+function adjuntarCondicionesVersion(caso, ver, b){
+  if (!b) return;
+  if (b.negociacion) ver.negociacion = Object.assign({}, b.negociacion);
+  if (b.quitados) ver.quitados = b.quitados;
+  if (b.planCobros && b.planCobros.length){ ver.planCobros = normalizarPlan(b.planCobros); caso.planCobros = ver.planCobros.map(t => Object.assign({}, t)); }
+  if (b.hitosPlan && b.hitosPlan.length){ ver.hitosPlan = b.hitosPlan.map(h => ({ nombre:h.nombre, diasEstimados:Math.max(1, Math.round(Number(h.diasEstimados != null ? h.diasEstimados : h.dias)||1)) })); caso.obra = caso.obra || {}; caso.obra.hitosPlan = ver.hitosPlan.map(h => Object.assign({}, h)); }
+}
+function tocarBorrador(caso, por){ const b = caso.borrador; if (!b) return; b.rev = (b.rev || 0) + 1; b.por = por || 'admin'; b.actualizadoAt = ahoraISO(); }
+// Aplica al caso lo que el lite midió en la visita (medidas, tabiques, estancias nuevas, notas y fotos)
+function aplicarVisitaLite(caso, d, opts){
+  opts = opts || {}; const esps = caso.solicitud.espacios; caso.visita = caso.visita || {}; caso.visita.medidas = caso.visita.medidas || {}; const fotosPrevias = new Set((caso.visita.fotos || []).map(f => f.adjuntoId).filter(Boolean));
+  (d.est || []).forEach(e => {
+    if (!esps.find(x => x.id === e.id)) esps.splice(esps.length - (esps.some(x => x.id === 'gen') ? 1 : 0), 0, { id:e.id, nombre:e.nombre, tipo:e.tipoAdm || e.tipo, m2:e.m2, trabajos:[] });
+    const ex = esps.find(x => x.id === e.id); ex.m2 = e.m2; ex.nombre = e.nombre;
+    if (e.med && e.med.activa) caso.visita.medidas[e.id] = { largo:e.med.largo, ancho:e.med.ancho, alto:e.med.alto, huecos:(e.med.huecos || []).map(h => ({ tipo:h.tipo, ancho:h.ancho, alto:h.alto })), reparto:e.med.reparto, aplicada:true, origen:'lite' };
+    (e.fotos || []).forEach(f => { if (f.adj && !fotosPrevias.has(f.adj)){ caso.visita.fotos.push({ id:uid('foto'), adjuntoId:f.adj, url:'foto-lite.jpg', espacioId:e.id, espacioNombre:e.nombre, etiqueta:'Visita (Lite)', caption:f.cap || '', fecha:hoy() }); fotosPrevias.add(f.adj); } });
+  });
+  caso.visita.tabiques = (d.tabiques || []).map(t => Object.assign({}, t));
+  caso.visita.notas = (caso.visita.notas || []).filter(n => n.origen !== 'lite');
+  (d.est || []).forEach(e => (e.comentarios || []).forEach(t => caso.visita.notas.push({ id:uid('n'), espacioId:e.id, texto:e.nombre + ': ' + t, fecha:hoy(), origen:'lite' })));
+  if (d.general) caso.visita.notas.push({ id:uid('n'), espacioId:null, texto:'Observaciones generales: ' + d.general, fecha:hoy(), origen:'lite' });
+}
+function guardarBorradorLite(caso, d, opts){
+  opts = opts || {}; const b = caso.borrador;
+  if (b && b.origen === 'lite' && b.por === 'admin' && (b.rev || 0) > (d.baseRev || 0) && !opts.forzar) return { ok:false, conflicto:true, fecha:b.actualizadoAt, por:b.por, rev:b.rev };
+  const { lineas, quitados } = lineasDeLite(caso, d, b && b.lineas); const cfg = dbActual().cfg;
+  const tot = calcularTotalesNeg(lineas, d.ajustes.iva, d.ajustes.margen, cfg.minimo, d.neg);
+  aplicarVisitaLite(caso, d);
+  const nb = { origen:'lite', v3id:d.v3id, basadoEn:(versionVigenteDe(caso) || {}).id || 'V1', lineas, ivaPct:d.ajustes.iva, margenPct:d.ajustes.margen, ajustes:{ margen:d.ajustes.margen, iva:d.ajustes.iva }, negociacion:Object.assign({}, d.neg), medidas:caso.visita.medidas, tabiques:(d.tabiques || []).map(t => Object.assign({}, t)),
+    hitosPlan:(d.hitosPlan || []).map(h => Object.assign({}, h)), planCobros:(d.planCobros || []).map(t => Object.assign({}, t)), notas:(d.est || []).flatMap(e => (e.comentarios || []).map(t => e.nombre + ': ' + t)), general:d.general || '', fotos:(d.est || []).flatMap(e => (e.fotos || []).map(f => f.adj).filter(Boolean)),
+    respuestas:(d.est || []).map(e => ({ espacioId:e.id, revisada:!!e.revisada, confirmados:(e.trabajos || []).filter(t => t.confirmado).map(t => t.id) })), quitados, totales:tot, pendienteEnvio:true, snap:d.snap || null, rev:(b && b.rev || 0), por:'lite', actualizadoAt:ahoraISO() };
+  caso.borrador = nb; tocarBorrador(caso, 'lite');
+  if (caso.interno) caso.interno.proximaAccion = 'Terminar y enviar el borrador ' + d.v3id + ' al cliente';
+  (caso.eventos = caso.eventos || []).push({ fecha:hoy(), tipo:'version', texto:'Borrador ' + d.v3id + ' guardado desde la visita (pendiente de enviar) · ' + fmtEur(tot.total), autor:'reformista' });
+  const db = dbActual(); if (db) notificar(db, caso.id, 'borrador', 'Borrador ' + d.v3id + ' de ' + caso.id + ' guardado desde la visita (pendiente de enviar)', { clave:'bor:' + caso.id + ':' + nb.rev });
+  return { ok:true, rev:nb.rev, actualizadoAt:nb.actualizadoAt, totales:tot };
+}
+// Aviso de que el reformista abre el borrador en el admin: cualquier edición posterior deja constancia
+function estadoDatosCliente(caso, cfg){
+  const dv = evaluarDatosVivienda(caso, cfg || dbActual().cfg); const fi = evaluarFiscal(caso.fiscal || nuevoFiscal(), caso);
+  return { vivienda:{ completos:!!dv.completos, hechos:dv.hechos, total:dv.total, faltan:dv.faltan.map(f => f.texto) }, fiscal:{ completos:!!fi.ok, faltan:fi.faltan.map(f => f.texto) } };
+}
+
 // 4.4 — Incertidumbre del caso → nivel baja/media/alta
 function calcularIncertidumbre(caso){
   let pts = 0; const v = caso.vivienda||{}, s = caso.solicitud||{};
@@ -2423,6 +2491,9 @@ function normalizarPlan(plan){
   const suma = r(p.slice(0,-1).reduce((s,t) => s + t.pct, 0)); p[p.length-1].pct = r(Math.max(0, 100 - suma));
   return p;
 }
+function importesPlanPrevio(plan, total){ // plan que ve el cliente antes de aceptar (el último tramo es «el resto»)
+  const p = normalizarPlan(plan); let ac = 0; return p.map((t,i) => { const imp = i < p.length-1 ? r(total * t.pct / 100) : r(Math.max(0, total - ac)); ac = r(ac + imp); return Object.assign({}, t, { importe:imp, resto:i === p.length-1 }); });
+}
 function validarPlan(plan, hitos){
   const errores = []; const p = plan||[]; const nombres = new Set((hitos||[]).map(h => typeof h === 'string' ? h : h.nombre));
   if (!p.length) errores.push('El plan necesita al menos un tramo');
@@ -2474,6 +2545,59 @@ function crearActa(caso, cobros, numero, fecha, cfg){
     inicioObra:caso.obra?.inicio || null, finObra:caso.obra?.cierre?.terminadaAt || null, conformidad: caso.obra?.cierre?.conformidad || null,
     garantiaInicio:fecha, textoGarantia:(cfg && cfg.textoGarantia) || CFG_DEFAULT.textoGarantia,
     documentacion:[ 'Presupuesto aceptado ' + (caso.aceptacion?.versionId||''), ...firmadas.map(a => 'Adenda ' + a.id + ' firmada (' + fmtEur(a.delta) + ' sin IVA)'), (caso.obra?.fotos||[]).length + ' fotografías de la obra', (caso.obra?.remates||[]).length + ' remate(s) gestionados' ] };
+}
+// ── R-12 · Generador ZIP mínimo «store» (sin compresión) con CRC32, a mano y sin librerías ──
+const CRC_TABLA = (() => { const t = new Uint32Array(256); for (let n = 0; n < 256; n++){ let c = n; for (let k = 0; k < 8; k++) c = (c & 1) ? (0xEDB88320 ^ (c >>> 1)) : (c >>> 1); t[n] = c >>> 0; } return t; })();
+function crc32(bytes){ let c = 0xFFFFFFFF; for (let i = 0; i < bytes.length; i++) c = CRC_TABLA[(c ^ bytes[i]) & 0xFF] ^ (c >>> 8); return (c ^ 0xFFFFFFFF) >>> 0; }
+function aBytes(x){ return x instanceof Uint8Array ? x : new TextEncoder().encode(String(x == null ? '' : x)); }
+function crearZip(archivos, fecha){
+  const d = fecha instanceof Date ? fecha : new Date(); const dosT = ((d.getHours() << 11) | (d.getMinutes() << 5) | (d.getSeconds() >> 1)) & 0xFFFF; const dosD = ((((d.getFullYear() - 1980) << 9) | ((d.getMonth() + 1) << 5) | d.getDate()) & 0xFFFF);
+  const partes = [], central = []; let off = 0;
+  const u16 = n => [n & 255, (n >>> 8) & 255], u32 = n => [n & 255, (n >>> 8) & 255, (n >>> 16) & 255, (n >>> 24) & 255];
+  archivos.forEach(f => {
+    const nom = aBytes(f.nombre), dat = aBytes(f.datos), crc = crc32(dat);
+    const lh = Uint8Array.from([0x50,0x4b,0x03,0x04, ...u16(20), ...u16(0x0800), ...u16(0), ...u16(dosT), ...u16(dosD), ...u32(crc), ...u32(dat.length), ...u32(dat.length), ...u16(nom.length), ...u16(0)]);
+    partes.push(lh, nom, dat);
+    central.push(Uint8Array.from([0x50,0x4b,0x01,0x02, ...u16(20), ...u16(20), ...u16(0x0800), ...u16(0), ...u16(dosT), ...u16(dosD), ...u32(crc), ...u32(dat.length), ...u32(dat.length), ...u16(nom.length), ...u16(0), ...u16(0), ...u16(0), ...u16(0), ...u32(0), ...u32(off)]), nom);
+    off += lh.length + nom.length + dat.length;
+  });
+  const tamCentral = central.reduce((s, x) => s + x.length, 0);
+  const fin = Uint8Array.from([0x50,0x4b,0x05,0x06, ...u16(0), ...u16(0), ...u16(archivos.length), ...u16(archivos.length), ...u32(tamCentral), ...u32(off), ...u16(0)]);
+  const todo = [...partes, ...central, fin]; const out = new Uint8Array(todo.reduce((s, x) => s + x.length, 0)); let p = 0; todo.forEach(x => { out.set(x, p); p += x.length; });
+  return out;
+}
+function leerZip(bytes){ // lector mínimo (store) para las pruebas: devuelve [{nombre, datos, crcOk}]
+  const dv = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength); const res = []; let p = 0;
+  while (p + 30 <= bytes.length && dv.getUint32(p, true) === 0x04034b50){
+    const crc = dv.getUint32(p + 14, true), tam = dv.getUint32(p + 22, true), nl = dv.getUint16(p + 26, true), el = dv.getUint16(p + 28, true);
+    const nombre = new TextDecoder().decode(bytes.subarray(p + 30, p + 30 + nl)); const datos = bytes.subarray(p + 30 + nl + el, p + 30 + nl + el + tam);
+    res.push({ nombre, datos, crcOk: crc32(datos) === crc }); p += 30 + nl + el + tam;
+  }
+  return res;
+}
+function dataUrlABytes(u){
+  const m = /^data:([^;,]*)((?:;[^;,]*)*),(.*)$/s.exec(u || ''); if (!m) return null;
+  if (/;base64/.test(m[2])){ const bin = atob(m[3]); const b = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) b[i] = bin.charCodeAt(i); return b; }
+  return new TextEncoder().encode(decodeURIComponent(m[3]));
+}
+function extDeAdjunto(meta){ const t = (meta && meta.tipo) || ''; const n = (meta && meta.nombre) || ''; const e = /\.([a-z0-9]{2,4})$/i.exec(n); if (e) return e[1].toLowerCase(); return ({ 'image/jpeg':'jpg', 'image/png':'png', 'image/webp':'webp', 'image/svg+xml':'svg', 'application/pdf':'pdf', 'image/heic':'heic' })[t] || 'bin'; }
+function nombreJustificante(mov, ref, ext, usados){
+  let base = String(mov.fecha || '0000-00-00') + '_' + ref + '_' + (Number(mov.importe) || 0).toFixed(2); let n = base + '.' + ext, i = 2;
+  while (usados && usados.has(n)){ n = base + '_' + i + '.' + ext; i++; } if (usados) usados.add(n); return n;
+}
+// Contenido del paquete (función pura respecto al DOM): CSV con columna «justificante», resumen JSON, proforma y justificantes
+function paqueteGestoriaDatos(caso, db, getAdj){
+  const cobros = (db.cobros || []).filter(c => c.casoId === caso.id && c.estado !== 'anulado'); const usados = new Set(); const archivos = []; const sinJustificante = [];
+  const cli = (db.clientes || []).find(x => x.id === caso.clienteId);
+  const ficheros = {};
+  cobros.forEach(m => { if (m.justificanteId){ const u = getAdj && getAdj.url(m.justificanteId); const meta = getAdj && getAdj.meta(m.justificanteId); const b = u ? dataUrlABytes(u) : null; if (b){ const nom = nombreJustificante(m, caso.id, extDeAdjunto(meta), usados); ficheros[m.id] = nom; archivos.push({ nombre:'justificantes/' + nom, datos:b }); return; } } sinJustificante.push(m); });
+  const cab = ['id','caso','fecha','tipo','concepto','importe_iva_incl','medio','referencia','estado','justificante'];
+  const filas = cobros.map(m => [m.id, m.casoId, m.fecha, m.tipo, m.concepto, (m.importe || 0).toFixed(2), m.medio, m.referencia, m.estado, ficheros[m.id] || 'sin justificante'].map(csvCelda).join(','));
+  archivos.unshift({ nombre:'movimientos.csv', datos:'﻿' + [cab.join(','), ...filas].join('\r\n') });
+  archivos.splice(1, 0, { nombre:'resumen_obra.json', datos:JSON.stringify(resumenObraJSON(caso, db.cobros, cli), null, 2) });
+  const pf = ((db.proformas || []).filter(p => p.casoId === caso.id).slice(-1)[0]) || crearProforma(caso, db.cobros, (db.proformas || []).length + 1, hoy());
+  archivos.splice(2, 0, { nombre:'proforma_' + pf.id + '.html', datos:'<!doctype html><meta charset="utf-8"><title>Proforma ' + pf.id + '</title><body>' + docProforma(pf) + '</body>' });
+  return { archivos, sinJustificante, nJustificantes:Object.keys(ficheros).length, proforma:pf.id };
 }
 function csvCelda(v){ return '"' + String(v == null ? '' : v).replace(/"/g, '""') + '"'; }
 function cobrosCSV(cobros){
@@ -3411,7 +3535,7 @@ function casoCardHtml(caso, prio){
   const ac = accionSugerida(caso, DB.cfg);
   return '<div class="caso-card" onclick="abrirCaso(\'' + caso.id + '\')">' +
     '<div class="caso-card-top">' +
-      '<span class="caso-ref">' + caso.id + '</span>' + badgeEstado(caso.estado) +
+      '<span class="caso-ref">' + caso.id + '</span>' + badgeEstado(caso.estado) + (caso.borrador && caso.borrador.origen === 'lite' ? ' <span class="badge b-warn" title="Borrador guardado desde la visita, pendiente de enviar">Borrador ' + escH(caso.borrador.v3id || 'V3') + '</span>' : '') +
       '<span class="caso-nombre">' + escH(cli.nombre) + '</span>' +
       prioChip(prio.nivel) +
       '<button class="accion-btn" onclick="event.stopPropagation();toast(\'Acción: ' + escH(ac.label) + '\')">' + escH(ac.label) + '</button>' +
@@ -3524,7 +3648,7 @@ function filaBandeja(caso, prio, cal){
   const abierto = porqueAbierto[caso.id];
   return '<div class="caso-card">' +
     '<div class="caso-card-top" onclick="abrirCaso(\'' + caso.id + '\')" style="cursor:pointer">' +
-      '<span class="caso-ref">' + caso.id + '</span>' + badgeEstado(caso.estado) +
+      '<span class="caso-ref">' + caso.id + '</span>' + badgeEstado(caso.estado) + (caso.borrador && caso.borrador.origen === 'lite' ? ' <span class="badge b-warn">Borrador ' + escH(caso.borrador.v3id || 'V3') + '</span>' : '') +
       '<span class="caso-nombre">' + escH(cli.nombre) + '</span>' + prioChip(prio.nivel) +
       (DB.cfg.pantalla.colBandeja.importe ? '<span class="caso-importe" style="margin-left:auto">' : '<span style="display:none">') + (v ? fmtImporteVersion(v) : '—') + '</span>' +
     '</div>' +
@@ -3838,7 +3962,7 @@ function fichaHistorial(c){
 // ── Ficha: Presupuesto ──────────────────────────────────
 function versionVigente(c){ return c.versiones.find(v=>v.estado==='vigente') || c.versiones.find(v=>v.estado==='aceptada') || c.versiones[c.versiones.length-1]; }
 function asegurarBorrador(c){ if(!c.borrador){ const v=versionVigente(c); c.borrador={ lineas:clonarLineas(v.lineas||[]), ivaPct:v.ivaPct||DB.cfg.iva, basadoEn:v.id }; } return c.borrador; }
-function totalesBorrador(c){ const b=c.borrador; return calcularTotales(b.lineas, b.ivaPct, DB.cfg.margen, DB.cfg.minimo); }
+function totalesBorrador(c){ const b=c.borrador; if (b.negociacion) return calcularTotalesNeg(b.lineas, b.ivaPct, b.margenPct != null ? b.margenPct : DB.cfg.margen, DB.cfg.minimo, b.negociacion); return calcularTotales(b.lineas, b.ivaPct, DB.cfg.margen, DB.cfg.minimo); }
 
 function fichaPresupuesto(c){
   const vig = versionVigente(c);
@@ -3866,7 +3990,9 @@ function fichaPresupuesto(c){
 
   if (c.borrador){
     const b = c.borrador; const tot = totalesBorrador(c);
-    h += '<div class="section-card" style="border-color:var(--accent)"><div class="section-card-title" style="color:var(--accent)">Borrador sin enviar (basado en ' + b.basadoEn + ')</div>';
+    const delLite = b.origen === 'lite';
+    h += '<div class="section-card" id="ficha-borrador" style="border-color:var(--accent)"><div class="section-card-title" style="color:var(--accent)">' + (delLite ? 'Borrador ' + escH(b.v3id || '') + ' (desde la visita)' : 'Borrador sin enviar (basado en ' + b.basadoEn + ')') + '</div>' +
+      (delLite ? '<div class="mv-aviso" style="font-size:13px;font-weight:400;margin-top:0">⏳ <b>Pendiente de enviar.</b> Última modificación: ' + escH(String(b.actualizadoAt || '').replace('T', ' ').slice(0, 16)) + ' por ' + (b.por === 'admin' ? 'el admin' : 'el lite') + ' (revisión ' + (b.rev || 1) + '). Si lo editas aquí y luego guardas desde el lite, verás un aviso con esta fecha.' + (b.pendienteEnvio === false ? '' : '') + '</div>' : '');
     h += tablaLineas(c, b.lineas, true);
     h += '<div style="margin-top:10px;display:flex;align-items:center;gap:10px;flex-wrap:wrap">' +
       '<label style="font-size:12px;color:var(--muted)">IVA <select onchange="c_setIva(this.value)">' + [21,10,0].map(i=>'<option value="' + i + '"' + (b.ivaPct===i?' selected':'') + '>' + i + '%</option>').join('') + '</select></label>' +
@@ -3874,8 +4000,10 @@ function fichaPresupuesto(c){
       '<button class="abtn abtn-ghost abtn-sm" onclick="c_addLinea()">+ Añadir línea</button>' +
       '<button class="abtn abtn-ghost abtn-sm" onclick="c_recalcular()">Recalcular</button>' +
     '</div>';
-    h += '<div class="totbar"><span>Subtotal <b>' + fmtEur(tot.subtotal) + '</b></span><span>Margen <b>' + fmtEur(tot.margen) + '</b></span><span>IVA <b>' + fmtEur(tot.iva) + '</b></span><span class="tot-final">' + fmtEur(tot.total) + '</span></div>';
-    h += '<div style="margin-top:10px;display:flex;gap:8px;justify-content:flex-end"><button class="abtn abtn-ghost abtn-sm" onclick="materialesClienteModal(\'' + c.id + '\')">Materiales del cliente</button><button class="abtn abtn-ghost abtn-sm" onclick="c_descartarBorrador()">Descartar borrador</button><button class="abtn abtn-primary abtn-sm" onclick="c_enviarVersion()">Enviar versión</button></div>';
+    h += '<div class="totbar"><span>Subtotal <b>' + fmtEur(tot.subtotal) + '</b></span><span>Margen <b>' + fmtEur(tot.margen) + '</b></span>' + (tot.imprevistos ? '<span>Imprevistos <b>' + fmtEur(tot.imprevistos) + '</b></span>' : '') + (tot.descuento ? '<span>Descuento <b>−' + fmtEur(tot.descuento) + '</b></span>' : '') + '<span>IVA <b>' + fmtEur(tot.iva) + '</b></span>' + (tot.ajusteRedondeo ? '<span>Redondeo <b>' + fmtEur(tot.ajusteRedondeo) + '</b></span>' : '') + '<span class="tot-final">' + fmtEur(tot.total) + '</span></div>';
+    if (delLite && (b.planCobros || []).length) h += '<div class="porque" style="margin-top:8px"><b>Plan de cobros del caso:</b> ' + normalizarPlan(b.planCobros).map(t => escH(t.label) + ' ' + t.pct + ' %').join(' · ') + '<br><b>Hitos:</b> ' + (b.hitosPlan || []).map(x => escH(x.nombre) + ' (' + (x.diasEstimados || x.dias) + ' d)').join(' · ') + '</div>';
+    if (delLite && (b.tabiques || []).length) h += '<div class="porque" style="margin-top:8px"><b>Tabiques medidos:</b> ' + b.tabiques.map(t => escH(t.m2 + ' m² · ' + (((c.solicitud.espacios||[]).find(e => e.id === t.espacioId)||{}).nombre||'') + ' ↔ ' + (((c.solicitud.espacios||[]).find(e => e.id === t.contiguaId)||{}).nombre||'—'))).join(' · ') + '</div>';
+    h += '<div style="margin-top:10px;display:flex;gap:8px;justify-content:flex-end">' + (delLite ? '<button class="abtn abtn-primary abtn-sm" id="bor-reabrir" onclick="reabrirBorradorEnLite(\'' + c.id + '\')">Reabrir en el lite</button>' : '') + '<button class="abtn abtn-ghost abtn-sm" onclick="materialesClienteModal(\'' + c.id + '\')">Materiales del cliente</button><button class="abtn abtn-ghost abtn-sm" onclick="c_descartarBorrador()">Descartar borrador</button><button class="abtn abtn-primary abtn-sm" onclick="c_enviarVersion()">Enviar versión</button></div>';
     h += '</div>';
   } else {
     h += '<div class="section-card"><div class="section-card-title">Versión vigente · ' + (vig?.id||'—') + ' · IVA ' + (vig?.ivaPct||21) + '%</div><div style="font-size:12px;color:var(--muted);margin-bottom:6px">' + escH(etiquetaVersion(vig, c)) + (vig && !rangoVersion(vig).exacto ? ' · ' + fmtImporteVersion(vig) + ' (IVA incl.)' : '') + '</div>';
@@ -3918,19 +4046,21 @@ function tablaLineas(c, lineas, editable){
 }
 function _fc(){ return DB.casos.find(x=>x.id===_fichaId); }
 function c_editar(){ const c=_fc(); asegurarBorrador(c); renderFicha(); }
-function c_editLinea(lid, campo, val){ const c=_fc(); const b=asegurarBorrador(c); const l=b.lineas.find(x=>x.id===lid); if(!l)return;
+function c_editLinea(lid, campo, val){ const c=_fc(); const b=asegurarBorrador(c); tocarBorrador(c, 'admin'); const l=b.lineas.find(x=>x.id===lid); if(!l)return;
   if(campo==='cantidad'||campo==='precio'){ l[campo]=r(Number(val)||0); l.subtotal=r(l.cantidad*l.precio); } else l[campo]=val;
   l.bloqueada=true; l.origen='manual'; renderFicha(); }
-function c_candado(lid){ const c=_fc(); const b=asegurarBorrador(c); const l=b.lineas.find(x=>x.id===lid); if(l){l.bloqueada=!l.bloqueada; renderFicha();} }
-function c_delLinea(lid){ const c=_fc(); const b=asegurarBorrador(c); const l=b.lineas.find(x=>x.id===lid); confirmarAccion('Eliminar línea','¿Eliminar «' + (l?l.concepto:'línea') + '» del borrador?', () => { b.lineas=b.lineas.filter(x=>x.id!==lid); renderFicha(); }); }
-function c_addLinea(){ const c=_fc(); const b=asegurarBorrador(c); const esp=(c.solicitud.espacios||[])[0];
+function c_candado(lid){ const c=_fc(); const b=asegurarBorrador(c); tocarBorrador(c, 'admin'); const l=b.lineas.find(x=>x.id===lid); if(l){l.bloqueada=!l.bloqueada; renderFicha();} }
+function c_delLinea(lid){ const c=_fc(); const b=asegurarBorrador(c); const l=b.lineas.find(x=>x.id===lid); confirmarAccion('Eliminar línea','¿Eliminar «' + (l?l.concepto:'línea') + '» del borrador?', () => { b.lineas=b.lineas.filter(x=>x.id!==lid); tocarBorrador(c, 'admin'); renderFicha(); }); }
+function c_addLinea(){ const c=_fc(); const b=asegurarBorrador(c); tocarBorrador(c, 'admin'); const esp=(c.solicitud.espacios||[])[0];
   b.lineas.push({id:uid('L'),key:'manual',concepto:'Nueva partida',espacioId:esp?.id||null,unidad:'ud',base:'fijo',cantidad:1,precio:0,subtotal:0,tipo:'extra',origen:'manual',bloqueada:true}); renderFicha(); }
-function c_setIva(val){ const c=_fc(); const b=asegurarBorrador(c); b.ivaPct=Number(val); renderFicha(); }
+function c_setIva(val){ const c=_fc(); const b=asegurarBorrador(c); tocarBorrador(c, 'admin'); b.ivaPct=Number(val); renderFicha(); }
 function c_recalcular(){ const c=_fc(); recalcularYGuardar(c); toast('Recalculado (líneas bloqueadas y manuales intactas)'); renderFicha(); }
+function reabrirBorradorEnLite(casoId){ try { window.parent.Proto.reabrirEnLite(casoId); } catch (e) { toast('Abre la pestaña Lite para continuar el borrador', 'err'); } }
 function c_descartarBorrador(){ const c=_fc(); c.borrador=null; renderFicha(); }
 function c_enviarVersion(){ const c=_fc(); const b=c.borrador; if(!b)return;
   const tot=totalesBorrador(c); const inc=calcularIncertidumbre(c); const hq=calcularHorquilla(tot.total,inc.nivel); tot.lo=hq.lo; tot.hi=hq.hi;
-  const nv={ id:siguienteVersionId(c), tipo:'revisada', creadaAt:hoy(), enviadaAt:null, ivaPct:b.ivaPct, lineas:b.lineas, totales:tot, cambiosRespectoAnterior:null, estado:'borrador' };
+  const nv={ id:b.v3id || siguienteVersionId(c), tipo:'revisada', creadaAt:hoy(), enviadaAt:null, ivaPct:b.ivaPct, lineas:b.lineas, totales:tot, cambiosRespectoAnterior:null, estado:'borrador' };
+  adjuntarCondicionesVersion(c, nv, b);
   if (!exigir('enviar_version', c, { version:nv })) return; // A1
   enviarVersion(c, nv, 'WhatsApp'); c.borrador=null; _fichaDiff=nv.id;
   if (['en_triaje','en_visita'].includes(c.estado) && puedeTransitar(c,'propuesta_enviada')){ try{transitar(c,'propuesta_enviada',{autor:'reformista',texto:'Presupuesto enviado'});}catch(e){} }
@@ -4889,7 +5019,21 @@ function descargar(nombre, contenido, mime){
 }
 function exportarCobrosCSV(casoId){ const lista = casoId ? DB.cobros.filter(m => m.casoId === casoId) : DB.cobros; descargar('cobros' + (casoId ? '_' + casoId : '') + '_' + hoy() + '.csv', '﻿' + cobrosCSV(lista), 'text/csv;charset=utf-8'); toast('CSV de cobros exportado (' + lista.length + ' movimientos)'); }
 function exportarResumenJSON(casoId){ const c = DB.casos.find(x => x.id === casoId); if (!c) return; descargar('resumen_' + casoId + '.json', JSON.stringify(resumenObraJSON(c, DB.cobros, clienteDe(c)), null, 2), 'application/json'); toast('Resumen de obra exportado'); }
-function paqueteGestoria(casoId){ if (!exigirFacturacion(casoId)) return; exportarCobrosCSV(casoId); setTimeout(() => exportarResumenJSON(casoId), 350); }
+let _paq = null;
+function paqueteGestoria(casoId){
+  if (!exigirFacturacion(casoId)) return; // A9
+  const c = DB.casos.find(x => x.id === casoId); if (!c) return;
+  const p = paqueteGestoriaDatos(c, DB, Adj); let zip = null, fallo = false;
+  try { zip = crearZip(p.archivos, new Date()); } catch (e) { fallo = true; console.error(e); }
+  _paq = { casoId, zip, p };
+  openModal('<div class="modal-title">Paquete para la gestoría · ' + c.id + '</div>' +
+    (p.sinJustificante.length ? '<div class="mv-aviso" style="font-size:13px;font-weight:400">⚠ <b>' + p.sinJustificante.length + ' movimiento(s) sin justificante:</b> ' + p.sinJustificante.map(m => escH(fmtFechaCorta(m.fecha) + ' · ' + m.concepto + ' · ' + fmtEur(m.importe))).join('; ') + '. Puedes generar el paquete igualmente; la gestoría verá «sin justificante» en el CSV.</div>' : '<div class="porque">Todos los movimientos tienen justificante.</div>') +
+    '<div style="font-size:13px;margin:8px 0">Contenido del ZIP (' + p.archivos.length + ' archivos' + (zip ? ', ' + Math.round(zip.length / 1024) + ' KB' : '') + '):</div><ul style="font-size:12px;margin:0 0 10px 18px">' + p.archivos.map(f => '<li>' + escH(f.nombre) + '</li>').join('') + '</ul>' +
+    (fallo ? '<div class="mv-aviso" style="font-size:13px">No se ha podido generar el ZIP. Descarga los archivos uno a uno.</div>' : '') +
+    '<div style="margin-top:12px;display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap"><button class="abtn abtn-ghost" onclick="closeAllModals()">Cerrar</button><button class="abtn abtn-ghost" onclick="paqueteIndividuales()">Descargar los archivos por separado</button>' + (zip ? '<button class="abtn abtn-primary" id="paq-zip" onclick="paqueteDescargar()">Descargar ZIP</button>' : '') + '</div>');
+}
+function paqueteDescargar(){ if (!_paq || !_paq.zip) return; descargar('gestoria_' + _paq.casoId + '_' + hoy() + '.zip', _paq.zip, 'application/zip'); toast('Paquete para la gestoría descargado'); }
+function paqueteIndividuales(){ if (!_paq) return; _paq.p.archivos.forEach((f, i) => setTimeout(() => descargar(f.nombre.split('/').pop(), f.datos, /\.csv$/.test(f.nombre) ? 'text/csv;charset=utf-8' : /\.json$/.test(f.nombre) ? 'application/json' : /\.html$/.test(f.nombre) ? 'text/html' : 'application/octet-stream'), i * 300)); }
 
 RENDERERS.cobros = function(){
   const cs = casosCobrables(); const info = cs.map(c => ({ c, eco: estadoEconomico(c, DB.cobros), tramo: proximoTramo(c, DB.cfg, DB.cobros) }));
@@ -5029,6 +5173,7 @@ function urgenteHoy(db, cfg, ahora){
     if (c.aceptacion) cobrosPendientesDebidos(c, cfg, db.cobros).forEach(t => out.push({ tipo:'cobro', casoId:c.id, destino:'cobros', texto:'Cobro debido «' + t.label + '» ' + fmtEur0(t.falta) + ' · ' + nom(c) }));
     (db.avisosPago || []).filter(a => a.casoId === c.id && a.estado === 'pendiente').forEach(a => out.push({ tipo:'cobro_conf', casoId:c.id, destino:'cobros_conf', texto:'Cobro por confirmar: ' + fmtEur0(a.importe) + ' (' + (a.tipo === 'visita' ? 'visita' : (a.tramo || 'pago')) + ') · ' + nom(c) }));
     const nl = mensajesNoLeidos(c, 'adm'); if (nl) out.push({ tipo:'mensajes', casoId:c.id, destino:'mensajes', texto:nl + ' mensaje(s) sin leer · ' + nom(c) });
+    if (c.borrador && c.borrador.origen === 'lite') out.push({ tipo:'borrador', casoId:c.id, destino:'presupuesto', texto:'Borrador ' + (c.borrador.v3id || 'V3') + ' pendiente de enviar (desde la visita) · ' + nom(c) });
     if (pendienteConformidad(c)) out.push({ tipo:'conformidad', casoId:c.id, destino:'obra', texto:'Entregada, pendiente de conformidad del cliente · ' + nom(c) });
   });
   return out;
@@ -5054,6 +5199,7 @@ function urgAbrir(casoId, destino){
   else if (destino === 'obra') abrirObra(casoId);
   else if (destino === 'cobros'){ abrirCaso(casoId); _fichaTab = 'cuenta'; renderFicha(); }
   else if (destino === 'visita'){ abrirCaso(casoId); _fichaTab = 'visita'; renderFicha(); }
+  else if (destino === 'presupuesto'){ abrirCaso(casoId); _fichaTab = 'presupuesto'; renderFicha(); }
   else abrirCaso(casoId);
 }
 RENDERERS.resumen = function(){
@@ -5757,6 +5903,14 @@ function pedirDatosModal(id, tipo, volver){
     '<div class="modal-section"><b style="font-size:12px;text-transform:uppercase;color:var(--muted)">Mensaje</b>' + msgBloque(msg, cli.tel) + '</div>' +
     '<div style="margin-top:16px;display:flex;gap:8px;justify-content:flex-end"><button class="abtn abtn-ghost" onclick="' + (volver || 'renderFicha()') + '">Cancelar</button><button class="abtn abtn-primary" onclick="pedirDatosOk(\'' + id + '\')">Dejar el mensaje en la conversación</button></div>', true);
   window._pdMsg = msg;
+}
+// R-25 · «Recordar al cliente» desde el lite (sin abrir el modal del admin): deja el mensaje con la plantilla en la conversación
+function recordarDatosCliente(caso, que){
+  const cfg = dbActual().cfg; const dv = evaluarDatosVivienda(caso, cfg); const fi = evaluarFiscal(caso.fiscal || nuevoFiscal(), caso); const quien = que || (!dv.completos ? 'vivienda' : 'fiscal');
+  const concepto = quien === 'vivienda' ? (dv.faltan.map(f => f.texto).join(', ') || 'tus datos') : (fi.faltan.map(f => f.texto).join(', ') || 'tus datos de facturación (nombre, DNI/NIE y domicilio fiscal)');
+  const msg = fillTpl(PLANTILLAS_MSG.recordar_datos, varsDe(caso, { concepto, enlace:enlaceSec(caso, quien === 'vivienda' ? 'inicio' : 'presupuesto') }));
+  const m = escribirMensaje(caso, { autor:'reformista', texto:msg, tipo:'mensaje' });
+  return { mensaje:m, texto:msg, tipo:quien };
 }
 function pedirDatosOk(id){ const c = DB.casos.find(x => x.id === id); escribirMensaje(c, { autor:'reformista', texto:window._pdMsg, tipo:'mensaje' }); if (_pd.tipo === 'vivienda') c.datosVivienda = Object.assign(nuevoDatosVivienda(c), c.datosVivienda || {}, { pedidos:Object.keys(_pd.sel).filter(k => _pd.sel[k]) }); toast('Mensaje registrado: el cliente lo verá en su panel'); renderPaginaActual(); if (_fichaId) renderFicha(); else closeAllModals(); }
 

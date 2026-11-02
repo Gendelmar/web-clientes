@@ -165,7 +165,9 @@ function buildV(caso) {
   const vers = caso.versiones.filter(v => v.estado !== 'borrador').map(v => {
     const g = a.rangoVersion(v);
     return { id: v.id, tipo: v.tipo === 'propuesta' ? 'propuesta' : 'estimacion', fecha: ms(v.enviadaAt || v.creadaAt || a.hoy()), total: v.totales.total, rango: g.exacto ? null : { lo: g.lo, hi: g.hi }, etiqueta: a.etiquetaVersion(v, caso), avisosVisita: (v.avisosVisita || v.avisos || []).slice(),
-      estado: v.estado === 'vigente' ? 'vigente' : v.estado === 'aceptada' ? 'aceptada' : 'sustituida', est: estCliente(caso, v) };
+      estado: v.estado === 'vigente' ? 'vigente' : v.estado === 'aceptada' ? 'aceptada' : 'sustituida', est: estCliente(caso, v),
+      aj: v.negociacion ? { descuento: v.totales.descuento || 0, imprevistos: v.totales.imprevistos || 0, imprevistosPct: v.negociacion.imprevistosPct || 0, redondeo: v.totales.ajusteRedondeo || 0, validezDias: v.negociacion.validezDias || null, plazoSemanas: v.negociacion.plazoSemanas || null, condiciones: v.negociacion.condiciones || '' } : null,
+      plan: v.planCobros ? a.importesPlanPrevio(v.planCobros, v.totales.total).map(t => ({ label: t.label, pct: t.pct, cuando: t.cuando, importe: t.importe, resto: t.resto })) : null, hitosPlan: (v.hitosPlan || []).map(h => ({ nombre: h.nombre, dias: h.diasEstimados })) };
   });
   const vi = caso.visita || {};
   const imp = (() => { try { return a.importeVisita(caso, cfg) || 60; } catch (e) { return 60; } })();
@@ -176,17 +178,22 @@ function buildV(caso) {
   const ac = caso.aceptacion;
   const aceptacion = ac ? { versionId: ac.versionId, total: ac.importe, f: ms(ac.fecha), nombre: ac.nombre || cl.nombre } : null;
   const ob = caso.obra || {};
-  const hitos = (ob.hitos || []).map(h => ({ id: h.id, nombre: h.nombre, dias: h.diasEstimados || 3, estado: h.estado === 'hecho' ? 'hecho' : h.estado === 'en_curso' ? 'en_curso' : 'pendiente', previsto: ms(h.fechaPrevista || a.hoy()), real: h.fechaReal ? ms(h.fechaReal) : null }));
+  const hitos = (ob.hitos || []).map(h => ({ id: h.id, nombre: h.nombre, dias: h.diasEstimados || 3, fotosAdj: (h.fotos || []).map(f => f.adjuntoId).filter(Boolean), nota: h.nota || '', estado: h.estado === 'hecho' ? 'hecho' : h.estado === 'en_curso' ? 'en_curso' : 'pendiente', previsto: ms(h.fechaPrevista || a.hoy()), real: h.fechaReal ? ms(h.fechaReal) : null }));
   const cambios = (ob.cambios || []).map(c => ({ id: c.id, concepto: c.concepto, importe: c.importe, motivo: c.nota || c.tipo || 'Cambio en obra', bloquea: !!c.bloqueaObra, f: ms(c.fecha), comentario: c.comentarioCliente,
-    estado: c.estado === 'consolidado' ? 'consolidado' : c.estado === 'en_desacuerdo' ? 'en_desacuerdo' : (c.avisoCliente && c.avisoCliente.aceptadoAt ? 'aceptado' : 'pendiente_cliente') }));
+    estado: c.estado === 'consolidado' ? 'consolidado' : c.estado === 'retirado' ? 'retirado' : c.estado === 'en_desacuerdo' ? 'en_desacuerdo' : (c.avisoCliente && c.avisoCliente.aceptadoAt ? 'aceptado' : 'pendiente_cliente'), resolucion: c.resolucion ? { accion: c.resolucion.accion, nota: c.resolucion.nota } : null, cortesia: !!c.cortesia, motivoRetiro: c.motivoRetiro || '' }));
   const adendas = (ob.adendas || []).map(x => ({ id: x.id, cambios: x.cambios, delta: x.delta, estado: x.estado === 'firmada' ? 'firmada' : 'por_firmar', f: ms(x.fecha), firma: x.estado === 'firmada' ? { nombre: cl.nombre, f: ms(x.firmadaAt || x.fecha) } : undefined }));
   const solicitudes = (ob.solicitudesCambio || []).map(s => ({ id: s.id, texto: s.texto, estado: s.estado === 'abierta' ? 'abierta' : 'valorada', respuesta: s.respuesta || 'Valorada por tu reformista', f: ms(s.fecha) }));
   const remates = (ob.remates || []).map(r => ({ id: r.id, texto: r.texto, estado: r.estado === 'abierto' ? 'abierto' : 'resuelto', foto: !!r.foto, autor: r.autor || 'reformista', itemId: r.itemId || null, localId: r.localId || null }));
   const cierre = ob.cierre ? { terminadaAt: ms(ob.cierre.terminadaAt || a.hoy()), conformidad: ob.cierre.conformidad ? { f: ms(ob.cierre.conformidad.fecha || a.hoy()) } : null } : (['terminada', 'en_remates', 'cerrada'].includes(caso.estado) ? { terminadaAt: hoyMs(), conformidad: null } : null);
-  const plan = (cfg.planCobros || []).map(t => ({ label: t.label, pct: t.pct, cuando: String(t.cuando).startsWith('hito:') ? 'hito2' : t.cuando }));
+  const verVig = caso.versiones.find(v => v.estado === 'vigente') || caso.versiones.find(v => v.id === (caso.aceptacion && caso.aceptacion.versionId));
+  const planBase = (verVig && verVig.planCobros) || (caso.planCobros && caso.planCobros.length ? caso.planCobros : cfg.planCobros); const totalPlan = caso.aceptacion ? caso.aceptacion.importe : (verVig ? verVig.totales.total : 0);
+  const plan = a.importesPlanPrevio(planBase, totalPlan).map(t => ({ label: t.label, pct: t.pct, cuando: t.cuando, importe: t.importe, resto: t.resto }));
+  const planTramos = caso.aceptacion ? a.planCobros(caso, cfg, db.cobros).map(t => ({ label: t.label, pct: t.pct, cuando: t.cuando, importe: t.importe, estado: t.estado, falta: t.falta, resto: !!t.resto, incluyeCambios: t.incluyeCambios || 0 })) : null;
   const cobros = db.cobros.filter(c => c.casoId === caso.id && c.estado !== 'anulado').map(c => ({ id: c.id, f: ms(c.fecha), concepto: c.concepto, importe: c.importe, medio: c.metodo || c.medio || 'Transferencia', tipo: c.tipo === 'visita' ? 'visita' : 'plan', justificanteId: c.justificanteId || null }));
   const avisosPago = (db.avisosPago || []).filter(x => x.casoId === caso.id).map(x => ({ id: x.id, importe: x.importe, medio: x.medio, f: ms(x.fecha), tramo: x.tramo, tipo: x.tipo, adjuntoId: x.adjuntoId, estado: x.estado, motivo: x.motivo || '', concepto: x.concepto }));
   const mensajes = (caso.mensajes || []).slice().sort((p, q) => String(p.fecha).localeCompare(String(q.fecha))).map(m => ({ id: m.id, f: Date.parse(m.fecha) || ms(String(m.fecha).slice(0, 10)), autor: m.autor, t: m.texto, adjuntos: (m.adjuntos || []).slice(), tipo: m.tipo, leido: !!(m.leido && m.leido.cli) }));
+  const incidencias = (ob.incidencias || []).filter(i => i.visibleCliente).map(i => ({ id: i.id, f: ms(i.fecha), tipo: i.tipo, texto: i.texto, gravedad: i.gravedad, estado: i.estado, diasRetraso: i.diasRetraso || 0, bloquea: !!i.bloquea, fotos: (i.fotos || []).slice(), resolucion: i.resolucion || '' }));
+  const fotosObra = (ob.fotos || []).filter(f => f.adjuntoId).map(f => ({ id: f.id, adjuntoId: f.adjuntoId, momento: f.momento, espacioId: f.espacioId, f: ms(f.fecha) }));
   const dvEval = a.evaluarDatosVivienda(caso, cfg);
   const dv = Object.assign(a.nuevoDatosVivienda(caso), caso.datosVivienda || {});
   const fiscal = caso.fiscal ? Object.assign({}, caso.fiscal) : a.nuevoFiscal();
@@ -197,10 +204,11 @@ function buildV(caso) {
     cliente: { nombre: cl.nombre, email: cl.email, tel: cl.tel, direccion: caso.vivienda.direccion || ((cl.zona ? cl.zona + ' · ' : '') + (caso.vivienda.cp || '')) },
     reformista: { empresa: emp.nombre || 'Anatoliy Reformas', contacto: emp.contacto || 'Anatoliy', tel: emp.tel || '600 000 000', email: emp.email || 'hola@anatoliyreformas.es', iban: (cfg.cobros && cfg.cobros.iban) || emp.iban || 'ES00 0000 0000 0000 0000 0000', titular: (cfg.cobros && cfg.cobros.titular) || emp.nombre, bizum: (cfg.cobros && cfg.cobros.bizum) || emp.tel },
     pago: { medios: MEDIOS_PAGO_CLI.filter(m => ((cfg.cobros || {}).medios || []).includes(m) || m === 'transferencia'), justificanteObligatorio: Object.fromEntries(['transferencia', 'bizum', 'efectivo'].map(m => [m, a.justificanteObligatorio(cfg, m)])) },
-    versiones: vers, visita, aceptacion, plan, cobros, avisosPago, mensajes, horquillaPct: a.horquillaPct(cfg),
+    versiones: vers, visita, aceptacion, plan, planTramos, cobros, avisosPago, mensajes, horquillaPct: a.horquillaPct(cfg),
     datosVivienda: Object.assign({}, dv, { eval: dvEval }), fiscal, fiscalEval, tipoVivienda: caso.vivienda.tipo || 'piso', habitadaConfigurador: !!(caso.solicitud && caso.solicitud.obraHabitada),
     requisitos: a.mapaRequisitosCliente(caso, rqCtx),
-    obra: { inicio: ob.inicio ? ms(ob.inicio) : null, hitos, cambios, adendas, solicitudes, remates, cierre }
+    hitosPlan: (a.hitosDeCaso(caso, cfg) || []).map(h => ({ nombre: h.nombre, dias: h.diasEstimados })),
+    obra: { inicio: ob.inicio ? ms(ob.inicio) : null, hitos, cambios, adendas, solicitudes, remates, cierre, incidencias, fotosObra }
   };
 }
 const MEDIOS_PAGO_CLI = ['transferencia', 'bizum', 'efectivo'];
@@ -210,6 +218,47 @@ Proto.proyectarCliente = function (force) {
 };
 
 /* ---------- 3. Admin → Lite ---------- */
+/* R-16/R-17: el lite recibe TODAS las versiones con sus líneas y, por cada trabajo, la key, la base real y lo que marcó el cliente */
+function estLite(caso, v) {
+  const esps = caso.solicitud.espacios; const det = (caso.solicitud.detalle && caso.solicitud.detalle.espacios) || {};
+  const byEsp = {}; v.lineas.forEach(l => { (byEsp[l.espacioId] = byEsp[l.espacioId] || []).push(l); });
+  const orden = esps.map(e => e.id).concat(Object.keys(byEsp).filter(id => !esps.some(e => e.id === id)));
+  const out = [];
+  orden.forEach(id => {
+    const ls = byEsp[id]; if (!ls || !ls.length) return;
+    const e = esps.find(x => x.id === id) || { id, nombre: 'General', tipo: 'general', m2: 0 };
+    const usadas = {}; const trab = (e.trabajos || []).filter(t => typeof t === 'object');
+    out.push({
+      id, tipo: TIPO_CLI[e.tipo] || 'pasillo', tipoAdm: e.tipo, nombre: e.nombre || e.tipo, m2: e.m2 || 0, detalle: (det[id] || null),
+      lineas: ls.map(l => { let k = l.key + (l.tipo === 'mat' ? '~m' : ''); if (usadas[k]) k += '#' + usadas[k]; usadas[k] = (usadas[k] || 0) + 1; const tr = trab.find(t => t.key === l.key);
+        return { k, key: l.key, l: l.concepto, u: l.unidad || 'ud', cant: l.cantidad, precio: l.precio, nota: l.nota || '', bk: l.base || 'fijo', tl: l.tipo || 'mo', det: l.tipo === 'mat' ? null : ((tr && tr.detalles) || null), liteId: l.liteId || null, lineaId: l.id, manual: !!l.bloqueada, origen: l.origen || 'calculo', tab: l.tabiqueId || null }; })
+    });
+  });
+  return out;
+}
+function versionesLite(c) {
+  const a = A();
+  return c.versiones.filter(v => v.estado !== 'borrador').map(v => { const g = a.rangoVersion(v);
+    return { id: v.id, etiqueta: a.etiquetaVersion(v, c), fecha: ms(v.enviadaAt || v.creadaAt || a.hoy()), autor: v.tipo === 'estimacion' ? 'Cliente (configurador)' : 'Reformista', tipo: v.tipo, total: v.totales.total, rango: g.exacto ? null : { lo: g.lo, hi: g.hi },
+      estado: v.estado === 'vigente' ? 'vigente' : v.estado === 'aceptada' ? 'aceptada' : 'sustituida',
+      lineas: v.lineas.map(l => ({ k: l.key + (l.tipo === 'mat' ? '~m' : ''), key: l.key, l: l.concepto, u: l.unidad || 'ud', cant: l.cantidad, precio: l.precio, esp: l.espacioId, tl: l.tipo || 'mo' })) }; });
+}
+function datosLite(c) {
+  const a = A(), db = DBA(), cfg = db.cfg;
+  const vig = c.versiones.find(v => v.estado === 'vigente') || c.versiones[c.versiones.length - 1];
+  const cl = db.clientes.find(x => x.id === c.clienteId) || {};
+  const nums = c.versiones.map(v => parseInt(String(v.id).replace(/\D/g, ''), 10) || 0);
+  const sig = (c.borrador && c.borrador.v3id) || ('V' + (Math.max.apply(null, nums) + 1));
+  const bo = c.borrador && c.borrador.origen === 'lite' ? { snap: c.borrador.snap, lineas: c.borrador.lineas, rev: c.borrador.rev || 0, por: c.borrador.por, actualizadoAt: c.borrador.actualizadoAt, v3id: c.borrador.v3id, neg: c.borrador.negociacion, ajustes: c.borrador.ajustes, hitosPlan: c.borrador.hitosPlan, planCobros: c.borrador.planCobros } : null;
+  const dir = a.direccionDe ? a.direccionDe(c) : ((cl.zona ? cl.zona + ' · ' : '') + (c.vivienda.cp || ''));
+  return {
+    clave: c.id + ':' + vig.id, casoId: c.id, ref: c.id, cliente: { nombre: cl.nombre, tel: cl.tel || '', email: cl.email || '' }, direccion: dir || ((cl.zona ? cl.zona + ' · ' : '') + (c.vivienda.cp || '')), m2Total: c.vivienda.m2,
+    tipoTxt: (c.solicitud.tipoObra === 'reforma_integral' ? 'Reforma integral' : 'Reforma') + ' · ' + (c.vivienda.m2 || '') + ' m²', ajustes: { margen: cfg.margen != null ? cfg.margen : 22, iva: cfg.iva != null ? cfg.iva : 21 },
+    v2id: vig.id, v3id: sig, est: estLite(c, vig), versiones: versionesLite(c), estadoDatos: a.estadoDatosCliente(c, cfg), borrador: bo,
+    cfg: { hitos: a.hitosDeCaso(c, cfg), planCobros: a.normalizarPlan(a.planDeCaso(c, cfg)), negociacionDef: Object.assign({ validezDias: cfg.validezDias || 30 }, cfg.negociacionDef || {}), fotoObligatoriaHito: cfg.fotoObligatoriaHito !== false, margen: cfg.margen },
+    solicitud: { notas: c.solicitud.notasCliente || '', calidad: c.solicitud.calidad, materiales: ((c.solicitud.detalle || {}).materiales) || null }
+  };
+}
 Proto.proyectarLite = function () {
   const c = casoActivo(); const L = W('lite'); if (!L || !L.__P) return;
   if (!c) return;
@@ -217,65 +266,123 @@ Proto.proyectarLite = function () {
   const vig = c.versiones.find(v => v.estado === 'vigente') || c.versiones[c.versiones.length - 1];
   const clave = c.id + ':' + vig.id;
   if (activo && L.__P.clave() !== clave) {
-    const ests = estCliente(c, vig);
-    const cl = DBA().clientes.find(x => x.id === c.clienteId) || {};
-    const nums = c.versiones.map(v => parseInt(String(v.id).replace(/\D/g, ''), 10) || 0);
-    const sig = 'V' + (Math.max.apply(null, nums) + 1);
-    L.__P.cargar({
-      clave, ref: c.id, cliente: { nombre: cl.nombre, tel: cl.tel || '', email: cl.email || '' }, direccion: (cl.zona ? cl.zona + ' · ' : '') + (c.vivienda.cp || ''), m2Total: c.vivienda.m2,
-      tipoTxt: (c.solicitud.tipoObra === 'reforma_integral' ? 'Reforma integral' : 'Reforma') + ' · ' + (c.vivienda.m2 || '') + ' m²', ajustes: { margen: DBA().cfg.margen != null ? DBA().cfg.margen : 22, iva: DBA().cfg.iva != null ? DBA().cfg.iva : 21 },
-      v2id: vig.id, v3id: sig, est: ests.map((e, i) => ({ id: e.id, tipo: e.tipo, nombre: e.nombre, m2: e.m2, lineas: e.lineas }))
-    });
+    L.__P.cargar(datosLite(c));
     Proto.liteNuevo = true; refreshBadges();
-  } else if (!activo && L.__P.clave() && !L.__P.clave().startsWith(c.id + ':')) { /* otro caso: se mantiene */ }
-  else if (!activo && L.__P.clave() === clave && c.estado !== 'propuesta_enviada') { /* sin cambios */ }
+  } else if (L.__P.clave() === clave) { try { L.__P.estadoDatos(DBA() && A().estadoDatosCliente(c, DBA().cfg)); } catch (e) {} }
+};
+/* R-21: el reformista reabre en el lite el borrador guardado (desde el admin) */
+Proto.reabrirEnLite = function (id) {
+  const db = DBA(); const c = db.casos.find(x => x.id === id); const L = W('lite'); if (!c || !L || !L.__P) return false;
+  Proto.ref = id; L.__P.cargar(datosLite(c), true); tab('lite'); toast('Borrador reabierto en el Lite'); return true;
 };
 
 /* ---------- 4. Lite → Admin ---------- */
 Proto.lite = function (kind, d) {
-  const c = casoActivo(); if (!c) return; const a = A(), hoy = a.hoy();
+  const c = casoActivo(); if (!c) return { ok: false }; const a = A(), hoy = a.hoy();
   if (kind === 'borrador') {
-    c.eventos.push({ fecha: hoy, tipo: 'version', texto: 'Borrador ' + d.v3id + ' guardado desde la visita (pendiente de enviar)', autor: 'reformista' });
-    c.interno.proximaAccion = 'Terminar y enviar el borrador ' + d.v3id + ' al cliente'; toast('Borrador guardado · queda anotado en el caso (Admin)');
+    const rs = a.guardarBorradorLite(c, d, { forzar: !!d.forzar });
+    if (rs.ok) { if (!d.silencioso) toast('Borrador ' + d.v3id + ' guardado · ya aparece en la ficha del caso (pestaña Presupuesto)'); AP().refresh(); Proto.sigCaso = ''; }
+    return rs;
+  }
+  if (kind === 'recordar') {
+    const rs = a.recordarDatosCliente(c, d.que); toast('Recordatorio dejado en la conversación con el cliente'); AP().refresh(); Proto.tick(true); return { ok: true, texto: rs.texto };
   }
   if (kind === 'enviar') {
-    const lineas = []; const esps = c.solicitud.espacios; const quitados = {};
-    d.est.forEach(e => {
-      if (!esps.find(x => x.id === e.id)) esps.splice(esps.length - (esps.some(x => x.id === 'gen') ? 1 : 0), 0, { id: e.id, nombre: e.nombre, tipo: Object.keys(TIPO_CLI).find(k => TIPO_CLI[k] === e.tipo) || 'salon', m2: e.m2, trabajos: [] });
-      const ex = esps.find(x => x.id === e.id); ex.m2 = e.m2; ex.nombre = e.nombre;
-      e.trabajos.forEach(t => {
-        if (t.quitado) { if (t.origen !== 'visita') { (quitados[e.id] = quitados[e.id] || {})[t.k] = t.nota || 'Quitado en la visita'; } return; }
-        const precio = r2(t.precio), cant = r2(t.cant);
-        lineas.push({ id: a.uid('L'), key: t.k, concepto: t.l, espacioId: e.id, unidad: t.u || 'ud', base: 'fijo', cantidad: cant, precio, subtotal: r2(precio * cant), tipo: 'mo', origen: t.origen === 'visita' ? 'visita' : 'calculo', bloqueada: false, nota: t.nota || '' });
-      });
-      e.comentarios.forEach(t => c.visita.notas.push({ id: a.uid('n'), espacioId: e.id, texto: e.nombre + ': ' + t, fecha: hoy }));
-      for (let i = 0; i < e.nFotos; i++) c.visita.fotos.push({ id: a.uid('foto'), url: 'foto-lite.jpg', espacioId: e.id, espacioNombre: e.nombre, etiqueta: 'Visita (Lite)', fecha: hoy });
-    });
-    const tot = a.calcularTotales(lineas, d.ajustes.iva, d.ajustes.margen, 500); const hq = a.calcularHorquilla(tot.total, null); tot.lo = hq.lo; tot.hi = hq.hi;
+    const { lineas, quitados } = a.lineasDeLite(c, d, (c.borrador && c.borrador.lineas) || []);
+    const cfg = DBA().cfg; const tot = a.calcularTotalesNeg(lineas, d.ajustes.iva, d.ajustes.margen, 500, d.neg); const hq = a.calcularHorquilla(tot.total, null); tot.lo = hq.lo; tot.hi = hq.hi;
     const ver = { id: d.v3id, tipo: 'propuesta', creadaAt: hoy, enviadaAt: hoy, ivaPct: d.ajustes.iva, lineas, totales: tot, estado: 'borrador', cambiosRespectoAnterior: null, quitados };
     // R-15 (A10 y A1): se revalida antes de aplicar nada; al cerrar la visita desde el lite se da por realizada
     const cSim = Object.assign({}, c, { estado: 'en_visita', visita: Object.assign({}, c.visita, { estado: 'realizada' }) });
     const rq10 = a.requisitos('cerrar_visita', c, { total: tot.total }), rq1 = a.requisitos('enviar_version', cSim, { version: ver });
-    if (!rq10.ok || !rq1.ok) { toast('⚠ No se puede enviar todavía. Te falta: ' + a.textoFaltan({ faltan: rq10.faltan.concat(rq1.faltan) }) + '.'); return; }
+    if (!rq10.ok || !rq1.ok) { toast('⚠ No se puede enviar todavía. Te falta: ' + a.textoFaltan({ faltan: rq10.faltan.concat(rq1.faltan) }) + '.'); return { ok: false }; }
+    const vp = a.validarPlan(d.planCobros, d.hitosPlan);
+    if (!vp.ok) { toast('⚠ Plan de cobros: ' + vp.errores[0]); return { ok: false }; }
+    a.aplicarVisitaLite(c, d);
     if (c.estado === 'visita_confirmada' && a.puedeTransitar(c, 'en_visita')) a.transitar(c, 'en_visita', { autor: 'reformista', texto: 'Visita técnica realizada (panel Lite)' });
     c.visita.estado = 'realizada';
     // cobro de la visita (a cuenta del presupuesto) si no estaba cobrada
     try {
-      const imp = a.importeVisita(c, DBA().cfg);
-      if (imp > 0 && !['cobrada', 'eximida', 'pendiente_pago', 'justificante_enviado'].includes(c.visita.cobro && c.visita.cobro.estado) && (DBA().cfg.visita.cobroCuando || 'en_visita') === 'en_visita') {
+      const imp = a.importeVisita(c, cfg);
+      if (imp > 0 && !['cobrada', 'eximida', 'pendiente_pago', 'justificante_enviado'].includes(c.visita.cobro && c.visita.cobro.estado) && (cfg.visita.cobroCuando || 'en_visita') === 'en_visita') {
         c.visita.cobro = Object.assign({}, c.visita.cobro, { importe: imp, estado: 'cobrada', fecha: hoy });
-        const vd = a.visitaDescuento(DBA().cfg);
+        const vd = a.visitaDescuento(cfg);
         DBA().cobros.push({ id: a.uid('cob'), casoId: c.id, importe: imp, concepto: 'Visita técnica', fecha: hoy, estado: 'cobrado', metodo: 'efectivo', tipo: 'visita', descontable: vd.descontable, descontablePct: vd.pct });
         c.eventos.push({ fecha: hoy, tipo: 'cobro', texto: 'Cobrada la visita técnica (' + a.fmtEur(imp) + ')', autor: 'reformista' });
       }
     } catch (e) { console.warn(e); }
-    a.enviarVersion(c, ver, d.canal || 'WhatsApp');
+    a.adjuntarCondicionesVersion(c, ver, { negociacion: d.neg, planCobros: d.planCobros, hitosPlan: d.hitosPlan, quitados });
+    ver.tabiques = (d.tabiques || []).map(t => Object.assign({}, t));
+    a.enviarVersion(c, ver, d.canal || 'WhatsApp'); c.borrador = null;
     if (a.puedeTransitar(c, 'propuesta_enviada')) a.transitar(c, 'propuesta_enviada', { autor: 'reformista', texto: 'Presupuesto ' + ver.id + ' enviado tras la visita (' + a.fmtEur(tot.total) + ')' });
     c.interno.proximaAccion = 'Hacer seguimiento de la propuesta ' + ver.id;
     toast('✅ ' + ver.id + ' enviada: ya está en Admin y el cliente la ve en su panel');
     AP().refresh(); Proto.tick(true);
     banner('📤 <b>' + ver.id + '</b> enviada al cliente. El siguiente paso es del cliente: revisar y aceptar.', [['Ir al panel del cliente', () => { tab('cli'); W('cli').__P.irPanel('presupuesto'); }]]);
+    return { ok: true, id: ver.id };
   }
+  return { ok: false };
+};
+/* Cálculos del admin que el lite reutiliza (una sola regla): importe de un cambio rápido y catálogo para «Por partidas» */
+Proto.calc = {
+  cambio: (modo, datos, margen) => A().importeCambioRapido(modo, datos, margen),
+  catalogo: () => A().catalogoCambios(DBA()),
+  umbralTexto: id => { const c = DBA().casos.find(x => x.id === id); return c ? A().textoUmbral(c, DBA().cfg) : ''; }
+};
+
+/* ---------- 4b. Lite: modo Obra (R-26 a R-31) ---------- */
+const TRIG = () => A().eval('TRIGGER_TXT');
+const adminListo = () => { try { return !!(W('adm') && W('adm').__P && W('adm').__P.db()); } catch (e) { return false; } };
+Proto.obrasLite = function () {
+  if (!adminListo()) return [];
+  const a = A(), db = DBA();
+  return db.casos.filter(c => ['en_obra', 'terminada', 'en_remates'].includes(c.estado)).map(c => { const cl = db.clientes.find(x => x.id === c.clienteId) || {};
+    return { id: c.id, cliente: cl.nombre, direccion: a.direccionDe(c), estado: c.estado, progreso: a.calcularProgreso(c), salud: (c.obra.hitos || []).length ? a.saludObra(c, db.cfg, a.hoy()) : null,
+      incidenciasAbiertas: (c.obra.incidencias || []).filter(i => i.estado === 'abierta').length, hitos: (c.obra.hitos || []).length, pendienteConformidad: a.pendienteConformidad(c) }; });
+};
+Proto.obraVista = function (id) {
+  if (!adminListo()) return null;
+  const a = A(), db = DBA(), cfg = db.cfg, c = db.casos.find(x => x.id === id); if (!c || !c.obra) return null;
+  const cl = db.clientes.find(x => x.id === c.clienteId) || {}; const tv = a.totalVigente(c), eco = a.estadoEconomico(c, db.cobros), um = a.umbralAdenda(c, cfg), pend = a.cambiosPendientes(c), plan = a.planCobros(c, cfg, db.cobros), trig = a.debeGenerarAdenda(c, cfg, {});
+  const iva = a.ivaDe(c); const pendSin = r2(pend.reduce((s, x) => s + x.importe, 0)); const prox = plan.find(t => t.estado !== 'cobrado') || null;
+  const regs = (c.obra.cambios || []).filter(x => x.estado === 'registrado' && !x.adendaId);
+  return {
+    id: c.id, cliente: cl.nombre, direccion: a.direccionDe(c), estado: c.estado, progreso: a.calcularProgreso(c), salud: (c.obra.hitos || []).length ? a.saludObra(c, cfg, a.hoy()) : null, inicio: c.obra.inicio,
+    pendienteConformidad: a.pendienteConformidad(c), margen: cfg.margen, ivaPct: iva, fotoObligatoriaHito: cfg.fotoObligatoriaHito !== false, espacios: (c.solicitud.espacios || []).filter(e => e.id !== 'gen').map(e => ({ id: e.id, nombre: e.nombre || e.tipo })),
+    hitos: (c.obra.hitos || []).map(h => ({ id: h.id, nombre: h.nombre, dias: h.diasEstimados, estado: h.estado, fechaReal: h.fechaReal || null, fechaPrevista: h.fechaFinPrevista || h.fechaPrevista || null, nota: h.nota || '', fotos: (h.fotos || []).map(f => f.adjuntoId).filter(Boolean), nFotos: (h.fotos || []).length,
+      desbloquea: (plan.find(t => t.cuando === 'hito:' + h.nombre && t.estado !== 'cobrado') || null) && { label: plan.find(t => t.cuando === 'hito:' + h.nombre && t.estado !== 'cobrado').label, importe: plan.find(t => t.cuando === 'hito:' + h.nombre && t.estado !== 'cobrado').importe } })),
+    incidencias: (c.obra.incidencias || []).map(i => Object.assign({}, i, { fotos: (i.fotos || []).slice() })),
+    cambios: (c.obra.cambios || []).map(x => ({ id: x.id, concepto: x.concepto, importe: x.importe, importeIva: r2(x.importe * (1 + iva / 100)), estado: x.estado, fecha: x.fecha, tipo: x.tipo, bloquea: !!x.bloqueaObra, adendaId: x.adendaId || null })),
+    adendas: (c.obra.adendas || []).map(x => ({ id: x.id, delta: x.delta, estado: x.estado })),
+    cuenta: { aceptada: tv.aceptada, adendasFirmadas: tv.adendasFirmadas, firmado: tv.firmado, provisional: tv.provisional, total: tv.total, cobrado: eco.cobrado, saldo: eco.saldo, pendienteSinIva: pendSin, umbralSinIva: um.sinIva, umbralConIva: um.conIva, umbralTexto: a.textoUmbral(c, cfg), pctUmbral: um.sinIva > 0 ? Math.min(100, Math.round(pendSin / um.sinIva * 100)) : 0, proximo: prox && { label: prox.label, importe: prox.importe, falta: prox.falta, estado: prox.estado }, disparadores: trig.map(t => TRIG()[t] || t), puedeAdenda: trig.length > 0 && regs.length > 0, nRegistrados: regs.length },
+    fotos: (c.obra.fotos || []).map(f => ({ id: f.id, adjuntoId: f.adjuntoId || null, momento: f.momento, espacioId: f.espacioId, fecha: f.fecha })).concat((c.obra.hitos || []).flatMap(h => (h.fotos || []).filter(f => f.adjuntoId).map(f => ({ id: f.id, adjuntoId: f.adjuntoId, momento: f.momento || 'durante', espacioId: null, hito: h.nombre, fecha: f.fecha })))),
+    catalogo: a.catalogoCambios(db)
+  };
+};
+Proto.liteObra = function (kind, d) {
+  d = d || {}; const a = A(), db = DBA(), cfg = db.cfg, c = db.casos.find(x => x.id === d.casoId); if (!c || !c.obra) return { ok: false, error: 'No se encuentra la obra' };
+  const fin = res => { AP().refresh(); Proto.tick(true); return res; };
+  try {
+    if (!['en_obra', 'terminada', 'en_remates'].includes(c.estado)) return { ok: false, error: 'La obra no está en curso' };
+    if (kind === 'hito') {
+      const h = (c.obra.hitos || []).find(x => x.id === d.id); if (!h) return { ok: false, error: 'No se encuentra el hito' };
+      if (d.estado === 'hecho' && cfg.fotoObligatoriaHito !== false && !(d.adjuntos || []).length) return { ok: false, error: 'Para marcar el hito como hecho hace falta al menos una foto' };
+      a.marcarHito(c, d.id, d.estado, { adjuntos: d.adjuntos || [], nota: d.nota, momento: 'durante' });
+      const avisos = []; const tr = d.estado === 'hecho' ? a.planCobros(c, cfg, db.cobros).find(t => t.cuando === 'hito:' + h.nombre && t.estado === 'debido') : null;
+      if (tr) avisos.push('Este hito desbloquea el cobro del tramo «' + tr.label + '» (' + a.fmtEur(tr.falta) + ').');
+      if (d.estado === 'hecho' && a.debeGenerarAdenda(c, cfg, { contexto: 'hito' }).includes('hito')) avisos.push('Hay cambios sin consolidar: conviene generar una adenda.');
+      return fin({ ok: true, avisos });
+    }
+    if (kind === 'incidencia') { const inc = a.registrarIncidencia(c, d); return fin({ ok: true, incidencia: inc }); }
+    if (kind === 'cambio') { const rs = a.altaCambioRapido(c, d, cfg); return fin({ ok: true, id: rs.ch.id, msg: rs.msg, disparadores: rs.trig.map(t => TRIG()[t] || t), tope: rs.trig.includes('tope'), umbralTexto: a.textoUmbral(c, cfg), puedeAdenda: rs.trig.length > 0 }); }
+    if (kind === 'foto') { (d.adjuntos || []).forEach(aid => { c.obra.fotos.push({ id: a.uid('of'), fecha: a.hoy(), url: 'foto-lite.jpg', adjuntoId: aid, momento: d.momento || 'durante', espacioId: d.espacioId || null, origen: 'lite' }); Proto.adjuntos.setMeta(aid, { casoId: c.id }); }); c.eventos.push({ fecha: a.hoy(), tipo: 'obra', texto: (d.adjuntos || []).length + ' foto(s) de obra subidas desde el lite (' + (d.momento || 'durante') + ')', autor: 'reformista' }); return fin({ ok: true }); }
+    if (kind === 'adenda') {
+      const rq = a.requisitos('generar_adenda', c, {}); if (!rq.ok) return { ok: false, error: 'Te falta: ' + a.textoFaltan(rq) };
+      const trig = a.debeGenerarAdenda(c, cfg, {}); const ids = (c.obra.cambios || []).filter(x => x.estado === 'registrado' && !x.adendaId).map(x => x.id);
+      const ad = a.crearAdenda(c, ids, trig.includes('tope') ? 'tope' : trig.includes('umbral') ? 'umbral' : 'manual');
+      return fin({ ok: true, id: ad.id, delta: ad.delta });
+    }
+  } catch (e) { return { ok: false, error: e.message }; }
+  return { ok: false, error: 'Acción desconocida' };
 };
 
 /* ---------- 5. Cliente → Admin ---------- */
@@ -425,7 +532,7 @@ function tab(k) {
   Proto.tab = k; $('#pbanner').classList.remove('on');
   TABS.forEach(t => { FR[t].classList.toggle('on', t === k); $('#tb-' + t).classList.toggle('on', t === k); $('#tb-' + t).setAttribute('aria-selected', t === k); });
   if (k === 'adm') { Proto.adminNuevo = false; try { AP().refresh(); } catch (e) {} }
-  if (k === 'lite') Proto.liteNuevo = false;
+  if (k === 'lite'){ Proto.liteNuevo = false; try { W('lite').__P.refrescar(); } catch (e) {} }
   if (k === 'cli') { try { W('cli').__P.tieneCaso() && /^#\/correo/.test(W('cli').location.hash) === false && 0; } catch (e) {} }
   refreshBadges(); try { sessionStorage.setItem('protoTab', k); } catch (e) {}
 }
