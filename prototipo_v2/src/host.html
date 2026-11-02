@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Prototipo completo v1 · Workflow de una reforma</title>
+<style>
+:root{--bg:#f6f1ea;--ink:#1c140d;--mut:#6b5d4f;--acc:#c96f28;--acc2:#8a5c38;--card:#fffdf9;--line:#e4d9ca;--ok:#2f7d4f}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0}
+body{background:var(--bg);color:var(--ink);font:14px/1.4 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;display:flex;flex-direction:column;overflow:hidden}
+#top{display:flex;align-items:center;gap:12px;padding:0 14px;height:52px;background:#1c140d;color:#f6f1ea;flex:none}
+#brand{font-weight:700;letter-spacing:.2px;white-space:nowrap;font-size:14px}
+#brand small{display:block;font-weight:400;color:#c9b9a4;font-size:11px;margin-top:-1px}
+#tabs{display:flex;gap:4px;flex:1;justify-content:center;min-width:0}
+.tb{appearance:none;border:0;background:transparent;color:#d9cbb8;padding:9px 16px;border-radius:9px 9px 0 0;font:600 14px inherit;cursor:pointer;position:relative;white-space:nowrap;display:flex;align-items:center;gap:7px;height:42px;align-self:flex-end}
+.tb:hover{background:#2c2118;color:#fff}
+.tb.on{background:var(--bg);color:var(--ink)}
+.tb:focus-visible{outline:2px solid var(--acc);outline-offset:-2px}
+.tb .n{font-size:11px;opacity:.6;font-weight:500}
+.bd{min-width:18px;height:18px;border-radius:9px;background:var(--acc);color:#fff;font-size:11px;font-weight:700;display:inline-flex;align-items:center;justify-content:center;padding:0 5px}
+#ctl{display:flex;gap:6px;align-items:center}
+#ctl button{appearance:none;border:1px solid #4a3a2c;background:#2c2118;color:#f6f1ea;border-radius:8px;padding:6px 10px;font:600 12px inherit;cursor:pointer;white-space:nowrap}
+#ctl button:hover{background:#3a2c20}
+#guia{flex:none;background:var(--card);border-bottom:1px solid var(--line);padding:7px 14px;display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+#gcaso{font-size:13px;white-space:nowrap}
+#gpasos{display:flex;gap:4px;flex-wrap:wrap}
+.gp{font-size:11px;padding:2px 8px;border-radius:10px;background:#ece3d6;color:var(--mut)}
+.gp.ok{background:#d9eadf;color:var(--ok)}
+.gp.now{background:var(--acc);color:#fff;font-weight:700}
+#gtxt{flex:1;min-width:220px;font-size:13px}
+#gbtn{appearance:none;border:0;background:var(--acc);color:#fff;border-radius:8px;padding:6px 12px;font:700 12px inherit;cursor:pointer;white-space:nowrap}
+#gbtn:hover{background:#b0601f}
+#frames{flex:1;position:relative;min-height:0}
+#frames iframe{position:absolute;inset:0;width:100%;height:100%;border:0;background:#fff;visibility:hidden;pointer-events:none;z-index:0}
+#frames iframe.on{visibility:visible;pointer-events:auto;z-index:2}
+#pbanner{position:fixed;left:50%;transform:translate(-50%,-160%);opacity:0;pointer-events:none;top:100px;flex-wrap:wrap;z-index:50;background:#1c140d;color:#f6f1ea;border-radius:12px;padding:10px 14px;display:flex;gap:10px;align-items:center;max-width:min(760px,94vw);box-shadow:0 8px 30px rgba(0,0,0,.35);transition:transform .25s;font-size:13px}
+#pbanner.on{transform:translate(-50%,0);opacity:1;pointer-events:auto}
+#pbanner>span{flex:1 1 260px}
+#pbanner button{appearance:none;border:0;background:var(--acc);color:#fff;border-radius:7px;padding:5px 10px;font:700 12px inherit;cursor:pointer;white-space:nowrap}
+#pbanner button.x{background:transparent;color:#c9b9a4;padding:2px 6px}
+#ptoast{position:fixed;left:50%;bottom:18px;transform:translate(-50%,160%);opacity:0;pointer-events:none;background:#1c140d;color:#fff;padding:10px 16px;border-radius:10px;z-index:60;transition:transform .25s;max-width:92vw;font-size:13px}
+#ptoast.on{transform:translate(-50%,0);opacity:1}
+#carga{position:fixed;inset:0;background:var(--bg);display:flex;align-items:center;justify-content:center;z-index:100;font-weight:600;color:var(--mut)}
+.ready #carga{display:none}
+@media(max-width:900px){#brand small,.tb .n{display:none}#brand{font-size:12px}.tb{padding:9px 10px;font-size:13px}#ctl button .t{display:none}}
+@media(max-width:620px){#pbanner{width:92vw}#brand{display:none}#top{padding:0 6px;gap:4px}#tabs{justify-content:flex-start;overflow-x:auto}#ctl{display:none}#gpasos{display:none}}
+</style>
+</head>
+<body>
+<header id="top">
+  <div id="brand">Prototipo completo v1<small>Workflow de una reforma de principio a fin</small></div>
+  <nav id="tabs" role="tablist" aria-label="Aplicaciones del prototipo">
+    <button class="tb on" id="tb-cfg" role="tab" aria-selected="true" onclick="tab('cfg')">🧮 Configurador <span class="n">cliente</span></button>
+    <button class="tb" id="tb-adm" role="tab" aria-selected="false" onclick="tab('adm')">🗂️ Admin <span class="n">reformista</span><span class="bd" id="bd-adm" style="display:none"></span></button>
+    <button class="tb" id="tb-lite" role="tab" aria-selected="false" onclick="tab('lite')">📱 Lite <span class="n">visita</span><span class="bd" id="bd-lite" style="display:none"></span></button>
+    <button class="tb" id="tb-cli" role="tab" aria-selected="false" onclick="tab('cli')">🏠 Cliente <span class="n">su panel</span><span class="bd" id="bd-cli" style="display:none"></span></button>
+  </nav>
+  <div id="ctl">
+    <button onclick="avanzar(1)" title="Avanzar la fecha del prototipo 1 día">⏩ <span class="t">+1 día</span></button>
+    <button onclick="avanzar(7)" title="Avanzar la fecha del prototipo 7 días">⏩ <span class="t">+7 días</span></button>
+    <button onclick="reiniciarTodo()" title="Empezar de cero">↺ <span class="t">Reiniciar</span></button>
+  </div>
+</header>
+<div id="guia">
+  <div id="gcaso"></div>
+  <div id="gpasos"></div>
+  <div id="gtxt"></div>
+  <button id="gbtn">Siguiente</button>
+</div>
+<main id="frames"></main>
+<div id="pbanner" role="status"></div>
+<div id="ptoast" role="status"></div>
+<div id="carga">Cargando las cuatro aplicaciones…</div>
+<script>
+const SRC = /*SRC*/;
+</script>
+<script>
+/*BRIDGE*/
+</script>
+</body>
+</html>

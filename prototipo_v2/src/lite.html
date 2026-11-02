@@ -1,0 +1,768 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#18100a">
+<title>Panel Lite v1 — Revisión en visita técnica</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=Cormorant+Garamond:wght@500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --cream:#f4efe6;--stone:#e5ddd0;--warm:#c4b49a;--terra:#8a5c38;--deep:#18100a;--ink:#1c140d;
+  --accent:#c96f28;--accent-d:#a9561a;--light:#faf7f2;--muted:#6f6150;--ok:#2f6b45;--danger:#a03030;--amber:#8a5a00;
+  --border:#ddd5c5;--r:14px;--bar:76px;
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html{-webkit-text-size-adjust:100%}
+body{font-family:'DM Sans',system-ui,sans-serif;background:var(--cream);color:var(--ink);min-height:100vh;font-size:16px;line-height:1.35}
+button,input,select,textarea{font-family:inherit;font-size:inherit;color:inherit}
+button{cursor:pointer;border:none;background:none}
+:focus-visible{outline:3px solid var(--accent-d);outline-offset:2px}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+
+/* ── Cabecera ── */
+.top{position:sticky;top:0;z-index:30;background:var(--deep);color:#fff;display:flex;align-items:center;gap:6px;padding:8px 10px;padding-top:max(8px,env(safe-area-inset-top))}
+.top .back{min-width:48px;min-height:48px;border-radius:12px;background:rgba(255,255,255,.1);color:#fff;font-size:15px;padding:0 12px;display:inline-flex;align-items:center;gap:4px}
+.top .tt{flex:1;min-width:0}
+.top .tt b{display:block;font-family:'Cormorant Garamond',serif;font-size:21px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.top .tt small{display:block;font-size:12px;color:var(--warm);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ver{background:var(--accent-d);color:#fff;border-radius:20px;padding:5px 11px;font-size:12px;font-weight:600;white-space:nowrap}
+.ver.env{background:var(--ok)}
+.save{font-size:11px;color:#9ad1a8;white-space:nowrap;min-width:64px;text-align:right}
+.save.err{color:#ffb3b3}
+
+/* ── Estructura ── */
+#app{max-width:1180px;margin:0 auto}
+main{padding:14px 14px calc(var(--bar) + 26px)}
+.cols{display:block}
+.pane-list{display:block}.pane-room{display:block}
+body[data-view=room] .pane-list{display:none}
+body[data-view=hub] .pane-room{display:none}
+@media(min-width:980px){
+  .cols{display:grid;grid-template-columns:380px 1fr;gap:18px;align-items:start}
+  body[data-view=room] .pane-list,body[data-view=hub] .pane-list,body[data-view=room] .pane-room,body[data-view=hub] .pane-room{display:block}
+  .pane-list{position:sticky;top:76px;max-height:calc(100vh - 170px);overflow-y:auto}
+  .only-narrow{display:none!important}
+}
+@media(max-width:979px){.only-wide{display:none!important}}
+
+/* ── Componentes ── */
+.card{background:#fff;border:1px solid var(--border);border-radius:var(--r);padding:14px;margin-bottom:12px}
+.card h3,.h{font-family:'Cormorant Garamond',serif;font-size:22px;font-weight:600;color:var(--terra);margin-bottom:6px}
+.lbl{font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);font-weight:600;margin-bottom:6px}
+.btn{min-height:48px;padding:0 18px;border-radius:12px;font-weight:600;display:inline-flex;align-items:center;justify-content:center;gap:8px;border:2px solid var(--border);background:#fff}
+.btn.pri{background:var(--accent-d);border-color:var(--accent-d);color:#fff}
+.btn.ok{background:var(--ok);border-color:var(--ok);color:#fff}
+.btn.dng{color:var(--danger);border-color:#e3b4b4}
+.btn.blk{width:100%}
+.btn[disabled]{opacity:.5}
+.row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.sp{flex:1}
+.muted{color:var(--muted);font-size:13px}
+.pill{display:inline-block;padding:3px 10px;border-radius:20px;font-size:12px;font-weight:600;background:var(--stone);color:var(--muted)}
+.pill.ok{background:#dff1e5;color:var(--ok)}.pill.wip{background:#fff1d6;color:var(--amber)}.pill.env{background:#dff1e5;color:var(--ok)}.pill.new{background:#e6edf8;color:#1d4b8a}
+.chip{display:inline-flex;align-items:center;min-height:44px;padding:0 14px;border:1.5px solid var(--border);border-radius:20px;background:#fff;font-size:14px;margin:0 6px 6px 0}
+.progress{height:8px;background:var(--stone);border-radius:6px;overflow:hidden}
+.progress>i{display:block;height:100%;background:var(--ok);transition:width .25s}
+.field{display:block;margin-bottom:10px}
+.field>span{display:block;font-size:12px;color:var(--muted);margin-bottom:3px}
+input:where(:not([type=checkbox]):not([type=radio]):not([type=file]):not([type=hidden])),select,textarea{width:100%;min-height:48px;padding:10px 12px;border:1.5px solid var(--border);border-radius:12px;background:#fff}
+textarea{min-height:84px;resize:vertical}
+input:focus,select:focus,textarea:focus{border-color:var(--accent);outline:none}
+
+/* ── Inicio ── */
+.hero{text-align:center;padding:20px 8px 6px}
+.hero h1{font-family:'Cormorant Garamond',serif;font-size:34px;color:var(--terra)}
+.hero p{color:var(--muted)}
+.big-total{font-family:'Cormorant Garamond',serif;font-size:34px;font-weight:600;line-height:1}
+.kv{display:flex;justify-content:space-between;gap:10px;padding:6px 0;border-bottom:1px dashed var(--border);font-size:15px}
+
+/* ── Estancias (lista) ── */
+.room{display:flex;align-items:center;gap:12px;width:100%;text-align:left;background:#fff;border:1.5px solid var(--border);border-radius:var(--r);padding:12px;margin-bottom:10px;min-height:76px}
+.room.cur{border-color:var(--accent);box-shadow:0 0 0 2px rgba(201,111,40,.18)}
+.room .ico{font-size:26px;width:44px;height:44px;border-radius:12px;background:var(--stone);display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.room.done .ico{background:#dff1e5}
+.room b{display:block;font-size:16px}
+.room .meta{display:flex;gap:8px;flex-wrap:wrap;font-size:12px;color:var(--muted);margin-top:2px}
+.room .amt{text-align:right;font-weight:600;white-space:nowrap}
+.room .amt small{display:block;font-weight:400;font-size:11px}
+.dlt-up{color:var(--danger)}.dlt-dn{color:var(--ok)}
+
+/* ── Detalle de estancia ── */
+.rhead{display:flex;gap:8px;align-items:center;margin-bottom:10px}
+.rhead input{font-family:'Cormorant Garamond',serif;font-size:24px;font-weight:600;min-height:52px;border-color:transparent;background:transparent;padding:0 6px}
+.rhead input:focus{background:#fff;border-color:var(--accent)}
+.nav{min-width:48px;min-height:48px;border-radius:12px;background:#fff;border:1.5px solid var(--border);font-size:20px}
+.stepper{display:inline-flex;align-items:stretch;border:1.5px solid var(--border);border-radius:12px;background:#fff;overflow:hidden}
+.stepper button{min-width:48px;min-height:48px;font-size:22px;font-weight:600;color:var(--terra)}
+.stepper input{width:72px;min-height:48px;border:none;border-radius:0;text-align:center;font-weight:600;padding:0 4px}
+.stepper.sm button{min-width:44px;min-height:44px}.stepper.sm input{width:64px;min-height:44px}
+.work{background:#fff;border:1.5px solid var(--border);border-radius:var(--r);margin-bottom:10px;overflow:hidden}
+.work.ok{border-color:#9fd0b0;background:#f6fbf7}
+.work-top{display:flex;gap:12px;align-items:flex-start;padding:12px}
+.chk{width:48px;height:48px;border-radius:50%;border:2.5px solid var(--warm);background:#fff;font-size:24px;color:#fff;flex-shrink:0;display:flex;align-items:center;justify-content:center}
+.work.ok .chk{background:var(--ok);border-color:var(--ok)}
+.work-t{flex:1;min-width:0}
+.work-t b{display:block;font-size:16px;line-height:1.25}
+.tag{display:inline-block;font-size:11px;font-weight:600;border-radius:8px;padding:2px 7px;margin-right:4px;background:var(--stone);color:var(--muted)}
+.tag.add{background:#dfeaf8;color:#1d4b8a}.tag.mod{background:#fff1d6;color:var(--amber)}
+.work-sub{font-weight:600;white-space:nowrap;text-align:right;font-size:15px}
+.work-sub small{display:block;font-weight:400;font-size:11px;color:var(--muted)}
+.work-act{display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding:0 12px 12px}
+.work-edit{padding:0 12px 12px;display:none}
+.work.open .work-edit{display:block}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.grid2>*{min-width:0}
+.sheet{overflow-x:hidden}
+.cat-i b{min-width:0}
+.quit{background:#faf0f0;border:1.5px dashed #e3b4b4;border-radius:var(--r);padding:10px;margin-bottom:10px}
+.quit .q{display:flex;gap:10px;align-items:center;padding:6px 0;text-decoration:none}
+.quit .q span{flex:1;text-decoration:line-through;color:var(--muted)}
+.cm{background:var(--light);border:1px solid var(--border);border-radius:12px;padding:10px 12px;margin-bottom:8px;display:flex;gap:8px;align-items:flex-start}
+.cm p{flex:1;white-space:pre-wrap;word-break:break-word}
+.cm small{display:block;color:var(--muted);font-size:11px}
+.x{min-width:44px;min-height:44px;border-radius:10px;color:var(--danger);font-size:18px}
+.thumbs{display:grid;grid-template-columns:repeat(auto-fill,minmax(104px,1fr));gap:8px;margin-top:8px}
+.thumb{position:relative;aspect-ratio:1;border-radius:12px;overflow:hidden;background:var(--stone);border:1px solid var(--border);padding:0}
+.thumb img{width:100%;height:100%;object-fit:cover;display:block}
+.thumb em{position:absolute;left:0;right:0;bottom:0;background:rgba(0,0,0,.55);color:#fff;font-size:11px;font-style:normal;padding:3px 6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.addph{display:inline-flex}
+.addph input{position:absolute;width:1px;height:1px;opacity:0}
+
+/* ── Barra inferior ── */
+.bar{position:fixed;left:0;right:0;bottom:0;z-index:30;background:var(--deep);color:#fff;padding:10px 14px;padding-bottom:max(10px,env(safe-area-inset-bottom));display:flex;align-items:center;gap:12px}
+.bar .tot{flex:1;min-width:0}
+.bar small{display:block;font-size:11px;color:var(--warm)}
+.bar b{font-family:'Cormorant Garamond',serif;font-size:26px;font-weight:600;line-height:1}
+.bar .d{font-size:12px;margin-left:6px}
+.bar .btn{min-height:50px}
+
+/* ── Hojas, visor y avisos ── */
+.ov{position:fixed;inset:0;z-index:50;background:rgba(10,6,2,.55);display:none}
+.ov.on{display:block}
+.sheet{position:absolute;left:0;right:0;bottom:0;max-height:92vh;overflow-y:auto;background:var(--cream);border-radius:20px 20px 0 0;padding:16px 14px calc(18px + env(safe-area-inset-bottom));max-width:720px;margin:0 auto}
+@media(min-width:760px){.sheet{bottom:auto;top:50%;transform:translateY(-50%);border-radius:20px;max-height:86vh}}
+.sheet .grab{width:44px;height:5px;background:var(--warm);border-radius:4px;margin:0 auto 10px}
+.cat-i{display:flex;align-items:center;gap:10px;width:100%;text-align:left;min-height:56px;padding:8px 12px;border:1.5px solid var(--border);border-radius:12px;background:#fff;margin-bottom:8px}
+.cat-i b{flex:1;font-weight:500}
+.cat-i small{color:var(--muted);white-space:nowrap}
+.viewer{position:fixed;inset:0;z-index:60;background:#000;display:none;flex-direction:column}
+.viewer.on{display:flex}
+.viewer img{flex:1;min-height:0;object-fit:contain;width:100%}
+.viewer .vb{padding:12px;background:#111;display:flex;gap:10px;align-items:center}
+.viewer .vb input{flex:1;background:#222;border-color:#444;color:#fff}
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(var(--bar) + 14px);z-index:70;background:var(--deep);color:#fff;padding:12px 16px;border-radius:14px;box-shadow:0 6px 24px rgba(0,0,0,.35);display:none;align-items:center;gap:14px;max-width:92vw}
+.toast.on{display:flex}
+.toast button{color:#ffd9a8;font-weight:700;min-height:44px;padding:0 6px}
+.warn{background:#fff6e0;border:1.5px solid #e6c16b;color:#6a4a00;border-radius:12px;padding:10px 12px;margin-bottom:12px;font-size:14px}
+.info{background:#e9f0fa;border:1.5px solid #b8cdea;color:#1d3f70;border-radius:12px;padding:10px 12px;margin-bottom:12px;font-size:13px}
+.diff{padding:6px 0;border-bottom:1px dashed var(--border);font-size:14px;display:flex;gap:8px}
+.diff i{font-style:normal;font-weight:700;width:20px;text-align:center}
+.diff .a{color:#1d4b8a}.diff .q{color:var(--danger)}.diff .m{color:var(--amber)}
+.msgbox{width:100%;min-height:180px;font-size:14px}
+@media(prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body data-view="home">
+<a href="#main" class="sr">Saltar al contenido</a>
+<div id="app"></div>
+<div class="ov" id="ov" role="dialog" aria-modal="true" aria-label="Ventana"><div class="sheet" id="sheet"></div></div>
+<div class="viewer" id="viewer" role="dialog" aria-modal="true" aria-label="Foto"></div>
+<div class="toast" id="toast" role="status" aria-live="polite"><span id="toast-t"></span><button id="toast-u" type="button" hidden>Deshacer</button></div>
+<script>
+'use strict';
+// ═══════════════════════════════════════════════════════
+// 1. UTILIDADES
+// ═══════════════════════════════════════════════════════
+const LS_KEY = 'panelLiteV1';
+const r2 = v => Math.round((Number(v) || 0) * 100) / 100;
+const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]));
+const uid = p => (p || 'id') + Math.random().toString(36).slice(2, 8) + Date.now().toString(36).slice(-3);
+const NF2 = new Intl.NumberFormat('de-DE', { minimumFractionDigits:2, maximumFractionDigits:2 });
+const NF0 = new Intl.NumberFormat('de-DE', { maximumFractionDigits:0 });
+const eur = v => NF2.format(r2(v)) + ' €';
+const eur0 = v => NF0.format(Math.round(v)) + ' €';
+const num = v => { const n = Number(String(v).replace(',', '.')); return isFinite(n) ? n : 0; };
+const fmtNum = v => String(Math.round(v * 100) / 100).replace('.', ',');
+const hhmm = d => new Date(d).toLocaleTimeString('es-ES', { hour:'2-digit', minute:'2-digit' });
+const fecha = d => new Date(d).toLocaleDateString('es-ES', { day:'2-digit', month:'short', year:'numeric' });
+
+// ═══════════════════════════════════════════════════════
+// 2. CATÁLOGO DE TRABAJOS (reforma integral estándar)
+//    p = precio unitario sin IVA ni margen (mano de obra + material, calidad media)
+//    b = base de la cantidad: m2 · pared · ml · mlm (muebles) · ud · fijo
+// ═══════════════════════════════════════════════════════
+const TIPOS = {
+  pasillo:    { n:'Pasillo / entrada', i:'🚪' },
+  salon:      { n:'Salón-comedor',     i:'🛋️' },
+  cocina:     { n:'Cocina',            i:'🍳' },
+  bano:       { n:'Baño',              i:'🚿' },
+  habitacion: { n:'Dormitorio',        i:'🛏️' },
+  otro:       { n:'Otra estancia',     i:'📐' },
+};
+const CAT = [
+  { k:'demolicion',   l:'Demolición y retirada de escombros',  u:'m²', b:'m2',    p:28,  t:['cocina','bano','pasillo'] },
+  { k:'solado',       l:'Suelo cerámico / porcelánico',        u:'m²', b:'m2',    p:52,  t:['cocina','bano','pasillo'] },
+  { k:'tarima',       l:'Tarima flotante',                      u:'m²', b:'m2',    p:38,  t:['salon','habitacion','pasillo'] },
+  { k:'alicatado',    l:'Alicatado de paredes',                 u:'m²', b:'pared', p:46,  t:['cocina','bano'] },
+  { k:'gotele',       l:'Quitar gotelé y alisar paredes',       u:'m²', b:'pared', p:14,  t:['salon','habitacion','pasillo'] },
+  { k:'pint_pared',   l:'Pintura de paredes',                   u:'m²', b:'pared', p:8.7, t:['salon','habitacion','pasillo','cocina'] },
+  { k:'pint_techo',   l:'Pintura de techo',                     u:'m²', b:'m2',    p:9.2, t:['salon','habitacion','pasillo','cocina','bano'] },
+  { k:'rodapie',      l:'Rodapié',                              u:'ml', b:'ml',    p:10.5,t:['salon','habitacion','pasillo'] },
+  { k:'falso_techo',  l:'Falso techo de pladur',                u:'m²', b:'m2',    p:30,  t:['salon','pasillo','bano'] },
+  { k:'tabique',      l:'Tabique de pladur',                    u:'m²', b:'pared', p:32,  t:[] },
+  { k:'electricidad', l:'Instalación eléctrica de la estancia', u:'ud', b:'fijo',  p:{ salon:720, cocina:980, bano:560, habitacion:420, pasillo:320, otro:400 }, t:['salon','cocina','bano','habitacion','pasillo'] },
+  { k:'font_bano',    l:'Fontanería de baño',                   u:'ud', b:'fijo',  p:1420,t:['bano'] },
+  { k:'font_cocina',  l:'Fontanería de cocina',                 u:'ud', b:'fijo',  p:480, t:['cocina'] },
+  { k:'impermeab',    l:'Impermeabilización',                   u:'ud', b:'fijo',  p:260, t:['bano'] },
+  { k:'sanitarios',   l:'Inodoro, lavabo y grifería',           u:'ud', b:'fijo',  p:500, t:['bano'] },
+  { k:'ducha',        l:'Plato de ducha y mampara',             u:'ud', b:'fijo',  p:650, t:['bano'] },
+  { k:'mueble_bano',  l:'Mueble de baño con espejo',            u:'ud', b:'fijo',  p:480, t:['bano'] },
+  { k:'muebles_coc',  l:'Muebles y encimera de cocina',         u:'ml', b:'mlm',   p:480, t:['cocina'] },
+  { k:'puerta',       l:'Puerta interior',                      u:'ud', b:'ud',    p:330, t:['habitacion','salon','cocina','bano','pasillo'] },
+  { k:'ventana',      l:'Ventana de PVC con rotura de puente',  u:'ud', b:'ud',    p:620, t:['salon','habitacion','cocina'] },
+  { k:'armario',      l:'Armario empotrado',                    u:'ud', b:'ud',    p:380, t:['habitacion'] },
+  { k:'radiador',     l:'Radiador',                             u:'ud', b:'ud',    p:190, t:['salon','habitacion','pasillo'] },
+  { k:'humedades',    l:'Tratamiento de humedades',             u:'ud', b:'fijo',  p:380, t:[] },
+  { k:'microcemento', l:'Microcemento',                         u:'m²', b:'pared', p:70,  t:[] },
+  { k:'limpieza',     l:'Limpieza final de obra',               u:'ud', b:'fijo',  p:120, t:[] },
+];
+const CATK = Object.fromEntries(CAT.map(c => [c.k, c]));
+const COMENT_RAPIDOS = ['Humedades visibles', 'Hay que picar el suelo', 'Posible muro de carga', 'Instalación antigua', 'El cliente duda del acabado', 'Acceso difícil para escombros'];
+
+function precioBase(c, tipo) { return typeof c.p === 'object' ? (c.p[tipo] != null ? c.p[tipo] : (c.p.otro || 400)) : c.p; }
+function qtyBase(b, m2) {
+  m2 = Math.max(0, Number(m2) || 0);
+  if (b === 'm2') return r2(m2);
+  if (b === 'pared') return r2(Math.sqrt(m2) * 4 * 2.4);
+  if (b === 'ml') return r2(Math.sqrt(m2) * 4 * 0.9);
+  if (b === 'mlm') return Math.max(3, Math.round(m2 * 0.5));
+  return 1;
+}
+function nuevoTrabajo(k, est, origen) {
+  const c = CATK[k]; const cant = qtyBase(c.b, est.m2); const precio = precioBase(c, est.tipo);
+  return { id:uid('t'), k, l:c.l, u:c.u, b:c.b, cant, precio, origen:origen || 'visita', confirmado:false, quitado:false, manual:false, nota:'', base: origen === 'cliente' ? { cant, precio } : null };
+}
+
+// ═══════════════════════════════════════════════════════
+// 3. CASO DE EJEMPLO: reforma integral estándar (piso de 85 m²)
+// ═══════════════════════════════════════════════════════
+const PEDIDO_CLIENTE = {
+  pasillo:    ['tarima', 'pint_pared', 'pint_techo', 'rodapie', 'puerta'],
+  salon:      ['tarima', 'gotele', 'pint_pared', 'pint_techo', 'rodapie', 'electricidad', 'radiador', 'falso_techo'],
+  cocina:     ['demolicion', 'solado', 'alicatado', 'muebles_coc', 'font_cocina', 'electricidad', 'pint_techo'],
+  bano:       ['demolicion', 'solado', 'alicatado', 'font_bano', 'sanitarios', 'ducha', 'mueble_bano', 'electricidad', 'pint_techo'],
+  habitacion: ['tarima', 'pint_pared', 'pint_techo', 'rodapie', 'electricidad', 'puerta', 'radiador'],
+};
+const ESTANCIAS_EJEMPLO = [
+  ['pasillo', 'Pasillo y entrada', 9], ['salon', 'Salón-comedor', 26], ['cocina', 'Cocina', 11],
+  ['bano', 'Baño principal', 6.5], ['bano', 'Baño secundario', 4.5],
+  ['habitacion', 'Dormitorio principal', 14], ['habitacion', 'Dormitorio 2', 10.5], ['habitacion', 'Dormitorio 3', 8],
+];
+function estanciaDesde(tipo, nombre, m2, claves, origen) {
+  const e = { id:uid('e'), tipo, nombre, m2, revisada:false, origenEst:origen || 'cliente', trabajos:[], comentarios:[], fotos:[] };
+  (claves || []).forEach(k => e.trabajos.push(nuevoTrabajo(k, e, origen === 'visita' ? 'visita' : 'cliente')));
+  return e;
+}
+function semilla() {
+  const S = {
+    ver:1, creado:Date.now(),
+    caso:{ ref:'REF-2041', cliente:{ nombre:'Laura Martín', tel:'612 345 678', email:'laura.martin@ejemplo.es' }, direccion:'C/ Alcalá 245, 4.º B · 28027 Madrid', m2Total:85, tipo:'Reforma integral · piso de 85 m²' },
+    ajustes:{ margen:22, iva:21 },
+    v2:null,
+    v3:{ id:'V3', estado:'borrador', pendienteEnvio:false, guardadaAt:null, enviadaAt:null, canal:null },
+    hist:[],
+    est:ESTANCIAS_EJEMPLO.map(([t, n, m]) => estanciaDesde(t, n, m, PEDIDO_CLIENTE[t], 'cliente')),
+    general:'', ui:{ view:'home', room:null },
+  };
+  const tot = totalesDe(S.est, S.ajustes);
+  S.v2 = { id:'V2', total:tot.total, subtotal:tot.subtotal, fecha:Date.now() - 2 * 86400000 };
+  return S;
+}
+
+// ═══════════════════════════════════════════════════════
+// 4. LÓGICA (funciones puras)
+// ═══════════════════════════════════════════════════════
+function subLinea(t) { return t.quitado ? 0 : r2((Number(t.cant) || 0) * (Number(t.precio) || 0)); }
+function subEst(e) { return r2(e.trabajos.reduce((s, t) => s + subLinea(t), 0)); }
+function totalesDe(est, aj) {
+  const subtotal = r2(est.reduce((s, e) => s + subEst(e), 0));
+  const margen = r2(subtotal * aj.margen / 100); const base = r2(subtotal + margen);
+  const iva = r2(base * aj.iva / 100);
+  return { subtotal, margen, base, iva, total:r2(base + iva) };
+}
+function finalDe(sub, aj) { return r2(sub * (1 + aj.margen / 100) * (1 + aj.iva / 100)); }
+function recalcM2(e) { e.trabajos.forEach(t => { if (!t.manual && !t.quitado && ['m2', 'pared', 'ml', 'mlm'].includes(t.b)) t.cant = qtyBase(t.b, e.m2); }); }
+function diffV3(S) {
+  const o = { anadidos:[], quitados:[], modificados:[] };
+  S.est.forEach(e => e.trabajos.forEach(t => {
+    if (t.origen === 'visita') { if (!t.quitado) o.anadidos.push({ e, t }); }
+    else if (t.quitado) o.quitados.push({ e, t });
+    else if (t.base && (t.cant !== t.base.cant || t.precio !== t.base.precio)) o.modificados.push({ e, t });
+  }));
+  return o;
+}
+function estadoEst(e) {
+  const vivos = e.trabajos.filter(t => !t.quitado); const ok = vivos.filter(t => t.confirmado).length;
+  if (e.revisada) return 'revisada';
+  return ok > 0 || e.comentarios.length || e.fotos.length ? 'curso' : 'pendiente';
+}
+function progreso(S) {
+  const rev = S.est.filter(e => e.revisada).length;
+  let tt = 0, tc = 0; S.est.forEach(e => e.trabajos.forEach(t => { if (!t.quitado) { tt++; if (t.confirmado) tc++; } }));
+  return { revisadas:rev, total:S.est.length, trabajos:tt, confirmados:tc, pct:S.est.length ? Math.round(rev / S.est.length * 100) : 0 };
+}
+function mensajeCliente(S) {
+  const tot = totalesDe(S.est, S.ajustes).total; const d = diffV3(S); const delta = r2(tot - S.v2.total);
+  const lineas = [];
+  d.anadidos.forEach(x => lineas.push('+ ' + x.e.nombre + ': ' + x.t.l));
+  d.quitados.forEach(x => lineas.push('− ' + x.e.nombre + ': ' + x.t.l));
+  d.modificados.forEach(x => lineas.push('~ ' + x.e.nombre + ': ' + x.t.l));
+  const fotos = S.est.reduce((s, e) => s + e.fotos.length, 0);
+  return 'Hola ' + S.caso.cliente.nombre.split(' ')[0] + ', tras la visita técnica a tu vivienda (' + S.caso.direccion.split('·')[0].trim() + ') te paso el presupuesto actualizado ' + S.v3.id + ' (' + S.caso.ref + '): ' + eur(tot) + ' (IVA incl.), ' + (delta >= 0 ? '+' : '−') + eur(Math.abs(delta)) + ' respecto a la ' + S.v2.id + (S.hist.length ? ' que te envié (' : ' que solicitaste (') + eur(S.v2.total) + ').' +
+    (lineas.length ? '\n\nCambios tras la visita:\n' + lineas.slice(0, 8).join('\n') + (lineas.length > 8 ? '\n… y ' + (lineas.length - 8) + ' más' : '') : '\n\nSin cambios sobre lo que pediste.') +
+    (fotos ? '\n\nHe adjuntado ' + fotos + ' foto(s) de la visita por estancias.' : '') +
+    '\n\nPuedes verlo y aceptarlo aquí: [enlace al presupuesto — pendiente de conectar]';
+}
+const etqBase = () => (S.hist.length ? 'enviada anteriormente' : 'pedido del cliente');
+function pendientes(S) { return S.est.filter(e => !e.revisada); }
+
+// ═══════════════════════════════════════════════════════
+// 5. ESTADO Y GUARDADO (solo en este dispositivo)
+// ═══════════════════════════════════════════════════════
+const $ = s => document.querySelector(s);
+function cargar() { try { const j = localStorage.getItem(LS_KEY); if (!j) return null; const o = JSON.parse(j); return o && o.ver === 1 && o.est ? o : null; } catch (e) { return null; } }
+let S = cargar() || semilla();
+let saveT = null, saveErr = false, savedAt = S.v3.guardadaAt || null, lastKey = '', undoFn = null, toastT = null;
+const UI = { openW:null, catQ:'', anadirEst:null, sinEnviar:false };
+function guardarYa() {
+  clearTimeout(saveT); saveT = null;
+  try { savedAt = Date.now(); S.v3.guardadaAt = savedAt; localStorage.setItem(LS_KEY, JSON.stringify(S)); saveErr = false; }
+  catch (e) { saveErr = true; if (!guardarYa.avisado) { guardarYa.avisado = true; setTimeout(() => toast('⚠ No hay espacio para guardar. Quita fotos o exporta antes de salir.'), 50); } }
+  pintaGuardado();
+}
+function guardar() { clearTimeout(saveT); saveT = setTimeout(guardarYa, 150); }
+function pintaGuardado() { const el = $('#sv'); if (!el) return; el.className = 'save' + (saveErr ? ' err' : ''); el.textContent = saveErr ? 'Sin guardar' : (savedAt ? 'Guardado ' + hhmm(savedAt) : ''); }
+window.addEventListener('beforeunload', () => { if (saveT) guardarYa(); });
+document.addEventListener('visibilitychange', () => { if (document.hidden && saveT) guardarYa(); });
+
+const editable = () => S.v3.estado !== 'enviada';
+function mut(fn) {
+  if (!editable()) { toast('La ' + S.v3.id + ' ya está enviada. Crea una nueva versión para editarla.'); return false; }
+  fn(); guardar(); render(); return true;
+}
+const est = id => S.est.find(e => e.id === id);
+const trab = (e, id) => e.trabajos.find(t => t.id === id);
+function curRoom() { return est(S.ui.room) || S.est[0]; }
+
+// ═══════════════════════════════════════════════════════
+// 6. PANTALLAS
+// ═══════════════════════════════════════════════════════
+function header() {
+  const v = S.ui.view; const enviada = S.v3.estado === 'enviada';
+  let back = '', title = 'Panel Lite', sub = 'Revisión en visita técnica';
+  const b = (txt, fn, cls) => '<button class="back ' + (cls || '') + '" onclick="' + fn + '" aria-label="Volver">‹ ' + txt + '</button>';
+  if (v === 'hub') { back = b('Inicio', "ir('home')"); title = S.caso.cliente.nombre; sub = S.caso.ref + ' · ' + S.caso.tipo; }
+  else if (v === 'room') { back = b('Estancias', "ir('hub')", 'only-narrow') + b('Inicio', "ir('home')", 'only-wide'); title = S.caso.cliente.nombre; sub = S.caso.ref + ' · ' + curRoom().nombre; }
+  else if (v === 'send') { back = b('Revisión', "ir('hub')"); title = 'Resumen y envío'; sub = S.caso.cliente.nombre + ' · ' + S.caso.ref; }
+  else if (v === 'sent') { back = b('Inicio', "ir('home')"); title = S.v3.id + ' enviada'; sub = S.caso.cliente.nombre + ' · ' + S.caso.ref; }
+  return '<header class="top">' + back + '<div class="tt"><b>' + esc(title) + '</b><small>' + esc(sub) + '</small></div>' +
+    '<span class="ver ' + (enviada ? 'env' : '') + '">' + (enviada ? S.v3.id + ' enviada' : S.v2.id + ' → ' + S.v3.id) + '</span><span id="sv" class="save' + (saveErr ? ' err' : '') + '">' + (saveErr ? 'Sin guardar' : (savedAt ? 'Guardado ' + hhmm(savedAt) : '')) + '</span></header>';
+}
+function bar() {
+  const t = totalesDe(S.est, S.ajustes).total; const d = r2(t - S.v2.total);
+  return '<div class="bar"><div class="tot"><small>' + S.v3.id + ' · total con IVA</small><b>' + eur0(t) + '</b><span class="d ' + (d > 0 ? 'dlt-up' : 'dlt-dn') + '" style="color:' + (d > 0 ? '#ffb18a' : '#9ad1a8') + '">' + (d >= 0 ? '+' : '−') + eur0(Math.abs(d)) + ' vs ' + S.v2.id + '</span></div>' +
+    '<button class="btn pri" onclick="ir(\'send\')">' + (editable() ? 'Terminar y enviar →' : 'Ver resumen →') + '</button></div>';
+}
+
+function vHome() {
+  const t = totalesDe(S.est, S.ajustes); const p = progreso(S); const enviada = !editable();
+  const d = r2(t.total - S.v2.total);
+  const estadoPill = enviada ? '<span class="pill env">' + S.v3.id + ' enviada · ' + fecha(S.v3.enviadaAt) + '</span>' : S.v3.pendienteEnvio ? '<span class="pill wip">Borrador pendiente de enviar</span>' : p.revisadas || p.confirmados ? '<span class="pill wip">En revisión</span>' : '<span class="pill new">Sin empezar</span>';
+  const cr = S.ui.room && est(S.ui.room);
+  return '<div class="hero"><h1>Panel Lite</h1><p>Revisa el presupuesto del cliente estancia por estancia durante la visita técnica.</p></div>' +
+    '<div class="card"><div class="row"><div class="sp"><div class="lbl">' + esc(S.caso.ref) + '</div><h3 style="margin:0">' + esc(S.caso.cliente.nombre) + '</h3><div class="muted">' + esc(S.caso.direccion) + '</div><div class="muted">' + esc(S.caso.tipo) + '</div></div>' + estadoPill + '</div>' +
+    '<div style="margin:12px 0"><div class="kv"><span>' + S.v2.id + ' · ' + etqBase() + '</span><b>' + eur(S.v2.total) + '</b></div><div class="kv"><span>' + S.v3.id + ' · ' + (enviada ? 'enviada' : 'tu revisión') + '</span><b>' + eur(t.total) + '</b></div><div class="kv"><span>Diferencia</span><b class="' + (d > 0 ? 'dlt-up' : 'dlt-dn') + '">' + (d >= 0 ? '+' : '−') + eur(Math.abs(d)) + '</b></div></div>' +
+    '<div class="row" style="margin-bottom:6px"><span class="muted sp">' + p.revisadas + ' de ' + p.total + ' estancias revisadas</span><span class="muted">' + p.confirmados + '/' + p.trabajos + ' trabajos</span></div><div class="progress"><i style="width:' + p.pct + '%"></i></div>' +
+    '<div style="margin-top:14px;display:grid;gap:10px">' +
+      (enviada ? '<button class="btn pri blk" onclick="ir(\'sent\')">Ver ' + S.v3.id + ' enviada</button><button class="btn blk" onclick="crearNueva()">Crear nueva versión para editar</button>'
+      : '<button class="btn pri blk" onclick="ir(\'' + (cr && (p.revisadas || p.confirmados) ? 'room\',\'' + cr.id : 'hub') + '\')">' + (p.revisadas || p.confirmados ? 'Continuar la revisión' + (cr ? ' · ' + esc(cr.nombre) : '') : 'Empezar la revisión') + '</button>' +
+        (S.v3.pendienteEnvio ? '<button class="btn ok blk" onclick="ir(\'send\')">Revisar y enviar al cliente</button>' : '')) + '</div></div>' +
+    '<div class="info">Prototipo sin conexión: los datos se guardan solo en este dispositivo (puedes cerrar y continuar después). El envío al cliente es simulado.</div>' +
+    '<div class="row"><button class="btn sp" onclick="abrirAjustes()">⚙ Ajustes</button><button class="btn dng sp" onclick="confirmarReset()">Restablecer ejemplo</button></div>';
+}
+
+function deltaEst(e) {
+  const baseSub = r2(e.trabajos.filter(t => t.base).reduce((s, t) => s + t.base.cant * t.base.precio, 0));
+  return r2(finalDe(subEst(e), S.ajustes) - finalDe(baseSub, S.ajustes));
+}
+const ESTADO_LBL = { pendiente:['Pendiente', ''], curso:['En curso', 'wip'], revisada:['Revisada ✓', 'ok'] };
+function vList() {
+  const p = progreso(S); const cur = curRoom();
+  return '<div class="card"><div class="row" style="margin-bottom:6px"><b class="sp">' + p.revisadas + ' de ' + p.total + ' estancias revisadas</b><span class="muted">' + p.pct + ' %</span></div><div class="progress"><i style="width:' + p.pct + '%"></i></div></div>' +
+    S.est.map(e => {
+      const st = estadoEst(e); const vivos = e.trabajos.filter(t => !t.quitado).length; const dl = deltaEst(e); const ti = TIPOS[e.tipo] || TIPOS.otro;
+      return '<button class="room ' + (st === 'revisada' ? 'done ' : '') + (S.ui.view !== 'hub' && cur.id === e.id ? 'cur' : '') + '" onclick="ir(\'room\',\'' + e.id + '\')" aria-label="Abrir ' + esc(e.nombre) + '">' +
+        '<span class="ico">' + (st === 'revisada' ? '✅' : ti.i) + '</span><span class="sp" style="min-width:0"><b>' + esc(e.nombre) + '</b><span class="meta"><span>' + fmtNum(e.m2) + ' m²</span><span>' + vivos + ' trabajos</span>' + (e.fotos.length ? '<span>📷 ' + e.fotos.length + '</span>' : '') + (e.comentarios.length ? '<span>💬 ' + e.comentarios.length + '</span>' : '') + '</span>' +
+        '<span class="pill ' + ESTADO_LBL[st][1] + '" style="margin-top:4px">' + ESTADO_LBL[st][0] + '</span></span>' +
+        '<span class="amt">' + eur0(finalDe(subEst(e), S.ajustes)) + (dl ? '<small class="' + (dl > 0 ? 'dlt-up' : 'dlt-dn') + '">' + (dl > 0 ? '+' : '−') + eur0(Math.abs(dl)) + '</small>' : '') + '</span></button>';
+    }).join('') +
+    (editable() ? '<button class="btn blk" onclick="abrirNuevaEst()">＋ Añadir estancia</button>' : '') +
+    '<div class="card" style="margin-top:12px"><div class="lbl">Observaciones generales de la visita</div><textarea aria-label="Observaciones generales" onchange="setGeneral(this.value)" placeholder="Acceso, plazos, preferencias del cliente…">' + esc(S.general) + '</textarea></div>';
+}
+
+function vWork(e, t) {
+  const aj = S.ajustes; const mod = t.origen !== 'visita' && t.base && (t.cant !== t.base.cant || t.precio !== t.base.precio);
+  const abierto = UI.openW === t.id;
+  return '<div class="work ' + (t.confirmado ? 'ok ' : '') + (abierto ? 'open' : '') + '" id="w-' + t.id + '">' +
+    '<div class="work-top"><button class="chk" aria-pressed="' + t.confirmado + '" aria-label="' + (t.confirmado ? 'Desmarcar' : 'Confirmar') + ' ' + esc(t.l) + '" onclick="chk(\'' + e.id + '\',\'' + t.id + '\')">' + (t.confirmado ? '✓' : '') + '</button>' +
+    '<div class="work-t"><b>' + esc(t.l) + '</b><div style="margin:3px 0">' + (t.origen === 'visita' ? '<span class="tag add">Añadido en la visita</span>' : '<span class="tag">Pedido por el cliente</span>') + (mod ? '<span class="tag mod">Modificado</span>' : '') + '</div>' +
+    '<div class="muted">' + eur(finalDe(t.precio, aj)) + ' / ' + esc(t.u) + ' (IVA incl.)' + (t.nota ? ' · 📝 ' + esc(t.nota) : '') + '</div></div>' +
+    '<div class="work-sub">' + eur0(finalDe(subLinea(t), aj)) + '<small>' + fmtNum(t.cant) + ' ' + esc(t.u) + '</small></div></div>' +
+    '<div class="work-act"><div class="stepper sm" role="group" aria-label="Cantidad"><button onclick="qty(\'' + e.id + '\',\'' + t.id + '\',-1)" aria-label="Menos">−</button><input inputmode="decimal" value="' + fmtNum(t.cant) + '" aria-label="Cantidad en ' + esc(t.u) + '" onchange="qtySet(\'' + e.id + '\',\'' + t.id + '\',this.value)"><button onclick="qty(\'' + e.id + '\',\'' + t.id + '\',1)" aria-label="Más">＋</button></div>' +
+    '<button class="btn" onclick="toggleEdit(\'' + t.id + '\')" aria-expanded="' + abierto + '">✎ Editar</button><button class="btn dng" onclick="quitar(\'' + e.id + '\',\'' + t.id + '\')" aria-label="Quitar ' + esc(t.l) + '">🗑 Quitar</button></div>' +
+    '<div class="work-edit"><label class="field"><span>Descripción del trabajo</span><input type="text" value="' + esc(t.l) + '" onchange="editW(\'' + e.id + '\',\'' + t.id + '\',\'l\',this.value)"></label>' +
+    '<div class="grid2"><label class="field"><span>Precio unitario (sin IVA ni margen)</span><input inputmode="decimal" value="' + fmtNum(t.precio) + '" onchange="editW(\'' + e.id + '\',\'' + t.id + '\',\'precio\',this.value)"></label>' +
+    '<label class="field"><span>Unidad</span><select onchange="editW(\'' + e.id + '\',\'' + t.id + '\',\'u\',this.value)">' + ['m²', 'ml', 'ud'].map(u => '<option' + (t.u === u ? ' selected' : '') + '>' + u + '</option>').join('') + '</select></label></div>' +
+    '<label class="field"><span>Nota del trabajo (opcional)</span><input type="text" value="' + esc(t.nota) + '" placeholder="Ej.: el cliente quiere porcelánico 60×60" onchange="editW(\'' + e.id + '\',\'' + t.id + '\',\'nota\',this.value)"></label>' +
+    (t.base ? '<button class="btn" onclick="restaurarValores(\'' + e.id + '\',\'' + t.id + '\')">↺ Volver a lo que pidió el cliente</button>' : '') + '</div></div>';
+}
+
+function vRoom(e) {
+  const idx = S.est.indexOf(e); const vivos = e.trabajos.filter(t => !t.quitado); const quitados = e.trabajos.filter(t => t.quitado);
+  const ok = vivos.filter(t => t.confirmado).length; const ultima = idx === S.est.length - 1; const ro = !editable();
+  const comentarios = e.comentarios.map(c => '<div class="cm"><p>' + esc(c.t) + '<small>' + hhmm(c.f) + '</small></p>' + (ro ? '' : '<button class="x" aria-label="Borrar comentario" onclick="comDel(\'' + e.id + '\',\'' + c.id + '\')">✕</button>') + '</div>').join('');
+  return (ro ? '<div class="warn">La ' + S.v3.id + ' ya está enviada: solo lectura. Crea una nueva versión desde el Inicio para seguir editando.</div>' : '') +
+    '<div class="rhead"><button class="nav" aria-label="Estancia anterior" onclick="roomStep(-1)" ' + (idx === 0 ? 'disabled style="opacity:.4"' : '') + '>‹</button><input aria-label="Nombre de la estancia" value="' + esc(e.nombre) + '" onchange="setNombre(\'' + e.id + '\',this.value)" ' + (ro ? 'disabled' : '') + '><button class="nav" aria-label="Estancia siguiente" onclick="roomStep(1)" ' + (ultima ? 'disabled style="opacity:.4"' : '') + '>›</button></div>' +
+    '<div class="card"><div class="row"><div class="sp"><div class="lbl">Superficie</div><div class="muted">Las cantidades por m² se ajustan solas (salvo las que edites a mano)</div></div><div class="stepper" role="group" aria-label="Superficie en metros cuadrados"><button onclick="m2Step(\'' + e.id + '\',-1)" aria-label="Menos">−</button><input inputmode="decimal" value="' + fmtNum(e.m2) + '" aria-label="Metros cuadrados" onchange="m2Set(\'' + e.id + '\',this.value)"><button onclick="m2Step(\'' + e.id + '\',1)" aria-label="Más">＋</button></div><b>m²</b></div></div>' +
+    '<div class="row" style="margin:6px 0 10px"><h3 class="sp" style="margin:0">Trabajos · ' + ok + '/' + vivos.length + ' confirmados</h3>' + (ro || ok === vivos.length ? '' : '<button class="btn" onclick="confirmarTodo(\'' + e.id + '\')">✓ Confirmar todo</button>') + '</div>' +
+    '<div class="progress" style="margin-bottom:12px"><i style="width:' + (vivos.length ? Math.round(ok / vivos.length * 100) : 0) + '%"></i></div>' +
+    (vivos.length ? vivos.map(t => vWork(e, t)).join('') : '<div class="card muted" style="text-align:center">Esta estancia no tiene trabajos. Añade los que haga falta.</div>') +
+    (ro ? '' : '<button class="btn pri blk" style="margin-bottom:12px" onclick="abrirAnadir(\'' + e.id + '\')">＋ Añadir trabajo</button>') +
+    (quitados.length ? '<div class="quit"><div class="lbl">Quitados de esta estancia (' + quitados.length + ')</div>' + quitados.map(t => '<div class="q"><span>' + esc(t.l) + '</span>' + (ro ? '' : '<button class="btn" onclick="restaurar(\'' + e.id + '\',\'' + t.id + '\')">↺ Restaurar</button>') + '</div>').join('') + '</div>' : '') +
+    '<div class="card"><h3>💬 Comentarios de la estancia</h3>' + (ro ? '' : '<div>' + COMENT_RAPIDOS.map(c => '<button class="chip" onclick="comAdd(\'' + e.id + '\',this.dataset.t)" data-t="' + esc(c) + '">' + esc(c) + '</button>').join('') + '</div>' +
+      '<textarea id="com-' + e.id + '" aria-label="Nuevo comentario" placeholder="Escribe una observación de esta estancia…"></textarea><button class="btn blk" style="margin-top:8px" onclick="comAddTxt(\'' + e.id + '\')">Añadir comentario</button><div style="height:10px"></div>') +
+      (comentarios || '<div class="muted">Sin comentarios todavía.</div>') + '</div>' +
+    '<div class="card"><h3>📷 Fotos de la estancia (' + e.fotos.length + ')</h3>' + (ro ? '' : '<div class="row"><label class="btn pri addph" style="position:relative">📷 Hacer foto<input type="file" accept="image/*" capture="environment" aria-label="Hacer foto con la cámara" onchange="fotosAdd(\'' + e.id + '\',this)"></label><label class="btn addph" style="position:relative">🖼 Elegir de la galería<input type="file" accept="image/*" multiple aria-label="Elegir fotos de la galería" onchange="fotosAdd(\'' + e.id + '\',this)"></label></div>') +
+      '<div class="thumbs">' + e.fotos.map(f => '<button class="thumb" onclick="verFoto(\'' + e.id + '\',\'' + f.id + '\')" aria-label="Ver foto ' + esc(f.cap || '') + '"><img src="' + f.src + '" alt="Foto de ' + esc(e.nombre) + '">' + (f.cap ? '<em>' + esc(f.cap) + '</em>' : '') + '</button>').join('') + '</div>' + (e.fotos.length ? '' : '<div class="muted" style="margin-top:6px">Sin fotos todavía.</div>') + '</div>' +
+    (ro ? '' : '<div class="row" style="margin-bottom:10px"><button class="btn ok sp" onclick="revisadaYSiguiente(\'' + e.id + '\')">' + (e.revisada ? '✓ Revisada · ' : 'Marcar revisada · ') + (ultima ? 'ir al resumen' : 'siguiente estancia') + ' →</button>' + (e.revisada ? '<button class="btn" onclick="toggleRev(\'' + e.id + '\')">Reabrir</button>' : '') + '</div>' +
+      (e.origenEst === 'visita' ? '<button class="btn dng blk" onclick="delEst(\'' + e.id + '\')">Eliminar esta estancia</button>' : ''));
+}
+
+function vSend() {
+  const t = totalesDe(S.est, S.ajustes); const d = diffV3(S); const pend = pendientes(S); const ro = !editable();
+  const delta = r2(t.total - S.v2.total); const hay = d.anadidos.length + d.quitados.length + d.modificados.length;
+  const fotos = S.est.reduce((s, e) => s + e.fotos.length, 0), coms = S.est.reduce((s, e) => s + e.comentarios.length, 0);
+  return (ro ? '<div class="warn">La ' + S.v3.id + ' ya fue enviada (' + fecha(S.v3.enviadaAt) + '). Esto es un resumen de solo lectura.</div>' : '') +
+    (pend.length && !ro ? '<div class="warn"><b>Faltan ' + pend.length + ' estancia(s) por revisar:</b> ' + pend.map(e => '<button class="chip" onclick="ir(\'room\',\'' + e.id + '\')">' + esc(e.nombre) + '</button>').join('') + '</div>' : '') +
+    '<div class="card"><div class="lbl">Presupuesto ' + S.v3.id + '</div><div class="big-total">' + eur(t.total) + '</div><div class="muted" style="margin-bottom:8px">IVA incluido</div>' +
+    '<div class="kv"><span>Subtotal trabajos</span><span>' + eur(t.subtotal) + '</span></div><div class="kv"><span>Margen ' + S.ajustes.margen + ' %</span><span>' + eur(t.margen) + '</span></div><div class="kv"><span>IVA ' + S.ajustes.iva + ' %</span><span>' + eur(t.iva) + '</span></div>' +
+    '<div class="kv"><span>' + S.v2.id + ' (' + etqBase() + ')</span><span>' + eur(S.v2.total) + '</span></div><div class="kv"><b>Diferencia</b><b class="' + (delta > 0 ? 'dlt-up' : 'dlt-dn') + '">' + (delta >= 0 ? '+' : '−') + eur(Math.abs(delta)) + '</b></div></div>' +
+    '<div class="card"><h3>Cambios respecto a la ' + S.v2.id + '</h3>' + (hay ? d.anadidos.map(x => '<div class="diff"><i class="a">＋</i><span><b>' + esc(x.e.nombre) + '</b> · ' + esc(x.t.l) + ' <span class="muted">(' + eur0(finalDe(subLinea(x.t), S.ajustes)) + ')</span></span></div>').join('') + d.quitados.map(x => '<div class="diff"><i class="q">−</i><span><b>' + esc(x.e.nombre) + '</b> · ' + esc(x.t.l) + '</span></div>').join('') + d.modificados.map(x => '<div class="diff"><i class="m">~</i><span><b>' + esc(x.e.nombre) + '</b> · ' + esc(x.t.l) + ' <span class="muted">' + fmtNum(x.t.base.cant) + '→' + fmtNum(x.t.cant) + ' ' + esc(x.t.u) + (x.t.base.precio !== x.t.precio ? ' · ' + fmtNum(x.t.base.precio) + '→' + fmtNum(x.t.precio) + ' €/' + esc(x.t.u) : '') + '</span></span></div>').join('') : '<div class="muted">Sin cambios: coincide con lo que pidió el cliente.</div>') + '</div>' +
+    '<div class="card"><h3>Por estancias</h3>' + S.est.map(e => '<div class="kv"><span>' + (e.revisada ? '✅ ' : '⏳ ') + esc(e.nombre) + ' <span class="muted">· ' + e.fotos.length + ' 📷 · ' + e.comentarios.length + ' 💬</span></span><b>' + eur0(finalDe(subEst(e), S.ajustes)) + '</b></div>').join('') + '<div class="muted" style="margin-top:8px">' + fotos + ' fotos y ' + coms + ' comentarios en total.</div></div>' +
+    (ro ? '' : '<div class="card"><div class="lbl">Observaciones generales</div><textarea aria-label="Observaciones generales" onchange="setGeneral(this.value)">' + esc(S.general) + '</textarea></div>' +
+      '<div style="display:grid;gap:10px"><button class="btn pri blk" onclick="abrirEnvio()">📤 Enviar ' + S.v3.id + ' al cliente ahora</button><button class="btn blk" onclick="guardarYSalir()">💾 Guardar borrador y enviar desde casa</button><button class="btn blk" onclick="ir(\'hub\')">‹ Seguir revisando</button></div>');
+}
+
+function vSent() {
+  const t = totalesDe(S.est, S.ajustes);
+  return '<div class="card" style="text-align:center"><div style="font-size:44px">✅</div><h3>' + S.v3.id + ' enviada</h3><div class="big-total">' + eur(t.total) + '</div><p class="muted">' + fecha(S.v3.enviadaAt) + ' · ' + hhmm(S.v3.enviadaAt) + ' · vía ' + esc(S.v3.canal || '—') + ' (simulado)</p></div>' +
+    '<div class="info">Este prototipo no está conectado: el cliente no recibe nada realmente. El mensaje se preparó para copiarlo o abrirlo en WhatsApp.</div>' +
+    '<div style="display:grid;gap:10px"><button class="btn blk" onclick="ir(\'send\')">Ver resumen enviado</button><button class="btn pri blk" onclick="crearNueva()">Crear ' + nextId() + ' para seguir editando</button><button class="btn blk" onclick="ir(\'home\')">Volver al inicio</button></div>';
+}
+
+let _verSig = null;
+function nextId() { return 'V' + (parseInt(S.v3.id.slice(1), 10) + 1); }
+function render() {
+  const v = S.ui.view; document.body.dataset.view = v;
+  const key = v + '|' + (S.ui.room || ''); const y = key === lastKey ? window.scrollY : 0; lastKey = key;
+  let main = '';
+  if (v === 'home') main = vHome();
+  else if (v === 'hub' || v === 'room') main = '<div class="cols"><div class="pane-list">' + vList() + '</div><div class="pane-room">' + vRoom(curRoom()) + '</div></div>';
+  else if (v === 'send') main = vSend(); else main = vSent();
+  $('#app').innerHTML = header() + '<main id="main">' + main + '</main>' + (v === 'hub' || v === 'room' ? bar() : '');
+  window.scrollTo(0, y);
+}
+
+// ═══════════════════════════════════════════════════════
+// 7. NAVEGACIÓN Y AVISOS
+// ═══════════════════════════════════════════════════════
+function ir(view, room) { S.ui.view = view; if (room) S.ui.room = room; if (view === 'room' && !est(S.ui.room)) S.ui.room = S.est[0].id; guardar(); render(); }
+function roomStep(d) { const i = S.est.indexOf(curRoom()) + d; if (i < 0 || i >= S.est.length) return; ir('room', S.est[i].id); window.scrollTo(0, 0); }
+function toast(msg, undo) {
+  const el = $('#toast'), u = $('#toast-u'); $('#toast-t').textContent = msg;
+  if (undo) { u.hidden = false; u.onclick = () => { undo(); hideToast(); guardar(); render(); }; } else { u.hidden = true; u.onclick = null; }
+  el.classList.add('on'); clearTimeout(toastT); toastT = setTimeout(hideToast, undo ? 6500 : 2800);
+}
+function hideToast() { $('#toast').classList.remove('on'); }
+function sheet(html) { $('#sheet').innerHTML = '<div class="grab"></div>' + html; $('#ov').classList.add('on'); UI.prevFocus = document.activeElement; setTimeout(() => { const f = $('#sheet input,#sheet textarea,#sheet button'); if (f && !f.matches('textarea')) f.blur && 0; }, 0); }
+function cerrarSheet() { $('#ov').classList.remove('on'); $('#sheet').innerHTML = ''; if (UI.prevFocus && document.body.contains(UI.prevFocus)) { try { UI.prevFocus.focus(); } catch (e) {} } }
+$('#ov').addEventListener('click', e => { if (e.target.id === 'ov') cerrarSheet(); });
+document.addEventListener('keydown', e => { if (e.key === 'Escape') { if ($('#viewer').classList.contains('on')) cerrarVisor(); else if ($('#ov').classList.contains('on')) cerrarSheet(); } });
+
+// ═══════════════════════════════════════════════════════
+// 8. ACCIONES SOBRE TRABAJOS
+// ═══════════════════════════════════════════════════════
+function chk(eid, tid) { mut(() => { const t = trab(est(eid), tid); t.confirmado = !t.confirmado; const e = est(eid); if (!t.confirmado) e.revisada = false; }); }
+function confirmarTodo(eid) { mut(() => { est(eid).trabajos.forEach(t => { if (!t.quitado) t.confirmado = true; }); }); }
+function qty(eid, tid, d) { mut(() => { const t = trab(est(eid), tid); t.cant = Math.max(0, r2((Number(t.cant) || 0) + d)); t.manual = true; t.confirmado = false; }); }
+function qtySet(eid, tid, v) { mut(() => { const t = trab(est(eid), tid); t.cant = Math.max(0, r2(num(v))); t.manual = true; }); }
+function editW(eid, tid, campo, v) {
+  mut(() => { const t = trab(est(eid), tid);
+    if (campo === 'precio') { t.precio = Math.max(0, r2(num(v))); t.manual = true; }
+    else if (campo === 'l') t.l = String(v).trim() || t.l;
+    else t[campo] = v; });
+}
+function toggleEdit(tid) { UI.openW = UI.openW === tid ? null : tid; render(); }
+function restaurarValores(eid, tid) { mut(() => { const t = trab(est(eid), tid); if (t.base) { t.cant = t.base.cant; t.precio = t.base.precio; t.manual = false; recalcM2(est(eid)); } }); }
+function quitar(eid, tid) {
+  if (!editable()) { mut(() => {}); return; }
+  const e = est(eid), t = trab(e, tid); let deshacer;
+  if (t.origen === 'visita') { const i = e.trabajos.indexOf(t); e.trabajos.splice(i, 1); deshacer = () => { e.trabajos.splice(i, 0, t); }; }
+  else { t.quitado = true; deshacer = () => { t.quitado = false; }; }
+  guardar(); render(); toast('«' + t.l + '» quitado', deshacer);
+}
+function restaurar(eid, tid) { mut(() => { const t = trab(est(eid), tid); t.quitado = false; t.confirmado = false; }); }
+function setNombre(eid, v) { mut(() => { est(eid).nombre = String(v).trim() || est(eid).nombre; }); }
+function m2Set(eid, v) { mut(() => { const e = est(eid); e.m2 = Math.max(1, r2(num(v))); recalcM2(e); }); }
+function m2Step(eid, d) { m2Set(eid, est(eid).m2 + d); }
+function setGeneral(v) { if (!editable()) return; S.general = v; guardar(); }
+function toggleRev(eid) { mut(() => { const e = est(eid); e.revisada = !e.revisada; }); }
+function revisadaYSiguiente(eid) {
+  if (!editable()) { mut(() => {}); return; }
+  const e = est(eid); e.revisada = true; e.trabajos.forEach(t => { if (!t.quitado) t.confirmado = true; });
+  const i = S.est.indexOf(e); guardar();
+  if (i < S.est.length - 1) { toast('«' + e.nombre + '» revisada'); ir('room', S.est[i + 1].id); window.scrollTo(0, 0); }
+  else { toast(pendientes(S).length ? 'Última estancia. Aún quedan ' + pendientes(S).length + ' por revisar.' : 'Todas las estancias revisadas ✓'); ir('send'); }
+}
+
+// ── Añadir trabajo ──
+function abrirAnadir(eid) { UI.anadirEst = eid; UI.catQ = ''; sheetAnadir(); }
+function sheetAnadir() {
+  const e = est(UI.anadirEst); const q = UI.catQ.trim().toLowerCase();
+  const filtra = c => !q || c.l.toLowerCase().includes(q);
+  const sug = CAT.filter(c => c.t.includes(e.tipo) && filtra(c)), otros = CAT.filter(c => !c.t.includes(e.tipo) && filtra(c));
+  const item = c => { const ya = e.trabajos.some(t => t.k === c.k && !t.quitado); return '<button class="cat-i" onclick="anadir(\'' + c.k + '\')"><b>' + esc(c.l) + '</b>' + (ya ? '<span class="pill">ya incluido</span>' : '') + '<small>' + eur(finalDe(precioBase(c, e.tipo), S.ajustes)) + '/' + c.u + '</small></button>'; };
+  $('#sheet').innerHTML = '<div class="grab"></div><div class="row" style="margin-bottom:8px"><h3 class="sp" style="margin:0">Añadir a ' + esc(e.nombre) + '</h3><button class="btn" onclick="cerrarSheet()">Cerrar</button></div>' +
+    '<input type="text" id="catq" placeholder="Buscar trabajo…" aria-label="Buscar trabajo" value="' + esc(UI.catQ) + '" oninput="UI.catQ=this.value;listaCat()" style="margin-bottom:10px"><div id="catlist">' + listaCatHtml(e, sug, otros, item) + '</div>';
+  $('#ov').classList.add('on');
+}
+function listaCatHtml(e, sug, otros, item) {
+  return (sug.length ? '<div class="lbl">Habituales para ' + esc((TIPOS[e.tipo] || TIPOS.otro).n.toLowerCase()) + '</div>' + sug.map(item).join('') : '') + (otros.length ? '<div class="lbl" style="margin-top:8px">Otros trabajos</div>' + otros.map(item).join('') : '') +
+    '<div class="card" style="margin-top:10px"><h3>Trabajo personalizado</h3><label class="field"><span>Descripción</span><input type="text" id="cu-l" placeholder="Ej.: Refuerzo de viga"></label><div class="grid2"><label class="field"><span>Cantidad</span><input id="cu-c" inputmode="decimal" value="1"></label><label class="field"><span>Unidad</span><select id="cu-u"><option>ud</option><option>m²</option><option>ml</option></select></label></div><label class="field"><span>Precio unitario (sin IVA ni margen)</span><input id="cu-p" inputmode="decimal" placeholder="0"></label><button class="btn pri blk" onclick="anadirCustom()">Añadir trabajo personalizado</button></div>';
+}
+function listaCat() {
+  const e = est(UI.anadirEst); const q = UI.catQ.trim().toLowerCase(); const filtra = c => !q || c.l.toLowerCase().includes(q);
+  const item = c => { const ya = e.trabajos.some(t => t.k === c.k && !t.quitado); return '<button class="cat-i" onclick="anadir(\'' + c.k + '\')"><b>' + esc(c.l) + '</b>' + (ya ? '<span class="pill">ya incluido</span>' : '') + '<small>' + eur(finalDe(precioBase(c, e.tipo), S.ajustes)) + '/' + c.u + '</small></button>'; };
+  $('#catlist').innerHTML = listaCatHtml(e, CAT.filter(c => c.t.includes(e.tipo) && filtra(c)), CAT.filter(c => !c.t.includes(e.tipo) && filtra(c)), item);
+}
+function anadir(k) { const e = est(UI.anadirEst); if (!editable()) { cerrarSheet(); mut(() => {}); return; } const t = nuevoTrabajo(k, e, 'visita'); e.trabajos.push(t); e.revisada = false; UI.openW = t.id; cerrarSheet(); guardar(); render(); toast('Añadido: ' + t.l); setTimeout(() => { const el = document.getElementById('w-' + t.id); if (el) el.scrollIntoView({ block:'center' }); }, 30); }
+function anadirCustom() {
+  const l = $('#cu-l').value.trim(); const c = num($('#cu-c').value), p = num($('#cu-p').value);
+  if (!l) { toast('Escribe la descripción del trabajo'); return; } if (!(c > 0)) { toast('Indica una cantidad mayor que 0'); return; }
+  const e = est(UI.anadirEst); const t = { id:uid('t'), k:'custom', l, u:$('#cu-u').value, b:'fijo', cant:r2(c), precio:r2(p), origen:'visita', confirmado:false, quitado:false, manual:true, nota:'', base:null };
+  e.trabajos.push(t); e.revisada = false; cerrarSheet(); guardar(); render(); toast('Añadido: ' + l);
+}
+
+// ── Estancias nuevas ──
+let _ne = { tipo:'habitacion' };
+function abrirNuevaEst() { _ne = { tipo:'habitacion' }; sheetNuevaEst(); }
+function sheetNuevaEst() {
+  sheet('<div class="row" style="margin-bottom:8px"><h3 class="sp" style="margin:0">Añadir estancia</h3><button class="btn" onclick="cerrarSheet()">Cerrar</button></div><div class="lbl">Tipo</div><div>' + Object.entries(TIPOS).map(([k, v]) => '<button class="chip" style="' + (_ne.tipo === k ? 'border-color:var(--accent);background:#fff1e3;font-weight:600' : '') + '" onclick="_ne.tipo=\'' + k + '\';sheetNuevaEst()">' + v.i + ' ' + v.n + '</button>').join('') + '</div>' +
+    '<label class="field"><span>Nombre</span><input type="text" id="ne-n" value="' + esc(TIPOS[_ne.tipo].n) + '"></label><label class="field"><span>Superficie (m²)</span><input id="ne-m" inputmode="decimal" value="8"></label><label class="check" style="display:flex;gap:10px;align-items:center;min-height:48px"><input type="checkbox" id="ne-p" checked style="width:26px;height:26px"> Precargar los trabajos habituales</label><button class="btn pri blk" style="margin-top:8px" onclick="crearEst()">Crear estancia</button>');
+}
+function crearEst() {
+  const n = $('#ne-n').value.trim() || TIPOS[_ne.tipo].n; const m = Math.max(1, num($('#ne-m').value) || 8); const pre = $('#ne-p').checked;
+  const e = estanciaDesde(_ne.tipo, n, m, pre ? (PEDIDO_CLIENTE[_ne.tipo] || []) : [], 'visita'); e.trabajos.forEach(t => { t.origen = 'visita'; t.base = null; });
+  mut(() => { S.est.push(e); S.ui.room = e.id; S.ui.view = 'room'; }); cerrarSheet();
+}
+function delEst(eid) {
+  const e = est(eid); sheet('<h3>Eliminar «' + esc(e.nombre) + '»</h3><p class="muted" style="margin-bottom:12px">Se perderán sus trabajos, comentarios y fotos.</p><div class="row"><button class="btn sp" onclick="cerrarSheet()">Cancelar</button><button class="btn dng sp" onclick="delEstOk(\'' + eid + '\')">Eliminar</button></div>');
+}
+function delEstOk(eid) { cerrarSheet(); mut(() => { S.est = S.est.filter(e => e.id !== eid); S.ui.room = S.est[0].id; S.ui.view = 'hub'; }); }
+
+// ── Comentarios ──
+function comAdd(eid, txt) { txt = String(txt || '').trim(); if (!txt) { toast('Escribe un comentario'); return; } mut(() => { est(eid).comentarios.push({ id:uid('c'), t:txt, f:Date.now() }); }); }
+function comAddTxt(eid) { const ta = $('#com-' + eid); comAdd(eid, ta.value); }
+function comDel(eid, cid) { mut(() => { const e = est(eid); e.comentarios = e.comentarios.filter(c => c.id !== cid); }); }
+
+// ── Fotos ──
+function comprimir(file) {
+  return new Promise((res, rej) => {
+    const url = URL.createObjectURL(file); const img = new Image();
+    img.onload = () => { const M = 1100; let w = img.naturalWidth, h = img.naturalHeight; const k = Math.min(1, M / Math.max(w, h)); w = Math.round(w * k); h = Math.round(h * k);
+      const c = document.createElement('canvas'); c.width = w; c.height = h; c.getContext('2d').drawImage(img, 0, 0, w, h); URL.revokeObjectURL(url); res(c.toDataURL('image/jpeg', 0.65)); };
+    img.onerror = () => { URL.revokeObjectURL(url); rej(new Error('imagen no válida')); }; img.src = url;
+  });
+}
+async function fotosAdd(eid, input) {
+  const files = [...input.files]; input.value = ''; if (!files.length) return;
+  if (!editable()) { mut(() => {}); return; }
+  const e = est(eid); let n = 0;
+  for (const f of files) { try { e.fotos.push({ id:uid('f'), src:await comprimir(f), cap:'', f:Date.now() }); n++; } catch (err) { toast('No se pudo añadir una de las fotos'); } }
+  if (n) { guardarYa(); render(); toast(n + ' foto' + (n > 1 ? 's' : '') + ' añadida' + (n > 1 ? 's' : '') + ' a ' + e.nombre); }
+}
+let _vf = null;
+function verFoto(eid, fid) {
+  const e = est(eid), f = e.fotos.find(x => x.id === fid); _vf = { eid, fid };
+  $('#viewer').innerHTML = '<img src="' + f.src + '" alt="Foto de ' + esc(e.nombre) + '"><div class="vb"><input type="text" id="vcap" aria-label="Pie de foto" placeholder="Pie de foto (ej.: humedad en techo)" value="' + esc(f.cap) + '" ' + (editable() ? '' : 'disabled') + ' onchange="capFoto(this.value)">' + (editable() ? '<button class="btn dng" onclick="delFoto()">🗑</button>' : '') + '<button class="btn" onclick="cerrarVisor()">Cerrar</button></div>';
+  $('#viewer').classList.add('on');
+}
+function cerrarVisor() { $('#viewer').classList.remove('on'); $('#viewer').innerHTML = ''; render(); }
+function capFoto(v) { const f = est(_vf.eid).fotos.find(x => x.id === _vf.fid); f.cap = v.trim(); guardar(); }
+function delFoto() { const e = est(_vf.eid); e.fotos = e.fotos.filter(x => x.id !== _vf.fid); guardar(); cerrarVisor(); toast('Foto eliminada'); }
+
+// ═══════════════════════════════════════════════════════
+// 9. ENVÍO, BORRADOR Y VERSIONES
+// ═══════════════════════════════════════════════════════
+function guardarYSalir() { S.v3.pendienteEnvio = true; S.ui.view = 'home'; guardarYa(); render(); toast('Borrador ' + S.v3.id + ' guardado. Podrás continuar y enviarlo desde casa.'); }
+function abrirEnvio() {
+  if (!editable()) return;
+  const pend = pendientes(S);
+  if (pend.length && !UI.sinEnviar) {
+    sheet('<h3>Faltan estancias por revisar</h3><p class="muted" style="margin-bottom:10px">' + pend.map(e => esc(e.nombre)).join(', ') + '.</p><div style="display:grid;gap:10px"><button class="btn pri blk" onclick="cerrarSheet();ir(\'room\',\'' + pend[0].id + '\')">Revisar «' + esc(pend[0].nombre) + '»</button><button class="btn blk" onclick="UI.sinEnviar=true;abrirEnvio()">Enviar igualmente</button><button class="btn blk" onclick="cerrarSheet()">Cancelar</button></div>');
+    return;
+  }
+  UI.sinEnviar = false;
+  sheet('<div class="row" style="margin-bottom:8px"><h3 class="sp" style="margin:0">Enviar ' + S.v3.id + ' al cliente</h3><button class="btn" onclick="cerrarSheet()">Cerrar</button></div><div class="info">Prototipo sin conexión: el mensaje se prepara para enviarlo tú (WhatsApp o copiar). Nada se envía automáticamente.</div>' +
+    '<label class="field"><span>Mensaje (editable)</span><textarea id="msg" class="msgbox">' + esc(mensajeCliente(S)) + '</textarea></label>' +
+    '<div style="display:grid;gap:10px"><button class="btn pri blk" onclick="enviarWA()">💬 Abrir WhatsApp con el mensaje</button><div class="row"><button class="btn sp" onclick="copiarMsg()">📋 Copiar mensaje</button><button class="btn sp" onclick="correoSim()">✉ Simular correo</button></div>' +
+    '<button class="btn ok blk" onclick="confirmarEnvio()">✓ Ya lo he enviado: marcar ' + S.v3.id + ' como enviada</button><button class="btn blk" onclick="cerrarSheet();guardarYSalir()">Mejor lo guardo y lo envío desde casa</button></div>');
+}
+function enviarWA() { const tel = S.caso.cliente.tel.replace(/\D/g, ''); window.open('https://wa.me/34' + tel + '?text=' + encodeURIComponent($('#msg').value), '_blank', 'noopener'); S.v3.canalIntento = 'WhatsApp'; }
+function copiarMsg() {
+  const t = $('#msg').value; const ok = () => toast('Mensaje copiado');
+  if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(t).then(ok, () => { $('#msg').select(); document.execCommand('copy'); ok(); });
+  else { $('#msg').select(); document.execCommand('copy'); ok(); }
+}
+function correoSim() { S.v3.canalIntento = 'Correo'; toast('Correo simulado: se enviaría a ' + S.caso.cliente.email); }
+function confirmarEnvio() {
+  const total = totalesDe(S.est, S.ajustes).total; S.v3.estado = 'enviada'; S.v3.enviadaAt = Date.now(); S.v3.canal = S.v3.canalIntento || 'WhatsApp'; S.v3.pendienteEnvio = false;
+  S.hist.push({ id:S.v3.id, total, fecha:S.v3.enviadaAt, canal:S.v3.canal }); cerrarSheet(); S.ui.view = 'sent'; guardarYa(); render(); window.scrollTo(0, 0);
+}
+function crearNueva() {
+  const id = nextId(); S.v3 = { id, estado:'borrador', pendienteEnvio:false, guardadaAt:null, enviadaAt:null, canal:null };
+  S.v2 = { id:S.hist.length ? S.hist[S.hist.length - 1].id : S.v2.id, total:S.hist.length ? S.hist[S.hist.length - 1].total : S.v2.total, fecha:Date.now() };
+  S.est.forEach(e => { e.revisada = false; e.trabajos.forEach(t => { t.confirmado = false; if (!t.quitado) t.base = { cant:t.cant, precio:t.precio }; t.origen = t.origen === 'visita' && !t.quitado ? 'cliente' : t.origen; }); e.trabajos = e.trabajos.filter(t => !t.quitado); });
+  S.ui.view = 'hub'; guardarYa(); render(); toast('Nueva versión ' + id + ' en borrador (compara con la ' + S.v2.id + ' enviada)');
+}
+
+// ═══════════════════════════════════════════════════════
+// 10. AJUSTES Y REINICIO
+// ═══════════════════════════════════════════════════════
+function abrirAjustes() {
+  const bytes = (localStorage.getItem(LS_KEY) || '').length; const ro = !editable();
+  sheet('<div class="row" style="margin-bottom:8px"><h3 class="sp" style="margin:0">Ajustes</h3><button class="btn" onclick="cerrarSheet()">Cerrar</button></div>' +
+    '<label class="field"><span>Cliente</span><input type="text" id="aj-n" value="' + esc(S.caso.cliente.nombre) + '"></label><label class="field"><span>Teléfono (WhatsApp)</span><input type="tel" id="aj-t" value="' + esc(S.caso.cliente.tel) + '"></label><label class="field"><span>Dirección de la vivienda</span><input type="text" id="aj-d" value="' + esc(S.caso.direccion) + '"></label>' +
+    '<div class="grid2"><label class="field"><span>Margen (%)</span><input id="aj-m" inputmode="decimal" value="' + S.ajustes.margen + '" ' + (ro ? 'disabled' : '') + '></label><label class="field"><span>IVA (%)</span><input id="aj-i" inputmode="decimal" value="' + S.ajustes.iva + '" ' + (ro ? 'disabled' : '') + '></label></div>' +
+    '<p class="muted" style="margin-bottom:10px">Cambiar margen o IVA recalcula la ' + S.v3.id + '. La ' + S.v2.id + ' queda con el importe que vio el cliente.</p><button class="btn pri blk" onclick="guardarAjustes()">Guardar ajustes</button><p class="muted" style="margin-top:10px">Espacio usado en este dispositivo: ' + Math.round(bytes / 1024) + ' KB (límite aprox. 5.000 KB).</p>');
+}
+function guardarAjustes() {
+  S.caso.cliente.nombre = $('#aj-n').value.trim() || S.caso.cliente.nombre; S.caso.cliente.tel = $('#aj-t').value.trim() || S.caso.cliente.tel; S.caso.direccion = $('#aj-d').value.trim() || S.caso.direccion;
+  if (editable()) { S.ajustes.margen = Math.min(100, Math.max(0, num($('#aj-m').value))); S.ajustes.iva = Math.min(100, Math.max(0, num($('#aj-i').value))); }
+  cerrarSheet(); guardarYa(); render(); toast('Ajustes guardados');
+}
+function confirmarReset() { sheet('<h3>Restablecer el ejemplo</h3><p class="muted" style="margin-bottom:12px">Se borrarán tus cambios, comentarios y fotos y volverá la reforma de ejemplo.</p><div class="row"><button class="btn sp" onclick="cerrarSheet()">Cancelar</button><button class="btn dng sp" onclick="resetOk()">Restablecer</button></div>'); }
+function resetOk() { try { localStorage.removeItem(LS_KEY); } catch (e) {} S = semilla(); savedAt = null; UI.openW = null; cerrarSheet(); render(); toast('Ejemplo restablecido'); }
+
+// ═══════════════════════════════════════════════════════
+// 11. PRUEBAS INTERNAS  (consola: __tests())
+// ═══════════════════════════════════════════════════════
+window.__tests = function () {
+  let ok = 0, tot = 0; const fails = []; const a = (d, c) => { tot++; if (c) ok++; else { fails.push(d); console.error('✗ ' + d); } };
+  const T = semilla(); const aj = T.ajustes;
+  a('cantidad por m²', qtyBase('m2', 12) === 12); a('cantidad de pared ≈ 4√m²×2,4', qtyBase('pared', 16) === 38.4);
+  a('cantidad de rodapié ≈ 4√m²×0,9', qtyBase('ml', 16) === 14.4); a('muebles de cocina mínimo 3 ml', qtyBase('mlm', 2) === 3 && qtyBase('mlm', 12) === 6); a('ud/fijo = 1', qtyBase('ud', 50) === 1 && qtyBase('fijo', 50) === 1);
+  a('precio de electricidad depende de la estancia', precioBase(CATK.electricidad, 'cocina') === 980 && precioBase(CATK.electricidad, 'habitacion') === 420);
+  a('caso de ejemplo: 8 estancias (reforma integral estándar)', T.est.length === 8 && T.est.filter(e => e.tipo === 'bano').length === 2 && T.est.filter(e => e.tipo === 'habitacion').length === 3);
+  const tt = totalesDe(T.est, aj);
+  a('total = (subtotal + margen) × IVA', tt.base === r2(tt.subtotal + tt.margen) && tt.total === r2(tt.base + tt.iva) && tt.iva === r2(tt.base * 0.21));
+  a('V2 del ejemplo coincide con el cálculo', T.v2.total === tt.total && tt.total > 20000 && tt.total < 60000);
+  a('sin cambios: el diff está vacío', (() => { const d = diffV3(T); return !d.anadidos.length && !d.quitados.length && !d.modificados.length; })());
+  const sal = T.est.find(e => e.tipo === 'salon'); const ft = sal.trabajos.find(t => t.k === 'falso_techo'); const t0 = totalesDe(T.est, aj).total;
+  ft.quitado = true; const t1 = totalesDe(T.est, aj).total;
+  a('quitar un trabajo baja el total y aparece en «quitados»', t1 < t0 && diffV3(T).quitados.length === 1);
+  ft.quitado = false; const nt = nuevoTrabajo('humedades', sal, 'visita'); sal.trabajos.push(nt);
+  a('añadir un trabajo sube el total y aparece en «añadidos»', totalesDe(T.est, aj).total > t0 && diffV3(T).anadidos.length === 1);
+  a('un trabajo añadido en visita no tiene base del cliente', nt.base === null && nt.origen === 'visita');
+  const tar = sal.trabajos.find(t => t.k === 'tarima'); tar.cant += 2;
+  a('editar una cantidad se detecta como «modificado»', diffV3(T).modificados.some(x => x.t.id === tar.id));
+  const total1 = totalesDe(T.est, aj).total; sal.trabajos.pop(); tar.cant -= 2;
+  a('al deshacer los cambios vuelve el total de la V2', totalesDe(T.est, aj).total === T.v2.total && total1 > T.v2.total);
+  const hab = T.est.find(e => e.tipo === 'habitacion'); const tarH = hab.trabajos.find(t => t.k === 'tarima'); const pH = hab.trabajos.find(t => t.k === 'pint_pared');
+  pH.manual = true; pH.cant = 99; hab.m2 = 20; recalcM2(hab);
+  a('al cambiar los m² se recalculan las partidas por m² no editadas', tarH.cant === 20 && pH.cant === 99);
+  a('subtotal de estancia = suma de sus trabajos vivos', subEst(hab) === r2(hab.trabajos.reduce((s, t) => s + subLinea(t), 0)));
+  hab.revisada = true; a('progreso cuenta las estancias revisadas', progreso(T).revisadas === 1 && progreso(T).total === 8);
+  a('estado de la estancia: revisada / en curso / pendiente', estadoEst(hab) === 'revisada' && estadoEst(T.est[0]) === 'pendiente' && (T.est[0].trabajos[0].confirmado = true) && estadoEst(T.est[0]) === 'curso');
+  a('pendientes = no revisadas', pendientes(T).length === 7);
+  a('mensaje al cliente incluye total, V2 y cambios', (() => { const m = mensajeCliente(T); return m.includes('V3') && m.includes('V2') && /Cambios tras la visita/.test(m) && m.includes('[enlace'); })());
+  a('finalDe aplica margen e IVA', finalDe(100, { margen:22, iva:21 }) === 147.62);
+  a('formato de euros con miles', eur(1234.5) === '1.234,50 €' && eur0(12500) === '12.500 €');
+  a('guardado: el estado sobrevive a JSON', (() => { const c = JSON.parse(JSON.stringify(T)); return totalesDe(c.est, c.ajustes).total === totalesDe(T.est, aj).total; })());
+  a('el catálogo tiene trabajos para cada tipo habitual', ['salon', 'cocina', 'bano', 'habitacion', 'pasillo'].every(t => CAT.some(c => c.t.includes(t))));
+  const msg = ok + '/' + tot + ' pruebas correctas'; console.log('%c' + msg + (fails.length ? ' · fallos: ' + fails.join(' | ') : ' ✓'), 'font-weight:bold'); return { ok, total:tot, fails };
+};
+
+// ═══════════════════════════════════════════════════════
+// 12. ARRANQUE
+// ═══════════════════════════════════════════════════════
+if (!est(S.ui.room)) S.ui.room = null;
+if (['hub', 'room'].includes(S.ui.view) && !S.ui.room) S.ui.room = S.est[0].id;
+render();
+</script>
+<script>
+/* === PROTOTIPO COMPLETO · adaptador del panel Lite === */
+(function () {
+  const P = window.__P = {};
+  const up = () => window.parent && window.parent.Proto;
+  P.S = () => S;
+  P.clave = () => S && S.protoKey || null;
+
+  // Pantalla de espera mientras no haya una visita asignada
+  const ov = document.createElement('div');
+  ov.id = 'proto-vacio';
+  ov.style.cssText = 'position:fixed;inset:0;z-index:300;background:var(--bg,#f6f1ea);display:flex;align-items:center;justify-content:center;padding:24px;text-align:center;font-family:inherit';
+  ov.innerHTML = '<div style="max-width:420px"><div style="font-size:52px">📋</div><h2 style="margin:8px 0">Sin visitas asignadas</h2><p style="color:#6b5d4f;line-height:1.5">Cuando el cliente <b>confirme el día de la visita técnica</b> (pestaña Cliente), el pedido aparecerá aquí para revisarlo estancia por estancia desde el móvil o la tablet.</p></div>';
+  document.body.appendChild(ov);
+  P.mostrar = (sw) => { ov.style.display = sw ? 'none' : 'flex'; };
+
+  // Carga el pedido del cliente (presupuesto vigente) como punto de partida de la visita
+  P.cargar = function (V) {
+    const est = V.est.map(e => ({
+      id: e.id, tipo: e.tipo, nombre: e.nombre, m2: e.m2, revisada: false, origenEst: 'cliente', comentarios: [], fotos: [],
+      trabajos: e.lineas.map(l => ({ id: uid('t'), k: l.k, l: l.l, u: l.u, b: 'fijo', cant: l.cant, precio: l.precio, origen: 'cliente', confirmado: false, quitado: false, manual: false, nota: l.nota || '', base: { cant: l.cant, precio: l.precio } }))
+    }));
+    S = {
+      ver: 1, creado: Date.now(), protoKey: V.clave,
+      caso: { ref: V.ref, cliente: V.cliente, direccion: V.direccion, m2Total: V.m2Total, tipo: V.tipoTxt },
+      ajustes: V.ajustes, v2: null,
+      v3: { id: V.v3id, estado: 'borrador', pendienteEnvio: false, guardadaAt: null, enviadaAt: null, canal: null },
+      hist: [], est, general: '', ui: { view: 'home', room: null }
+    };
+    const tot = totalesDe(S.est, S.ajustes);
+    S.v2 = { id: V.v2id, total: tot.total, subtotal: tot.subtotal, fecha: Date.now() - 86400000 };
+    guardarYa(); render(); P.mostrar(true);
+  };
+
+  // Paquete que se envía al admin
+  function pack() {
+    return {
+      v3id: S.v3.id, canal: S.v3.canal, ajustes: S.ajustes, general: S.general, total: totalesDe(S.est, S.ajustes).total,
+      est: S.est.map(e => ({
+        id: e.id, tipo: e.tipo, nombre: e.nombre, m2: e.m2, comentarios: e.comentarios.map(c => c.t || c.texto || String(c)), nFotos: e.fotos.length,
+        trabajos: e.trabajos.map(t => ({ k: t.k, l: t.l, u: t.u, cant: t.cant, precio: t.precio, quitado: !!t.quitado, origen: t.origen, nota: t.nota || '' }))
+      }))
+    };
+  }
+  const wrap = (name, fn) => { const o = window[name]; window[name] = function () { const r = o.apply(this, arguments); try { fn(); } catch (e) { console.error(e); } return r; }; };
+  wrap('confirmarEnvio', () => { const p = up(); if (p && S.v3.estado === 'enviada') p.lite('enviar', pack()); });
+  wrap('guardarYSalir', () => { const p = up(); if (p) p.lite('borrador', { v3id: S.v3.id }); });
+  // «Nueva versión» (V4…) y restablecer ejemplo no tienen sentido aquí
+  const rs = window.resetOk; window.resetOk = function () { const p = up(); if (p) p.toast('Para empezar de cero usa «Reiniciar prototipo» arriba'); try { cerrarSheet(); } catch (e) {} };
+  P.mostrar(false);
+})();
+
+</script>
+</body>
+</html>
