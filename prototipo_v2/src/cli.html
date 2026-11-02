@@ -977,6 +977,20 @@ window.__tests = function () {
     S.obra.cierre.items.forEach(i => i.estado = 'ok'); while (simPago(true)) { } cerrarObra('Laura Martín', 'data:,'); a('cerrar la obra firma la conformidad y genera el aviso final', S.fase === 'cerrada' && S.obra.cierre.conformidad.nombre === 'Laura Martín' && S.avisos[S.avisos.length - 1].tipo === 'cerrada');
     a('al cerrar, todo está pagado', Math.abs(cobrado(S) - totalVigente(S).aceptada) < 0.02 || cobrado(S) >= totalVigente(S).aceptada - 0.02);
     a('formato de euros con miles', eur(1234.5) === '1.234,50 €' && eur0(12500) === '12.500 €');
+    // ── V2 · R-32, R-34 y R-35 ──
+    S = nuevoCaso(); S.fase = 'propuesta'; S.aceptacion = null;
+    a('R-35 antes de aceptar las pestañas son Inicio · Presupuesto · Visita · Mensajes', navActual(S).map(n => n[0]).join() === 'inicio,presupuesto,visita,mensajes');
+    S.aceptacion = { versionId:'V3', total:12000 }; S.fase = 'aceptada';
+    a('R-35 tras aceptar: Inicio · Presupuesto · Obra · Cuenta · Mensajes (máximo 5 en la barra inferior)', navActual(S).map(n => n[0]).join() === 'inicio,presupuesto,obra,cuenta,mensajes' && navActual(S).length <= 5);
+    a('R-35 los enlaces antiguos (cambios, pagos, documentos, entrega) llevan a su pestaña nueva', SEC_ALIAS.cambios[0] === 'cuenta' && SEC_ALIAS.pagos[1] === 'pagos' && SEC_ALIAS.docs[0] === 'cuenta' && SEC_ALIAS.entrega[0] === 'obra' && SECS_DE.cuenta.includes('pagos') && SECS_DE.obra.includes('entrega'));
+    S.planTramos = [{ label:'Señal', pct:30, importe:3600, estado:'cobrado', falta:0, resto:false, incluyeCambios:0 }, { label:'Hito', pct:30, importe:4050, estado:'debido', falta:4050, resto:false, incluyeCambios:450 }, { label:'Entrega', pct:40, importe:4800, estado:'pendiente', falta:4800, resto:true, incluyeCambios:0 }];
+    const ppv = planPagos(S);
+    a('R-32 el plan de pagos viene del admin: último tramo = el resto y los cambios firmados se suman al siguiente tramo', ppv.length === 3 && ppv[0].estado === 'pagado' && ppv[1].estado === 'debido' && ppv[1].incluyeCambios === 450 && ppv[2].resto && ppv[2].estado === 'previsto' && ppv.reduce((x, t) => x + t.importe, 0) === 12450);
+    S.planTramos = null; S.aceptacion = null; S.plan = [{ label:'Señal', pct:40, cuando:'aceptacion', importe:4800, resto:false }, { label:'Entrega', pct:60, cuando:'entrega', importe:7200, resto:true }];
+    a('R-23 antes de aceptar el cliente ve el plan de esta propuesta con sus importes', planPagos(S).map(t => t.importe).join('/') === '4800/7200' && planPagos(S).every(t => t.estado === 'previsto') && /el resto/.test(planPreHtml({ plan:S.plan, hitosPlan:[{ nombre:'Demolición', dias:2 }] })) && /Demolición/.test(planPreHtml({ plan:S.plan, hitosPlan:[{ nombre:'Demolición', dias:2 }] })));
+    a('R-24 las líneas de la propuesta (imprevistos, descuento, redondeo, validez, plazo y condiciones) se enseñan al cliente', (() => { const h = ajHtml({ total:11000, aj:{ imprevistos:200, imprevistosPct:2, descuento:300, redondeo:-1.5, validezDias:30, plazoSemanas:8, condiciones:'Incluye escombros <b>' }, est:[] }); return /Imprevistos \(2 %\)/.test(h) && /Descuento/.test(h) && /−300,00/.test(h) && /Validez/.test(h) && /8 semanas/.test(h) && /&lt;b&gt;/.test(h) && ajHtml({ total:1, est:[] }) === ''; })());
+    S = nuevoCaso(); S.aceptacion = { versionId:'V1', total:10000 }; S.obra.cambios = [{ id:'C1', estado:'pendiente_cliente', importe:100 }, { id:'C2', estado:'retirado', importe:900 }, { id:'C3', estado:'en_desacuerdo', importe:50 }];
+    a('R-34 un cambio retirado no suma en el total vigente; uno en duda sigue siendo provisional', totalVigente(S).provisional === conIva(150));
   } finally { S = guardado; }
   const m = ok + '/' + tot + ' pruebas correctas'; console.log('%c' + m + (fails.length ? ' · fallos: ' + fails.join(' | ') : ' ✓'), 'font-weight:bold'); return { ok, total:tot, fails };
 };
